@@ -394,7 +394,7 @@ env_copy_mulle_tool()
    local parentdir
    local srclibname
 
-   srclibdir="`exekutor "${exefile}" library-path `" || exit 1
+   srclibdir="`exekutor "${exefile}" libexec-path `" || exit 1
    srclibexecdir="`dirname -- "${srclibdir}" `"
    srclibname="`basename -- "${srclibdir}" `"
 
@@ -935,7 +935,7 @@ main()
    #
    if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
    then
-      fail "You are already in the mulle-bootstrap virtual \
+      fail "You are already in the virtual \
 environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    fi
 
@@ -1236,7 +1236,7 @@ _init()
       exit 0
    fi
 
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path 2> /dev/null`"
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-path 2> /dev/null`"
    [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && \
       echo "mulle-bashfunctions-env not installed" >&2 && \
       exit 1
@@ -1252,7 +1252,7 @@ _init()
    #
    # minimal setup exit
    #
-   if [ "$1" = "library-path" ]
+   if [ "$1" = "libexec-path" ]
    then
       echo "${MULLE_ENV_LIBEXEC_DIR}"
       exit 0

@@ -21,13 +21,3 @@ DEPENDENCIES='${TOOLS_TAP}mulle-bashfunctions
 '
 
 DEBIAN_DEPENDENCIES="mulle-bashfunctions"
-
-#
-# Build via mulle-build. If you don't like this
-# edit bin/release.sh. Need to specify mulle-build dependencies
-# so that brew picks up the internal path!
-#
-BUILD_DEPENDENCIES='${TOOLS_TAP}mulle-bashfunctions
-cmake'
-
-

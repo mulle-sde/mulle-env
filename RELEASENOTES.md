@@ -1,44 +1,4 @@
 ## 0.6.0
 
+* fix stuff for newer mulle-project, don't depend on cmake for install (necessarily)
 * changed name to mulle-env for clarity of purpose
-
-
-## 0.5.0
-
-* use .mulle-env subdirectory for configuration
-
-
-## 0.4.0
-
-* use -- to separate options from mulle-bootstrap flags
-
-
-### 0.3.1
-
-* Various small improvements
-
-## 0.3.0
-
-* add -c option
-* MULLE_BOOTSTRAP_VIRTUAL_ENVIRONMENT is now MULLE_ENV_VIRTUAL_ENVIRONMENT
-* search for .mulle-env-environment.sh to determine root of virtual environment
-* source .environment.sh if present
-* fix mulle-bootstrap running if there is not .bootstrap or .bootstrap.local folder
-
-
-### 0.1.1
-
-* Various small improvements
-
-## 0.1.0
-
-* Various small improvements
-
-
-### 0.0.3
-
-* Various small improvements
-
-### 0.0.2
-
-* various improvements and bugfixes
