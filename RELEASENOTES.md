@@ -1,6 +1,11 @@
+## 0.6.0
+
+* changed name to mulle-env for clarity of purpose
+
+
 ## 0.5.0
 
-* use .mulle-sde subdirectory for configuration
+* use .mulle-env subdirectory for configuration
 
 
 ## 0.4.0
@@ -15,8 +20,8 @@
 ## 0.3.0
 
 * add -c option
-* MULLE_BOOTSTRAP_VIRTUAL_ENVIRONMENT is now MULLE_SDE_VIRTUAL_ENVIRONMENT
-* search for .mulle-sde-environment.sh to determine root of virtual environment
+* MULLE_BOOTSTRAP_VIRTUAL_ENVIRONMENT is now MULLE_ENV_VIRTUAL_ENVIRONMENT
+* search for .mulle-env-environment.sh to determine root of virtual environment
 * source .environment.sh if present
 * fix mulle-bootstrap running if there is not .bootstrap or .bootstrap.local folder
 

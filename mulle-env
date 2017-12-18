@@ -34,9 +34,9 @@ then
    set -x
 fi
 
-MULLE_SDE_VERSION="0.5.0"
+MULLE_ENV_VERSION="0.6.0"
 
-MULLE_SDE_DEFAULT_STYLE="${MULLE_SDE_DEFAULT_STYLE:-mulle:none}"
+MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:none}"
 
 
 usage()
@@ -51,8 +51,8 @@ Usage:
 
 Commands:
    init              : set up the environment for the first time
-   uname             : return the mulle-sde specfic uname
-   version           : return the mulle-sde version (no options possible)
+   uname             : return the mulle-env specfic uname
+   version           : return the mulle-env version (no options possible)
    --                : enter the environment. Can be left out if path, url are
                        not named like the other commands.
 Options:
@@ -199,7 +199,7 @@ print_none_startup_header_sh()
 
    cat <<EOF
 #
-# If mulle-sde is broken, sometimes its nice just to source this file
+# If mulle-env is broken, sometimes its nice just to source this file
 # But we need some stuff to get things going:
 #     sed, cut, tr, hostname, pwd, uname
 #
@@ -230,19 +230,19 @@ print_none_startup_footer_sh()
 #
 HOSTNAME="\`hostname -s\`" # don't export it
 
-if [ -f .mulle-sde/environment-\${MULLE_UNAME}-os.sh ]
+if [ -f .mulle-env/environment-\${MULLE_UNAME}-os.sh ]
 then
-   . .mulle-sde/environment-\${MULLE_UNAME}-os.sh
+   . .mulle-env/environment-\${MULLE_UNAME}-os.sh
 fi
 
-if [ -f .mulle-sde/environment.\${HOSTNAME}-host.sh ]
+if [ -f .mulle-env/environment.\${HOSTNAME}-host.sh ]
 then
-   . .mulle-sde/environment-\${HOSTNAME}-host.sh
+   . .mulle-env/environment-\${HOSTNAME}-host.sh
 fi
 
-if [ -f .mulle-sde/environment-\${USER}-user.sh ]
+if [ -f .mulle-env/environment-\${USER}-user.sh ]
 then
-   . .mulle-sde/environment-\${USER}-user.sh
+   . .mulle-env/environment-\${USER}-user.sh
 fi
 EOF
 }
@@ -369,9 +369,9 @@ censored_path()
 # the toolname for the libraryname. Also libexec is versionized
 # so add the version
 #
-sde_copy_mulle_tool()
+env_copy_mulle_tool()
 {
-   log_entry "sde_copy_mulle_tool" "$@"
+   log_entry "env_copy_mulle_tool" "$@"
 
    local toolname="$1"
    local directory="$2"
@@ -425,7 +425,7 @@ sde_copy_mulle_tool()
    # Developer option, since I don't want to edit copies. Doesn't work
    # on mingw, but shucks
    #
-   if [ "${srclibname}" = "src" -a "${MULLE_SDE_DEVELOPER}" != "NO" ]
+   if [ "${srclibname}" = "src" -a "${MULLE_ENV_DEVELOPER}" != "NO" ]
    then
       mkdir_if_missing "${dstbindir}"
       mkdir_parent_if_missing "${dstlibdir}" > /dev/null
@@ -450,9 +450,9 @@ sde_copy_mulle_tool()
 }
 
 
-sde_link_other_tool()
+env_link_other_tool()
 {
-   log_entry "sde_link_other_tool" "$@"
+   log_entry "env_link_other_tool" "$@"
 
    local toolname="$1"
    local bindir="$2"
@@ -471,9 +471,9 @@ sde_link_other_tool()
 }
 
 
-sde_link_other_tools()
+env_link_other_tools()
 {
-   log_entry "sde_link_other_tools" "$@"
+   log_entry "env_link_other_tools" "$@"
 
    local toolnames="$1"
    local directory="$2"
@@ -497,7 +497,7 @@ sde_link_other_tools()
          continue
       fi
 
-      sde_link_other_tool "${toolname}" "${bindir}"
+      env_link_other_tool "${toolname}" "${bindir}"
    done
 
    IFS="${DEFAULT_IFS}"
@@ -506,7 +506,7 @@ sde_link_other_tools()
 }
 
 
-sde_setup_mulle_tools()
+env_setup_mulle_tools()
 {
    local directory="$1"
 
@@ -517,17 +517,17 @@ sde_setup_mulle_tools()
    # checked yet)
    #
    (
-      sde_copy_mulle_tool "mulle-bashfunctions-env" "${directory}" "library" &&
-      sde_copy_mulle_tool "mulle-fetch"      "${directory}" &&
-      sde_copy_mulle_tool "mulle-make"       "${directory}" &&
-      sde_copy_mulle_tool "mulle-dispense"   "${directory}" &&
-      sde_copy_mulle_tool "mulle-sourcetree" "${directory}" &&
-      sde_copy_mulle_tool "mulle-build"      "${directory}"
+      env_copy_mulle_tool "mulle-bashfunctions-env" "${directory}" "library" &&
+      env_copy_mulle_tool "mulle-fetch"      "${directory}" &&
+      env_copy_mulle_tool "mulle-make"       "${directory}" &&
+      env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
+      env_copy_mulle_tool "mulle-sourcetree" "${directory}" &&
+      env_copy_mulle_tool "mulle-build"      "${directory}"
    ) || return 1
 }
 
 
-sde_other_tool_files()
+env_other_tool_files()
 {
    local configdir="$1"
 
@@ -535,14 +535,14 @@ sde_other_tool_files()
 
    if [ ! -z "${HOME}" ]
    then
-      echo "${HOME}/.config/mulle-sde/tools"
+      echo "${HOME}/.config/mulle-env/tools"
    fi
 
-   echo "${configdir}/.mulle-sde/tools"
+   echo "${configdir}/.mulle-env/tools"
 }
 
 
-sde_setup_other_tools()
+env_setup_other_tools()
 {
    local toolfiles="$1"
    local directory="$2"
@@ -558,7 +558,7 @@ sde_setup_other_tools()
 
       if tools="`cat "${toolfile}" `"
       then
-         sde_link_other_tools "${tools}" "${directory}"
+         env_link_other_tools "${tools}" "${directory}"
       fi
    done
    IFS="${DEFAULT_IFS}"
@@ -567,7 +567,7 @@ sde_setup_other_tools()
 }
 
 
-sde_setup_if_needed()
+env_setup_if_needed()
 {
    local directory="$1"
    local style="$2"
@@ -620,7 +620,7 @@ Use \"--style none\", if you don't need mulle-build"
 
    IFS="
 "
-   for toolfile in `sde_other_tool_files "${directory}"`
+   for toolfile in `env_other_tool_files "${directory}"`
    do
       IFS="${DEFAULT_IFS}"
 
@@ -651,12 +651,12 @@ Use \"--style none\", if you don't need mulle-build"
 
    if [ ! -z "${needs_tools_update}" ]
    then
-      sde_setup_mulle_tools "${directory}"
+      env_setup_mulle_tools "${directory}"
    fi
 
    if [ ! -z "${needs_bin_update}" ]
    then
-      sde_setup_other_tools "${needs_bin_update}" "${directory}"
+      env_setup_other_tools "${needs_bin_update}" "${directory}"
 
       log_fluff "Writing \"${uptodatefile}\""
 
@@ -671,9 +671,9 @@ Use \"--style none\", if you don't need mulle-build"
 }
 
 
-sde_init()
+env_init()
 {
-   log_entry "sde_init" "$@"
+   log_entry "env_init" "$@"
 
    local OPTION_NINJA="DEFAULT"
    local OPTION_CMAKE="DEFAULT"
@@ -766,7 +766,7 @@ sde_init()
    local stylefile
    local configdir
 
-   configdir="${directory}/.mulle-sde"
+   configdir="${directory}/.mulle-env"
    envfile="${configdir}/environment.sh"
    toolsfile="${configdir}/tools"
    stylefile="${configdir}/style"
@@ -785,7 +785,7 @@ sde_init()
    style="${OPTION_STYLE}"
    if [ "${style}" = "DEFAULT" ]
    then
-      style="${MULLE_SDE_DEFAULT_STYLE}"
+      style="${MULLE_ENV_DEFAULT_STYLE}"
    fi
    flavor="`cut -d: -f1 <<< "${style}"`"
 
@@ -804,9 +804,9 @@ sde_init()
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
 
-   log_info "Did set up mulle-sde environment in \"${directory}\"
+   log_info "Did set up mulle-env environment in \"${directory}\"
 To enter the environment say:
-      ${C_RESET_BOLD}mulle-sde \"${directory}\"${C_INFO}"
+      ${C_RESET_BOLD}mulle-env \"${directory}\"${C_INFO}"
 
 }
 
@@ -818,11 +818,11 @@ find_best_environment()
    local directory
 
    directory="${start}"
-   # look for .mulle-sde/environment.sh going up to root, if we
+   # look for .mulle-env/environment.sh going up to root, if we
    # find one, we latch onto it
    while [ "${directory}" != "/" ]
    do
-      if [ -f "${directory}/.mulle-sde/environment.sh" ]
+      if [ -f "${directory}/.mulle-env/environment.sh" ]
       then
          log_info "Found superior environment \"${directory}\""
          echo "${directory}"
@@ -946,7 +946,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    local CALLDIRECTORY
    # DIRECTORY is where we are supposed to execute
    local DIRECTORY
-   # MULLE_VIRTUAL_ROOT is where the .mulle-sde/environment.sh is
+   # MULLE_VIRTUAL_ROOT is where the .mulle-env/environment.sh is
    local MULLE_VIRTUAL_ROOT
 
    CALLDIRECTORY="`pwd -P`"
@@ -966,7 +966,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
 
       init)
-         sde_init "$@"
+         env_init "$@"
          return $?
       ;;
    esac
@@ -1026,18 +1026,18 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 
    local style
 
-   style="`cat "${DIRECTORY}/.mulle-sde/style" 2> /dev/null`"
+   style="`cat "${DIRECTORY}/.mulle-env/style" 2> /dev/null`"
    if [ -z "${style}" ]
    then
-      fail "No mulle-sde environment found.
-You must ${C_RESET_BOLD}mulle-sde init \"${DIRECTORY}\"${C_ERROR} first before you can enter it."
+      fail "No mulle-env environment found.
+You must ${C_RESET_BOLD}mulle-env init \"${DIRECTORY}\"${C_ERROR} first before you can enter it."
    fi
 
-   sde_setup_if_needed "${DIRECTORY}" "${style}"
+   env_setup_if_needed "${DIRECTORY}" "${style}"
 
    if [ "${OPTION_BOOTSTRAP}" = "YES" ] && \
-      [ -f "${DIRECTORY}/.mulle-sourcetree"  ] && \
-      [ ! -d "${DIRECTORY}/.mulle-sourcetree.db" ]
+      [ -f "${DIRECTORY}/.mulle-sourcetree/config"  ] && \
+      [ ! -d "${DIRECTORY}/.mulle-sourcetree/db" ]
    then
       local exepath
 
@@ -1049,7 +1049,7 @@ You must ${C_RESET_BOLD}mulle-sde init \"${DIRECTORY}\"${C_ERROR} first before y
       log_fluff "Running mulle-sourcetree in \"${DIRECTORY}\"..."
       (
          cd "${DIRECTORY}" ;
-         "${MULLE_SDE_LIBEXEC_DIR}/mulle-sde-shell" \
+         "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
             "${MULLE_VIRTUAL_ROOT}" \
             "${PATH}" \
             "SCRIPT" \
@@ -1062,7 +1062,7 @@ You must ${C_RESET_BOLD}mulle-sde init \"${DIRECTORY}\"${C_ERROR} first before y
          log_fluff "Running mulle-build in \"${DIRECTORY}\"..."
          (
             cd "${DIRECTORY}" ;
-            "${MULLE_SDE_LIBEXEC_DIR}/mulle-sde-shell" \
+            "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
                "${MULLE_VIRTUAL_ROOT}" \
                "${PATH}" \
                "SCRIPT" \
@@ -1135,7 +1135,7 @@ You must ${C_RESET_BOLD}mulle-sde init \"${DIRECTORY}\"${C_ERROR} first before y
       cd "${DIRECTORY}" &&
       eval env -i \
              "${s}" \
-             "'${MULLE_SDE_LIBEXEC_DIR}/mulle-sde-shell'" \
+             "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
                "'${MULLE_VIRTUAL_ROOT}'" \
                "'${runpath}'" \
                "INTERACTIVE" \
@@ -1205,9 +1205,9 @@ sourcetree_libexec_path()
    executablepath="`resolve_symlinks "${executablepath}"`"
    exedirpath="`dirname "${executablepath}"`"
    prefix="`dirname "${exedirpath}"`"
-   libexecpath="${prefix}/libexec/mulle-sde"
+   libexecpath="${prefix}/libexec/mulle-env"
 
-   if [ ! -x "${libexecpath}/mulle-sde-shell" ]
+   if [ ! -x "${libexecpath}/mulle-env-shell" ]
    then
       libexecpath="${exedirpath}/src"
    fi
@@ -1221,7 +1221,7 @@ sourcetree_libexec_path()
       ;;
    esac
 
-   if [ -x "${libexecpath}/mulle-sde-shell" ]
+   if [ -x "${libexecpath}/mulle-env-shell" ]
    then
       echo "${libexecpath}"
    fi
@@ -1232,7 +1232,7 @@ _init()
 {
    if [ "$1" = "version" ]
    then
-      echo "${MULLE_SDE_VERSION}"
+      echo "${MULLE_ENV_VERSION}"
       exit 0
    fi
 
@@ -1243,8 +1243,8 @@ _init()
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 
-   MULLE_SDE_LIBEXEC_DIR="`sourcetree_libexec_path "$0"`"
-   if [ -z "${MULLE_SDE_LIBEXEC_DIR}" ]
+   MULLE_ENV_LIBEXEC_DIR="`sourcetree_libexec_path "$0"`"
+   if [ -z "${MULLE_ENV_LIBEXEC_DIR}" ]
    then
       fail "Fatal Error: Could not find libexec for ${MULLE_EXECUTABLE} ($PWD)"
    fi
@@ -1254,7 +1254,7 @@ _init()
    #
    if [ "$1" = "library-path" ]
    then
-      echo "${MULLE_SDE_LIBEXEC_DIR}"
+      echo "${MULLE_ENV_LIBEXEC_DIR}"
       exit 0
    fi
 

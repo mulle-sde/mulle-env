@@ -2,7 +2,7 @@
 # If you don't have this file, there will be no homebrew
 # formula operations.
 #
-PROJECT="mulle-sde"      # your project/repository name
+PROJECT="mulle-env"      # your project/repository name
 DESC="🌳 Virtual environment for C and Objective-C"
 LANGUAGE="bash"             # c,cpp, objc, bash ...
 
@@ -17,18 +17,17 @@ LANGUAGE="bash"             # c,cpp, objc, bash ...
 # DEPENDENCIES and BUILD_DEPENDENCIES will be evaled later!
 # So keep them single quoted.
 #
-DEPENDENCIES='${BOOTSTRAP_TAP}mulle-bootstrap
+DEPENDENCIES='${TOOLS_TAP}mulle-bashfunctions
 '
 
-DEBIAN_DEPENDENCIES="mulle-bootstrap, git"
+DEBIAN_DEPENDENCIES="mulle-bashfunctions"
 
 #
 # Build via mulle-build. If you don't like this
 # edit bin/release.sh. Need to specify mulle-build dependencies
 # so that brew picks up the internal path!
 #
-BUILD_DEPENDENCIES='${BOOTSTRAP_TAP}mulle-build
-${BOOTSTRAP_TAP}mulle-bootstrap
+BUILD_DEPENDENCIES='${TOOLS_TAP}mulle-bashfunctions
 cmake'
 
 

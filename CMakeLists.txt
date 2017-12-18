@@ -1,26 +1,23 @@
 cmake_minimum_required( VERSION 3.0)
 
-# use C, because otherwise a CXX compiler is required
-project( mulle-sde C)
+project( mulle-env NONE)
 
-execute_process( COMMAND ./mulle-sde version
+execute_process( COMMAND ./mulle-env version
                  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-                 OUTPUT_VARIABLE MULLE_SDE_VERSION
+                 OUTPUT_VARIABLE MULLE_ENV_VERSION
                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-message( STATUS "MULLE_SDE_VERSION is ${MULLE_SDE_VERSION} according to mulle-sde")
+message( STATUS "MULLE_ENV_VERSION is ${MULLE_ENV_VERSION} according to mulle-env")
 
 
-set( PROJECT_VERSION "${MULLE_SDE_VERSION}")
+set( PROJECT_VERSION "${MULLE_ENV_VERSION}")
 
 
 set( SCRIPTS
-mulle-sde
-mulle-sde-monitor
-mulle-sde-update-cmake
+mulle-env
 )
 
 set( LIBRARY_SCRIPTS
-src/mulle-sde-shell
+src/mulle-env-shell
 )
 
 
@@ -35,4 +32,4 @@ INSTALL( FILES ${LIBRARY_SCRIPTS}
 PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
             GROUP_EXECUTE GROUP_READ
             WORLD_EXECUTE WORLD_READ
-DESTINATION "libexec/mulle-sde")
+DESTINATION "libexec/mulle-env")
