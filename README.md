@@ -131,8 +131,8 @@ mulle-env /tmp/a
 ## Add environment variables
 
 During the start of the sub-shell the file `.mulle-env/environment.sh` will be
-sourced. You can easily expand this file. Unless you reinitialize with
-"mulle-sde init -f", your edits will be safe.
+sourced. You can edit this file. Unless you reinitialize with
+"mulle-sde init -f", your changes will be safe.
 
 > Hint: Do not forget to `export` your environment variables.
 
@@ -160,7 +160,7 @@ If you need some tools only on a certain platform, figure out the platform name
 with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
 `~/.config/mulle-env/tools.${MULLE_UNAME}` or `.mulle-env/tools.${MULLE_UNAME}`.
 
-Platform specifiy tool configuration files take precedence over the
+Platform specific tool configuration files take precedence over the
 cross-platform ones without the extension.
 
 #### Specify personal preferences (like a different shell)
