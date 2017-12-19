@@ -12,6 +12,16 @@ Executable          | Description
 `mulle-env`         | Virtual environment sub-shell
 
 
+
+## Install
+
+
+OS          | Command
+------------|------------------------------------
+macos       | `brew install mulle-kybernetik/software/mulle-env`
+other       | ./install.sh  (Requires: [mulle-bashfunctions](https://github.com/mulle-nat/mulle-bashfunctions)
+
+
 ## What mulle-env does in a nutshell
 
 mulle-env uses `env` to restrict the environment of the subshell to a minimal
