@@ -34,7 +34,7 @@ then
    set -x
 fi
 
-MULLE_ENV_VERSION="0.7.0"
+MULLE_ENV_VERSION="0.7.1"
 
 MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:none}"
 
@@ -346,6 +346,7 @@ __load_flavor_plugin()
    env_load_plugin "${flavor}"
 }
 
+
 env_init()
 {
    log_entry "env_init" "$@"
@@ -489,23 +490,30 @@ find_best_environment()
    local start="$1"
 
    local directory
+   local best
 
-   directory="${start}"
-   # look for .mulle-env/environment.sh going up to root, if we
-   # find one, we latch onto it
-   while [ "${directory}" != "/" ]
+   best="${start}"
+   directory="`absolutepath "${start}"`"  # paranoia
+   while :
    do
+      directory="`dirname -- "${directory}"`"
+
+      # look for .mulle-env/environment.sh going up to root, if we
+      # find one, we latch onto it
+      if [ "${directory}" = "/" ]
+      then
+         echo "${best}"
+         return
+      fi
+
       if [ -f "${directory}/.mulle-env/environment.sh" ]
       then
-         log_info "Found superior environment \"${directory}\""
-         echo "${directory}"
-         return 0
+         log_fluff "Found superior environment \"${directory}\""
+         best="${directory}"
       fi
-      directory="`dirname -- "${directory}"`"
    done
-
-   echo "${start}"
 }
+
 
 apply_style_to_directory()
 {
@@ -549,7 +557,7 @@ main()
 {
    log_entry "main" "$@"
 
-   local OPTION_directory
+   local OPTION_DIRECTORY
    local OPTION_BOOTSTRAP="YES"
    local OPTION_SHELL_COMMAND
    local OPTION_KEEP_TMP="NO"
@@ -601,7 +609,7 @@ main()
             [ $# -eq 1 ] && fail "Missing argument to $1"
             shift
 
-            OPTION_directory="$1"
+            OPTION_DIRECTORY="$1"
          ;;
 
          --search)
@@ -681,9 +689,9 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
    esac
 
-   if [ ! -z "${OPTION_directory}" ]
+   if [ ! -z "${OPTION_DIRECTORY}" ]
    then
-      directory="${OPTION_directory}"
+      directory="${OPTION_DIRECTORY}"
    else
       if [ -z "${arg}" ]
       then
@@ -760,6 +768,13 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    env_setup_if_needed "${directory}" "${flavor}"
 
    local runpath
+   local rundirectory
+
+   rundirectory="${MULLE_VIRTUAL_ROOT}"
+   if [ "${OPTION_SEARCH}" = "YES" ]
+   then
+      rundirectory="${callerdirectory}"
+   fi
 
    runpath="`colon_concat "${runpath}" "${MULLE_VIRTUAL_ROOT}/bin" `"
    runpath="`colon_concat "${runpath}" "${inherit_path}" `"
@@ -767,13 +782,12 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 
    log_debug "future PATH=${runpath}"
 
-   apply_style_to_directory "${MULLE_VIRTUAL_ROOT}" "${style}" "${flavor}"
+   apply_style_to_directory "${rundirectory}" "${style}" "${flavor}"
 
    #
    #
    #
-   log_fluff "Run shell in \"${directory}\"..."
-
+   log_fluff "Run shell in \"${rundirectory}\"..."
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
@@ -801,7 +815,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    # otherwise provide a minimal environment, for better reproducability
    #
    (
-      cd "${directory}" &&
+      cd "${rundirectory}" &&
       eval env -i \
              "${s}" \
              "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \

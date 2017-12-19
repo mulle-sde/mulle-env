@@ -1,3 +1,7 @@
+### 0.7.1
+
+* various bugfixes
+
 ## 0.7.0
 
 * moved to a plugin architecture

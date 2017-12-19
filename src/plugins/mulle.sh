@@ -41,17 +41,17 @@ print_mulle_startup_body_sh()
 #
 case "\${MULLE_UNAME}" in
    darwin)
-      MULLE_FETCH_MIRROR_DIR=~/Library/Caches/mulle-fetch/git-mirrors
-      MULLE_FETCH_ARCHIVE_DIR=~/Library/Caches/mulle-fetch/archives
+      MULLE_FETCH_MIRROR_DIR="~/Library/Caches/mulle-fetch/git-mirrors"
+      MULLE_FETCH_ARCHIVE_DIR="~/Library/Caches/mulle-fetch/archives"
    ;;
 
    *)
-      MULLE_FETCH_MIRROR_DIR=~/.cache/mulle-fetch/git-mirrors
-      MULLE_FETCH_ARCHIVE_DIR=~/.cache/mulle-fetch/archives
+      MULLE_FETCH_MIRROR_DIR="~/.cache/mulle-fetch/git-mirrors"
+      MULLE_FETCH_ARCHIVE_DIR="~/.cache/mulle-fetch/archives"
    ;;
 esac
 
-MULLE_FETCH_SEARCH_PATH="\`(cd .. ; pwd -P)\`"
+MULLE_FETCH_SEARCH_PATH="${MULLE_VIRTUAL_ROOT}/..`"
 MULLE_SYMLINK="YES"
 
 #
@@ -198,6 +198,7 @@ print_mulle_tools_sh()
    cat <<EOF
 curl
 git
+uuidgen
 EOF
 
    # optional, default yes
@@ -301,25 +302,10 @@ env_mulle_enter_subshell()
    local directory="$1"
 
    if [ "${OPTION_BOOTSTRAP}" = "YES" ] && \
-      [ -f "${directory}/.mulle-sourcetree/config"  ] && \
-      [ ! -d "${directory}/.mulle-sourcetree/db" ]
+      [ -f "${directory}/.mulle-sourcetree"  ] && \
+      [ ! -d "${MULLE_VIRTUAL_ROOT}/dependencies" ]
    then
       local exepath
-
-      #
-      # weird, but if there is a mulle-sourcetree folder in the top DIRECTORY
-      # you can't run mulle-sourcetree via bash so resolve before
-      #
-      exepath="`command -v mulle-sourcetree`"
-      log_fluff "Running mulle-sourcetree in \"${directory}\"..."
-      (
-         cd "${directory}" ;
-         "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
-            "${MULLE_VIRTUAL_ROOT}" \
-            "${PATH}" \
-            "SCRIPT" \
-            "${exepath}" "update"
-      )
 
       if [ $? -eq 0 ]
       then
@@ -331,7 +317,7 @@ env_mulle_enter_subshell()
                "${MULLE_VIRTUAL_ROOT}" \
                "${PATH}" \
                "SCRIPT" \
-               "${exepath}"
+               "${exepath}" "--share"
          )
       fi
    fi

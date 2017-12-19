@@ -67,19 +67,19 @@ print_none_startup_footer_sh()
 #
 HOSTNAME="\`hostname -s\`" # don't export it
 
-if [ -f .mulle-env/environment-\${MULLE_UNAME}-os.sh ]
+if [ -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh" ]
 then
-   . .mulle-env/environment-\${MULLE_UNAME}-os.sh
+   . "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh"
 fi
 
-if [ -f .mulle-env/environment.\${HOSTNAME}-host.sh ]
+if [ -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.\${HOSTNAME}-host.sh" ]
 then
-   . .mulle-env/environment-\${HOSTNAME}-host.sh
+   . "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${HOSTNAME}-host.sh"
 fi
 
-if [ -f .mulle-env/environment-\${USER}-user.sh ]
+if [ -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh" ]
 then
-   . .mulle-env/environment-\${USER}-user.sh
+   . "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh"
 fi
 EOF
 }
@@ -158,6 +158,7 @@ stat
 tail
 test
 tr
+uname
 vi
 wc
 which

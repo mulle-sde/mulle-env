@@ -66,9 +66,10 @@ run_shell()
    case "${cmd_string}" in
       *ash)
          initfile=".mulle-env.tmp.`uuidgen`" || exit 1
+
          echo "${env_string}" > "${initfile}"
-         echo "[ -f \"${MULLE_VIRTUAL_ROOT}/.mulle-env-environment.sh\" ] && \
-. \"${MULLE_VIRTUAL_ROOT}/.mulle-env-environment.sh\"" >> "${initfile}"
+         echo "[ -f \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\" ] && \
+. \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\"" >> "${initfile}"
          # try to set terminal title
          echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"  >> "${initfile}"
 
