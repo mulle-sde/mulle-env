@@ -34,7 +34,7 @@ then
    set -x
 fi
 
-MULLE_ENV_VERSION="0.6.0"
+MULLE_ENV_VERSION="0.7.0"
 
 MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:none}"
 
@@ -45,8 +45,8 @@ usage()
 Usage:
    ${MULLE_EXECUTABLE} [options] [commands] [path|url]
 
-   Create a virtual environment for project in DIRECTORY.
-   If the DIRECTORY at path does not exist and the path looks like an url,
+   Create a virtual environment for project in directory.
+   If the directory at path does not exist and the path looks like an url,
    ${MULLE_EXECUTABLE} will attempt to git clone the project from that url.
 
 Commands:
@@ -62,7 +62,7 @@ Options:
    --restricted-path : only inherit ${RESTRICTED_PATH}
    --style <style>   :  initialize environment with a certain flavor
    -c <cmd>          : shell command to execute instead of interactive shell
-   -d <dir>          : specify different DIRECTORY, than the one taken from the url
+   -d <dir>          : specify different directory, than the one taken from the url
 
 Styles:
    none              : no additions
@@ -74,260 +74,6 @@ EOF
   exit 1
 }
 
-
-
-print_none_tools_sh()
-{
-   log_entry "print_none_tools_sh" "$@"
-
-   #
-   # set of "minimal" commands for use in development
-   #
-   case "$1" in
-      *:inherit)
-         return
-      ;;
-
-      *:restricted)
-      ;;
-
-#
-# [ is built in
-#
-      *)
-         cat <<EOF
-awk
-basename
-bash
-cat
-chmod
-cp
-chown
-command
-date
-dirname
-echo
-ed
-env
-expr
-find
-fgrep
-grep
-head
-hostname
-less
-ls
-ln
-man
-mkdir
-more
-mv
-readlink
-rm
-rmdir
-ps
-sed
-sh
-sleep
-sort
-stat
-tail
-test
-tr
-vi
-wc
-which
-EOF
-   esac
-
-   if [ ! -z "${OPTION_OTHER_TOOLS}" ]
-   then
-      echo "${OPTION_OTHER_TOOLS}"
-   fi
-}
-
-
-print_mulle_tools_sh()
-{
-   log_entry "print_mulle_tools_sh" "$@"
-
-   print_none_tools_sh "$@"
-
-   #
-   # set of "minimal" commands for use in development
-   # many or most are required by the mulle scripts
-   #
-   cat <<EOF
-curl
-git
-EOF
-
-   # optional, default yes
-
-   if [ "${OPTION_NINJA}" != "NO" ]
-   then
-      echo "ninja"
-   fi
-
-   if [ "${OPTION_CMAKE}" != "NO" ]
-   then
-      echo "cmake"
-   fi
-
-   # optional, default no
-   if [ "${OPTION_SVN}" = "YES" ]
-   then
-      echo "svn"
-   fi
-
-   if [ "${OPTION_AUTOCONF}" = "YES" ]
-   then
-      echo "autoconf"
-      echo "autoreconf"
-   fi
-
-   if [ ! -z "${OPTION_OTHER_TOOLS}" ]
-   then
-      echo "${OPTION_OTHER_TOOLS}"
-   fi
-}
-
-
-print_none_startup_header_sh()
-{
-   log_entry "print_none_startup_header_sh" "$@"
-
-   cat <<EOF
-#
-# If mulle-env is broken, sometimes its nice just to source this file
-# But we need some stuff to get things going:
-#     sed, cut, tr, hostname, pwd, uname
-#
-if [ -z "\${MULLE_UNAME}" ]
-then
-   MULLE_UNAME="`uname | cut -d_ -f1 | sed 's/64$//' | tr 'A-Z' 'a-z'`"
-   export MULLE_UNAME
-fi
-if [ -z "\${MULLE_VIRTUAL_ROOT}" ]
-then
-   MULLE_VIRTUAL_ROOT="\`pwd -P\`"
-   echo "Using \${MULLE_VIRTUAL_ROOT} as MULLE_VIRTUAL_ROOT for \
-your convenience" >&2
-fi
-
-EOF
-}
-
-
-print_none_startup_footer_sh()
-{
-   log_entry "print_none_startup_footer_sh" "$@"
-
-   cat <<EOF
-#
-# Load in some modifications depending on osname, hostname, username
-# Of course this could be "cased" in a single file, but it seems convenient.
-#
-HOSTNAME="\`hostname -s\`" # don't export it
-
-if [ -f .mulle-env/environment-\${MULLE_UNAME}-os.sh ]
-then
-   . .mulle-env/environment-\${MULLE_UNAME}-os.sh
-fi
-
-if [ -f .mulle-env/environment.\${HOSTNAME}-host.sh ]
-then
-   . .mulle-env/environment-\${HOSTNAME}-host.sh
-fi
-
-if [ -f .mulle-env/environment-\${USER}-user.sh ]
-then
-   . .mulle-env/environment-\${USER}-user.sh
-fi
-EOF
-}
-
-
-print_none_startup_sh()
-{
-   log_entry "print_none_startup_sh" "$@"
-
-   print_none_startup_header_sh "$@"
-   print_none_startup_footer_sh "$@"
-}
-
-
-print_mulle_startup_body_sh()
-{
-   log_entry "print_mulle_startup_body_sh" "$@"
-
-   cat <<EOF
-#
-# Globally appropriate definitions
-#
-case "\${MULLE_UNAME}" in
-   darwin)
-      MULLE_FETCH_MIRROR_DIR=~/Library/Caches/mulle-fetch/git-mirrors
-      MULLE_FETCH_ARCHIVE_DIR=~/Library/Caches/mulle-fetch/archives
-   ;;
-
-   *)
-      MULLE_FETCH_MIRROR_DIR=~/.cache/mulle-fetch/git-mirrors
-      MULLE_FETCH_ARCHIVE_DIR=~/.cache/mulle-fetch/archives
-   ;;
-esac
-
-MULLE_FETCH_SEARCH_PATH="\`(cd .. ; pwd -P)\`"
-MULLE_SYMLINK="YES"
-
-#
-# PATH to search for git repositories locally
-#
-export MULLE_FETCH_SEARCH_PATH
-
-#
-# Prefer symlinks to local git repositories found via MULLE_FETCH_SEARCH_PATH
-#
-export MULLE_SYMLINK
-
-#
-# Git mirror and Zip/TGZ cache to conserve bandwidth
-#
-export MULLE_FETCH_MIRROR_DIR
-export MULLE_FETCH_ARCHIVE_DIR
-
-#
-# Use common folder for sharable projects
-#
-MULLE_SOURCETREE_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/stashes"
-export MULLE_SOURCETREE_SHARE_DIR
-
-#
-# Use common build directory
-#
-BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
-export BUILD_DIR
-
-
-#
-# Share dependencies directory (absolute for ease of use)
-#
-DEPENDENCIES_DIR="\${MULLE_VIRTUAL_ROOT}/dependencies"
-export DEPENDENCIES_DIR
-
-EOF
-
-}
-
-
-print_mulle_startup_sh()
-{
-   log_entry "print_mulle_startup_sh" "$@"
-
-   print_none_startup_header_sh "$@"
-   print_mulle_startup_body_sh "$@"
-   print_none_startup_footer_sh "$@"
-}
 
 
 censored_path()
@@ -359,93 +105,6 @@ censored_path()
    if [ ! -z "${result}" ]
    then
       echo "${result}"
-   fi
-}
-
-
-#
-# since all mulle- tools are uniform, this is easy.
-# If it's a library, we need to strip off -env from
-# the toolname for the libraryname. Also libexec is versionized
-# so add the version
-#
-env_copy_mulle_tool()
-{
-   log_entry "env_copy_mulle_tool" "$@"
-
-   local toolname="$1"
-   local directory="$2"
-   local copystyle="${3:-tool}"
-
-   #
-   # these dependencies should be there, but just check
-   #
-   local exefile
-
-   exefile="`command -v "${toolname}" `"
-   if [ -z "${exefile}" ]
-   then
-      fail "${toolname} not in PATH"
-   fi
-
-   # doing it like this renames "src" to $toolname
-
-   local srclibexecdir
-   local parentdir
-   local srclibname
-
-   srclibdir="`exekutor "${exefile}" libexec-path `" || exit 1
-   srclibexecdir="`dirname -- "${srclibdir}" `"
-   srclibname="`basename -- "${srclibdir}" `"
-
-   local dstlibexecdir
-   local dstbindir
-   local dstexefile
-   local dstlibname
-
-   dstlibname="${toolname}"
-   dstbindir="${directory}/bin"
-   dstexefile="${dstbindir}/${toolname}"
-   mkdir_if_missing "${dstbindir}"
-
-   dstlibexecdir="${directory}/libexec"
-
-   if [ "${copystyle}" = "library" ]
-   then
-      local version
-
-      version="`"${exefile}" version `" || exit 1
-      dstlibname="`sed 's/-env$//' <<< "${toolname}" `"
-      dstlibdir="${dstlibexecdir}/${dstlibname}/${version}"
-   else
-      dstlibdir="${directory}/libexec/${dstlibname}"
-   fi
-
-   #
-   # Developer option, since I don't want to edit copies. Doesn't work
-   # on mingw, but shucks
-   #
-   if [ "${srclibname}" = "src" -a "${MULLE_ENV_DEVELOPER}" != "NO" ]
-   then
-      mkdir_if_missing "${dstbindir}"
-      mkdir_parent_if_missing "${dstlibdir}" > /dev/null
-
-      log_fluff "Creating symlink \"${dstexefile}\""
-
-      exekutor ln -s -f "${exefile}" "${dstexefile}"
-      exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}"
-   else
-      mkdir_if_missing "${dstlibdir}"
-
-      ( cd "${srclibdir}" ; tar cf - . ) | \
-      ( cd "${dstlibdir}" ; tar xf -  )
-
-      mkdir_if_missing "${dstbindir}"
-
-      log_fluff "Copying \"${dstexefile}\""
-
-      exekutor cp "${exefile}" "${dstexefile}" &&
-      exekutor chmod 755 "${dstexefile}"
    fi
 }
 
@@ -506,27 +165,6 @@ env_link_other_tools()
 }
 
 
-env_setup_mulle_tools()
-{
-   local directory="$1"
-
-   #
-   # Since the PATH is restricted, we need a basic set of tools
-   # in directory/bin to get things going
-   # (We'd also need in PATH: git, tar, sed, tr, gzip, zip. But that's not
-   # checked yet)
-   #
-   (
-      env_copy_mulle_tool "mulle-bashfunctions-env" "${directory}" "library" &&
-      env_copy_mulle_tool "mulle-fetch"      "${directory}" &&
-      env_copy_mulle_tool "mulle-make"       "${directory}" &&
-      env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
-      env_copy_mulle_tool "mulle-sourcetree" "${directory}" &&
-      env_copy_mulle_tool "mulle-build"      "${directory}"
-   ) || return 1
-}
-
-
 env_other_tool_files()
 {
    local configdir="$1"
@@ -569,42 +207,35 @@ env_setup_other_tools()
 
 env_setup_if_needed()
 {
-   local directory="$1"
-   local style="$2"
+   log_entry "env_setup_if_needed" "$@"
 
-   local needs_tools_update
+   local directory="$1"
+   local flavor="$2"
+
+   local needs_flavor_update
    local needs_bin_update
    local needs_bin_update2
 
-   needs_tools_update=
+   needs_flavor_update=
    needs_bin_update=
 
-   local flavor
+   local callback
 
-   flavor="`cut -d: -f1 <<< "${style}" `"
-
-   case "${flavor}" in
-      mulle)
-         if [ -z "`command -v mulle-build`" ]
-         then
-            fail "Style \"mulle\" needs mulle-build to be in PATH.
-Use \"--style none\", if you don't need mulle-build"
-         fi
-
-         if [ "${OPTION_MAGNUM_FORCE}" = "YES" ] || \
-            [ ! -d "${directory}/bin/mulle-fetch" ]
-         then
-            needs_tools_update="YES"
-         fi
-      ;;
-   esac
+   callback="env_${flavor}_tools_need_update"
+   if [ "`type -t "${callback}"`" = "function" ]
+   then
+      if ${callback} "${directory}"
+      then
+         needs_flavor_update="YES"
+      fi
+   fi
 
    local toolfile
    local oldhost
    local uptodatefile
    local myhost
 
-   uptodatefile="${directory}/bin/.tools-updated"
+   uptodatefile="${MULLE_VIRTUAL_ROOT}/.mulle-env/.tools-updated"
 
    oldhost="`cat "${uptodatefile}" 2> /dev/null`"
    myhost="`hostname -s`"
@@ -637,7 +268,7 @@ Use \"--style none\", if you don't need mulle-build"
    done
    IFS="${DEFAULT_IFS}"
 
-   if [ -z "${needs_bin_update}" -a -z "${needs_tools_update}" ]
+   if [ -z "${needs_bin_update}" -a -z "${needs_flavor_update}" ]
    then
       log_verbose "Nothing needs to be updated"
       return
@@ -649,9 +280,12 @@ Use \"--style none\", if you don't need mulle-build"
    exekutor chmod -R ug+w "${directory}/bin" 2> /dev/null
    exekutor chmod -R ug+w "${directory}/libexec" 2> /dev/null
 
-   if [ ! -z "${needs_tools_update}" ]
+   local callback
+
+   callback="env_setup_${flavor}_tools"
+   if [ "`type -t "${callback}"`" = "function" ]
    then
-      env_setup_mulle_tools "${directory}"
+      ${callback} "${directory}"
    fi
 
    if [ ! -z "${needs_bin_update}" ]
@@ -670,6 +304,47 @@ Use \"--style none\", if you don't need mulle-build"
    exekutor chmod -R ugo-w "${directory}/libexec" 2> /dev/null
 }
 
+
+__get_saved_style_flavor()
+{
+   log_entry "__get_saved_style_flavor" "$@"
+
+   local directory="$1"
+
+   style="`cat "${directory}/.mulle-env/style" 2> /dev/null`"
+   if [ -z "${style}" ]
+   then
+      fail "No mulle-env environment found.
+You must ${C_RESET_BOLD}mulle-env init \"${directory}\"${C_ERROR} first before you can enter it."
+   fi
+   flavor="`cut -d: -f1 <<< "${style}"`"
+}
+
+__get_user_style_flavor()
+{
+   log_entry "__get_user_style_flavor" "$@"
+
+   local option="$1"
+
+   style="${option}"
+   if [ "${style}" = "DEFAULT" ]
+   then
+      style="${MULLE_ENV_DEFAULT_STYLE}"
+   fi
+   flavor="`cut -d: -f1 <<< "${style}"`"
+}
+
+
+__load_flavor_plugin()
+{
+   log_entry "__load_flavor_plugin" "$@"
+
+   local flavor="$1"
+
+   . "${MULLE_ENV_LIBEXEC_DIR}/mulle-plugins.sh" || exit 1
+
+   env_load_plugin "${flavor}"
+}
 
 env_init()
 {
@@ -782,12 +457,8 @@ env_init()
    local style
    local flavor
 
-   style="${OPTION_STYLE}"
-   if [ "${style}" = "DEFAULT" ]
-   then
-      style="${MULLE_ENV_DEFAULT_STYLE}"
-   fi
-   flavor="`cut -d: -f1 <<< "${style}"`"
+   __get_user_style_flavor "${OPTION_STYLE}"
+   __load_flavor_plugin "${flavor}"
 
    log_verbose "Creating \"${envfile}\""
    if ! print_${flavor}_startup_sh "${style}" > "${envfile}"
@@ -813,6 +484,8 @@ To enter the environment say:
 
 find_best_environment()
 {
+   log_entry "find_best_environment" "$@"
+
    local start="$1"
 
    local directory
@@ -834,12 +507,49 @@ find_best_environment()
    echo "${start}"
 }
 
+apply_style_to_directory()
+{
+   log_entry "apply_style_to_directory" "$@"
+
+   local directory="$1"
+   local style="$2"
+   local flavor="$3"
+
+   local callback
+
+   callback="env_${flavor}_enter_subshell"
+   if [ "`type -t "${callback}"`" = "function" ]
+   then
+      ${callback} "${directory}"
+   fi
+}
+
+
+apply_flavor_to_runpath()
+{
+   log_entry "apply_flavor_to_runpath" "$@"
+
+   local directory="$1"
+   local flavor="$2"
+   local runpath="$3"
+
+   local callback
+
+   callback="env_${flavor}_add_runpath"
+   if [ "`type -t "${callback}"`" = "function" ]
+   then
+      ${callback} "${directory}" "${runpath}"
+   else
+      echo "${runpath}"
+   fi
+}
+
 
 main()
 {
    log_entry "main" "$@"
 
-   local OPTION_DIRECTORY
+   local OPTION_directory
    local OPTION_BOOTSTRAP="YES"
    local OPTION_SHELL_COMMAND
    local OPTION_KEEP_TMP="NO"
@@ -887,11 +597,11 @@ main()
             OPTION_MAGNUM_FORCE="YES"
          ;;
 
-         -d|--DIRECTORY)
+         -d|--directory)
             [ $# -eq 1 ] && fail "Missing argument to $1"
             shift
 
-            OPTION_DIRECTORY="$1"
+            OPTION_directory="$1"
          ;;
 
          --search)
@@ -942,14 +652,14 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    local arg
    local url
 
-   # CALLDIRECTORY is where we are called from
-   local CALLDIRECTORY
-   # DIRECTORY is where we are supposed to execute
-   local DIRECTORY
+   # callerdirectory is where we are called from
+   local callerdirectory
+   # directory is where we are supposed to execute
+   local directory
    # MULLE_VIRTUAL_ROOT is where the .mulle-env/environment.sh is
    local MULLE_VIRTUAL_ROOT
 
-   CALLDIRECTORY="`pwd -P`"
+   callerdirectory="`pwd -P`"
 
    arg="$1"
    [ $# -ne 0 ] && shift
@@ -971,24 +681,24 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
    esac
 
-   if [ ! -z "${OPTION_DIRECTORY}" ]
+   if [ ! -z "${OPTION_directory}" ]
    then
-      DIRECTORY="${OPTION_DIRECTORY}"
+      directory="${OPTION_directory}"
    else
       if [ -z "${arg}" ]
       then
-         DIRECTORY="${CALLDIRECTORY}"
+         directory="${callerdirectory}"
          if [ "${OPTION_SEARCH}" = "DEFAULT" ]
          then
             OPTION_SEARCH="YES"
          fi
 
       else
-         DIRECTORY="$arg"
+         directory="$arg"
       fi
    fi
 
-   if [ ! -d "${DIRECTORY}" ]
+   if [ ! -d "${directory}" ]
    then
       local url
 
@@ -1005,73 +715,30 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
             fail "git not installed, can't clone stuff for you"
          fi
 
-         DIRECTORY="`basename -- "${url}" .git`"
-         log_verbose "Cloning from URL \"${arg}\" into \"${DIRECTORY}\"..."
-         git clone "${url}" "${DIRECTORY}" || return 1
+         directory="`basename -- "${url}" .git`"
+         log_verbose "Cloning from URL \"${arg}\" into \"${directory}\"..."
+         git clone "${url}" "${directory}" || return 1
       fi
    fi
 
    if [ "${OPTION_SEARCH}" = "YES" ]
    then
-      DIRECTORY="`find_best_environment "${DIRECTORY}"`"
+      directory="`find_best_environment "${directory}"`"
    fi
 
-   [ ! -d "${DIRECTORY}" ] && fail "${DIRECTORY} does not exist (init it first)"
+   [ ! -d "${directory}" ] && fail "${directory} does not exist (init it first)"
 
    local physicaldir
 
-   physicaldir="`physicalpath "${DIRECTORY}" `"
+   physicaldir="`physicalpath "${directory}" `"
    [ ! -d "${physicaldir}" ] && internal_fail "physicalpath failed"
    MULLE_VIRTUAL_ROOT="${physicaldir}"
 
    local style
+   local flavor
 
-   style="`cat "${DIRECTORY}/.mulle-env/style" 2> /dev/null`"
-   if [ -z "${style}" ]
-   then
-      fail "No mulle-env environment found.
-You must ${C_RESET_BOLD}mulle-env init \"${DIRECTORY}\"${C_ERROR} first before you can enter it."
-   fi
-
-   env_setup_if_needed "${DIRECTORY}" "${style}"
-
-   if [ "${OPTION_BOOTSTRAP}" = "YES" ] && \
-      [ -f "${DIRECTORY}/.mulle-sourcetree/config"  ] && \
-      [ ! -d "${DIRECTORY}/.mulle-sourcetree/db" ]
-   then
-      local exepath
-
-      #
-      # weird, but if there is a mulle-sourcetree folder in the top DIRECTORY
-      # you can't run mulle-sourcetree via bash so resolve before
-      #
-      exepath="`command -v mulle-sourcetree`"
-      log_fluff "Running mulle-sourcetree in \"${DIRECTORY}\"..."
-      (
-         cd "${DIRECTORY}" ;
-         "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
-            "${MULLE_VIRTUAL_ROOT}" \
-            "${PATH}" \
-            "SCRIPT" \
-            "${exepath}" "update"
-      )
-
-      if [ $? -eq 0 ]
-      then
-         exepath="`command -v mulle-build`"
-         log_fluff "Running mulle-build in \"${DIRECTORY}\"..."
-         (
-            cd "${DIRECTORY}" ;
-            "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
-               "${MULLE_VIRTUAL_ROOT}" \
-               "${PATH}" \
-               "SCRIPT" \
-               "${exepath}"
-         )
-      fi
-   fi
-
-   log_fluff "Run shell in \"${DIRECTORY}\"..."
+   __get_saved_style_flavor "${directory}"
+   __load_flavor_plugin "${flavor}"
 
    local run_shell_args
    local inherit_path
@@ -1090,21 +757,23 @@ You must ${C_RESET_BOLD}mulle-env init \"${DIRECTORY}\"${C_ERROR} first before y
       ;;
    esac
 
+   env_setup_if_needed "${directory}" "${flavor}"
+
    local runpath
-   local rootdir
 
-   rootdir="`absolutepath ${MULLE_VIRTUAL_ROOT}`"
-
-   case "${style}" in
-      mulle:*)
-      runpath="`colon_concat "${runpath}" "${rootdir}/dependencies/bin" `"
-      runpath="`colon_concat "${runpath}" "${rootdir}/addictions/bin" `"
-   esac
-
-   runpath="`colon_concat "${runpath}" "${rootdir}/bin" `"
+   runpath="`colon_concat "${runpath}" "${MULLE_VIRTUAL_ROOT}/bin" `"
    runpath="`colon_concat "${runpath}" "${inherit_path}" `"
+   runpath="`apply_flavor_to_runpath "${MULLE_VIRTUAL_ROOT}" "${flavor}" "${runpath}" `"
 
    log_debug "future PATH=${runpath}"
+
+   apply_style_to_directory "${MULLE_VIRTUAL_ROOT}" "${style}" "${flavor}"
+
+   #
+   #
+   #
+   log_fluff "Run shell in \"${directory}\"..."
+
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
@@ -1132,7 +801,7 @@ You must ${C_RESET_BOLD}mulle-env init \"${DIRECTORY}\"${C_ERROR} first before y
    # otherwise provide a minimal environment, for better reproducability
    #
    (
-      cd "${DIRECTORY}" &&
+      cd "${directory}" &&
       eval env -i \
              "${s}" \
              "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \

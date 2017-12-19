@@ -1,4 +1,4 @@
-# mulle-env `virtualenv` for bash
+# mulle-env, 🌳 Virtual environment for Unix
 
 mulle-env is a terminal based software development environment. It opens a
 sub-shell, with a restricted environment. Developing inside a **mulle-env**
@@ -67,12 +67,13 @@ USER=nat
 _=/Volumes/Source/srcO/MulleObjC-master/bin/env
 ```
 
-The `PATH` does not "escape" the virtual root as defined `MULLE_VIRTUAL_ROOT`.
+Notice the absence of most environment variables and see how restricted the
+`PATH` has become.
 
 
 ## Prepare a directory to use mulle-env
 
-A directory must be set up properly, before you can use **mulle-env** on it.
+A directory must be "init"ed, before you can use **mulle-env** with it.
 Let's try an example with a `/tmp/a` directory. We want a minimal portable set
 of commandline tools, so we specify the style as "none:empty".
 
@@ -84,17 +85,22 @@ And this is what happens:
 
 ```
 $ mulle-env /tmp/a
+Did set up mulle-env environment in "/tmp/a"
+To enter the environment say:
+      mulle-env "/tmp/a"
+$ mulle-env "/tmp/a"
 $ ls
 bin
 $ echo $PATH
 /private/tmp/a/bin
-$ cd bin
-$ ls -l
-total 336
-lrwxr-xr-x  1 nat  wheel  12 Dec 18 15:40 awk -> /usr/bin/awk
-lrwxr-xr-x  1 nat  wheel  17 Dec 18 15:40 basename -> /usr/bin/basename
+$ ls -l bin
+total 328
+lrwxr-xr-x  1 nat  wheel  12 Dec 19 16:20 awk -> /usr/bin/awk
+lrwxr-xr-x  1 nat  wheel  17 Dec 19 16:20 basename -> /usr/bin/basename
 ...
-lrwxr-xr-x  1 nat  wheel  14 Dec 18 15:40 which -> /usr/bin/which
+...
+...
+lrwxr-xr-x  1 nat  wheel  14 Dec 19 16:20 which -> /usr/bin/which
 ```
 
 ## Enter the subshell
@@ -110,28 +116,31 @@ exit
 ```
 
 
-## Adding tools
+## Add more commandline tools
 
 > It is assumed, that your project is still in `/tmp/a`.
 
-You modify the `.mulle-env-tools` file like this:
+Edit the `.mulle-env/tools` file. The re-enter the sub-shell.
+For example like this:
 
 ```
 echo "cc" >> /tmp/a/.mulle-env/tools
 mulle-env /tmp/a
 ```
 
-## Adding environment variables
+## Add environment variables
 
-During start of the subshell the file `.mulle-env/environment.sh` will be
-sourced. You can easily expand this file. Unless you reinitialize, your edits
-will be safe. Do not forget to `export` your environment variables.
+During the start of the sub-shell the file `.mulle-env/environment.sh` will be
+sourced. You can easily expand this file. Unless you reinitialize with
+"mulle-sde init -f", your edits will be safe.
+
+> Hint: Do not forget to `export` your environment variables.
 
 
 ## Tips and Tricks
 
 
-#### Allow /bin and /usr/bin always
+#### Add /bin and /usr/bin to your sub-shell PATH
 
 Use `mulle-env -style none:restricted init` when initalizing your environment.
 

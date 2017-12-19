@@ -186,6 +186,14 @@ main()
       mkdir -p "${libexec}" 2> /dev/null
       install -v -m "${mode}" "${i}" "${libexec}" || exit 1
    done
+
+
+   PLUGIN_DIR="${libexec}/plugins"
+   for i in src/plugins/*.sh
+   do
+      mkdir -p "${PLUGIN_DIR}" 2> /dev/null
+      install -v -m "${mode}" "${i}" "${PLUGIN_DIR}" || exit 1
+   done
 }
 
 main "$@"
