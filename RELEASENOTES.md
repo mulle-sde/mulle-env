@@ -1,3 +1,7 @@
+### 0.7.2
+
+* use mulle-craft instead of mulle-build now
+
 ### 0.7.1
 
 * various bugfixes

@@ -34,7 +34,7 @@ then
    set -x
 fi
 
-MULLE_ENV_VERSION="0.7.1"
+MULLE_ENV_VERSION="0.7.2"
 
 MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:none}"
 

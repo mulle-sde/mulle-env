@@ -51,7 +51,7 @@ case "\${MULLE_UNAME}" in
    ;;
 esac
 
-MULLE_FETCH_SEARCH_PATH="${MULLE_VIRTUAL_ROOT}/..`"
+MULLE_FETCH_SEARCH_PATH="${MULLE_VIRTUAL_ROOT}/.."
 MULLE_SYMLINK="YES"
 
 #
@@ -266,7 +266,7 @@ env_setup_mulle_tools()
       env_copy_mulle_tool "mulle-make"       "${directory}" &&
       env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
       env_copy_mulle_tool "mulle-sourcetree" "${directory}" &&
-      env_copy_mulle_tool "mulle-build"      "${directory}"
+      env_copy_mulle_tool "mulle-craft"      "${directory}"
    ) || return 1
 }
 
@@ -277,15 +277,15 @@ env_mulle_tools_need_update()
 
    local directory="$1"
 
-   if [ -z "`command -v mulle-build`" ]
+   if [ -z "`command -v mulle-craft`" ]
    then
-      fail "Style \"mulle\" needs mulle-build to be in PATH.
+      fail "Style \"mulle\" needs mulle-craft to be in PATH.
 
-Use \"--style none\", if you don't need mulle-build"
+Use \"--style none\", if you don't need mulle-craft"
    fi
 
    if [ "${OPTION_MAGNUM_FORCE}" = "YES" ] || \
-      [ ! -d "${directory}/bin/mulle-fetch" ]
+      [ ! -d "${directory}/bin/mulle-craft" ]
    then
       return 0
    fi
@@ -309,8 +309,8 @@ env_mulle_enter_subshell()
 
       if [ $? -eq 0 ]
       then
-         exepath="`command -v mulle-build`"
-         log_fluff "Running mulle-build in \"${directory}\"..."
+         exepath="`command -v mulle-craft`"
+         log_fluff "Running mulle-craft in \"${directory}\"..."
          (
             cd "${directory}" ;
             "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \

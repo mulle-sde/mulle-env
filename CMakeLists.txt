@@ -45,3 +45,10 @@ PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
             GROUP_EXECUTE GROUP_READ
             WORLD_EXECUTE WORLD_READ
 DESTINATION "libexec/mulle-env/plugins")
+
+
+######
+#
+# must be after CPACK_PACKAGE_VERSION
+include( CMakePackage.txt)
+include( CPack)
