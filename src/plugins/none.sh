@@ -35,6 +35,8 @@ print_none_startup_header_sh()
    log_entry "print_none_startup_header_sh" "$@"
 
    cat <<EOF
+[ "\${TRACE}" = "YES" ] && set -x  && : \${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh
+
 #
 # If mulle-env is broken, sometimes its nice just to source this file
 # But we need some stuff to get things going:
@@ -67,19 +69,28 @@ print_none_startup_footer_sh()
 #
 HOSTNAME="\`hostname -s\`" # don't export it
 
-if [ -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh" ]
+if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh" ]
 then
-   . "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh"
+   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh"
 fi
 
-if [ -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.\${HOSTNAME}-host.sh" ]
+if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.\${HOSTNAME}-host.sh" ]
 then
-   . "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${HOSTNAME}-host.sh"
+   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${HOSTNAME}-host.sh"
 fi
 
-if [ -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh" ]
+if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh" ]
 then
-   . "${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh"
+   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh"
+fi
+
+#
+# it's convenient to put changes into aux, as you can then reinit
+# with -f
+#
+if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-aux.sh" ]
+then
+   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-aux.sh"
 fi
 EOF
 }
@@ -98,6 +109,44 @@ print_none_startup_sh()
    print_none_startup_footer_sh "$@"
 }
 
+# http://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html
+#
+MINIMAL_BIN_BINARIES="
+cat
+chgrp
+chmod
+chown
+cp
+date
+dd
+df
+dmesg
+echo
+false
+hostname
+kill
+ln
+login
+ls
+mkdir
+mknod
+more
+mount
+mv
+pager
+ps
+pwd
+rm
+rmdir
+sed
+sh
+stty
+su
+sync
+true
+umount
+uname
+"
 
 # callback
 print_none_tools_sh()
@@ -120,45 +169,31 @@ print_none_tools_sh()
 #
       *)
          cat <<EOF
+${MINIMAL_BIN_BINARIES}
 awk
 basename
 bash
-cat
-chmod
-cp
-chown
+clear
 command
-date
 dirname
-echo
 ed
+egrep
 env
 expr
 find
 fgrep
 grep
 head
-hostname
 less
-ls
-ln
 man
-mkdir
 more
-mv
 readlink
-rm
-rmdir
-ps
-sed
-sh
 sleep
 sort
 stat
 tail
 test
 tr
-uname
 vi
 wc
 which

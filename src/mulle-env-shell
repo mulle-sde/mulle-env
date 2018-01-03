@@ -29,10 +29,8 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-if [ "${TRACE}" = "YES" ]
-then
-   set -x
-fi
+[ "${4}" = "YES" ] && set -x && : mulle-env-shell
+
 
 # a separate file to that env can call it. there is no error checking or
 # log output here
@@ -62,16 +60,30 @@ run_shell()
    # DYLD_LIBRARY_PATH are stripped off by dyld
    # let's source everything via an init file.
    # check vs bash/dash
+   # not sure dash can do this, or does even still exist
    #
    case "${cmd_string}" in
       *ash)
          initfile=".mulle-env.tmp.`uuidgen`" || exit 1
 
-         echo "${env_string}" > "${initfile}"
+         if [ "${TRACE}" = "YES" ]
+         then
+            echo "set -x" > "${initfile}"
+         else
+            echo "# " > "${initfile}"
+         fi
+
+         echo "${env_string}" >> "${initfile}"
          echo "[ -f \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\" ] && \
+TRACE=\"${TRACE}\" && \
 . \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\"" >> "${initfile}"
          # try to set terminal title
          echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"  >> "${initfile}"
+
+         if [ "${TRACE}" = "YES" ]
+         then
+            echo "set +x" >> "${initfile}"
+         fi
 
          if [ "${OPTION_KEEP_TMP}" = "NO" ]
          then
@@ -80,7 +92,8 @@ run_shell()
             echo "( ( /bin/sleep 1 ; /bin/rm \"${initfile}\" 2> /dev/null ) &)" >> "${initfile}"
          fi
 
-         cmd_options="--rcfile '${initfile}'"
+         # specifying --norc disables --rcfile
+         cmd_options="--rcfile '${initfile}' --noprofile"
       ;;
    esac
 
@@ -116,6 +129,7 @@ run_shell()
 
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
+        "TRACE='${TRACE}'" \
         "PATH='${RUNPATH}'" \
         "${env_string}" \
         "${prompt_string}" \
@@ -177,6 +191,11 @@ main()
 
    MODE="$1"
    [ -z "${MODE}" ] && echo  "empty MODE" >&2 && exit 1
+   shift
+
+   local TRACE  # either YES or usually empty
+
+   TRACE="$1"
    shift
 
    run_shell "$@"

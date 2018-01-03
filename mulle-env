@@ -29,14 +29,14 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-if [ "${TRACE}" = "YES" ]
-then
-   set -x
-fi
+[ "${TRACE}" = "YES" ] && set -x && : mulle-env
 
 MULLE_ENV_VERSION="0.7.2"
 
-MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:none}"
+#
+# use none:restricted as the default suitable for first time users
+#
+MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-none:restricted}"
 
 
 usage()
@@ -60,7 +60,7 @@ Options:
    --no-bootstrap    : don't execute mulle-build
    --no-path         : do not inherit PATH contents
    --restricted-path : only inherit ${RESTRICTED_PATH}
-   --style <style>   :  initialize environment with a certain flavor
+   --style <style>   : initialize environment with a certain flavor
    -c <cmd>          : shell command to execute instead of interactive shell
    -d <dir>          : specify different directory, than the one taken from the url
 
@@ -121,7 +121,7 @@ env_link_other_tool()
    filename="`command -v "${toolname}" `"
    if [ -z "${filename}" ]
    then
-      fail "Required tool \"${filename}\" not found"
+      fail "Required tool \"${toolname}\" not found"
    fi
 
    log_fluff "Creating symlink \"${bindir}/${toolname}\""
@@ -226,6 +226,7 @@ env_setup_if_needed()
    then
       if ${callback} "${directory}"
       then
+         log_fluff "Flavor \"${flavor}\" needs update"
          needs_flavor_update="YES"
       fi
    fi
@@ -263,6 +264,7 @@ env_setup_if_needed()
       if [ "${OPTION_MAGNUM_FORCE}" = "YES" -a -f "${toolfile}" ] || \
          [ "${toolfile}" -nt "${uptodatefile}" ]
       then
+         log_fluff "Tools \"${toolfile}\" needs update"
          needs_bin_update="`add_line "${needs_bin_update}" "${toolfile}" `"
       fi
    done
@@ -319,6 +321,7 @@ You must ${C_RESET_BOLD}mulle-env init \"${directory}\"${C_ERROR} first before y
    fi
    flavor="`cut -d: -f1 <<< "${style}"`"
 }
+
 
 __get_user_style_flavor()
 {
@@ -462,16 +465,21 @@ env_init()
    __load_flavor_plugin "${flavor}"
 
    log_verbose "Creating \"${envfile}\""
-   if ! print_${flavor}_startup_sh "${style}" > "${envfile}"
+
+   local text
+
+   if ! text="`print_${flavor}_startup_sh "${style}" `"
    then
       return 1
    fi
+   redirect_exekutor "${envfile}" echo "${text}"
 
    log_verbose "Creating \"${toolsfile}\""
-   if ! print_${flavor}_tools_sh "${style}" > "${toolsfile}"
+   if ! text="`print_${flavor}_tools_sh "${style}" `"
    then
       return 1
    fi
+   redirect_exekutor "${toolsfile}" echo "${text}"
 
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
@@ -802,6 +810,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    [ ! -z "${EDITOR}" ]  && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
    [ ! -z "${HOME}" ]    && s="`concat "${s}" "HOME='${HOME}'"`"
    [ ! -z "${LOGNAME}" ] && s="`concat "${s}" "LOGNAME='${LOGNAME}'"`"
+   [ ! -z "${LS_COLORS}" ] && s="`concat "${s}" "LS_COLORS='${LS_COLORS}'"`"
    [ ! -z "${SSH_CONNECTION}" ] \
                          && s="`concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'"`"
    [ ! -z "${SSH_TTY}" ] && s="`concat "${s}" "SSH_TTY='${SSH_TTY}'"`"
@@ -822,6 +831,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
                "'${MULLE_VIRTUAL_ROOT}'" \
                "'${runpath}'" \
                "INTERACTIVE" \
+               "${TRACE}" \
                "${run_shell_args}"
    )
    return $?
@@ -919,7 +929,7 @@ _init()
       exit 0
    fi
 
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-path 2> /dev/null`"
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir 2> /dev/null`"
    [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && \
       echo "mulle-bashfunctions-env not installed" >&2 && \
       exit 1
@@ -935,7 +945,7 @@ _init()
    #
    # minimal setup exit
    #
-   if [ "$1" = "libexec-path" ]
+   if [ "$1" = "libexec-dir" ]
    then
       echo "${MULLE_ENV_LIBEXEC_DIR}"
       exit 0

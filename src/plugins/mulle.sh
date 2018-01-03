@@ -125,7 +125,7 @@ env_copy_mulle_tool()
    local parentdir
    local srclibname
 
-   srclibdir="`exekutor "${exefile}" libexec-path `" || exit 1
+   srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
    srclibexecdir="`dirname -- "${srclibdir}" `"
    srclibname="`basename -- "${srclibdir}" `"
 
@@ -152,9 +152,13 @@ env_copy_mulle_tool()
       dstlibdir="${directory}/libexec/${dstlibname}"
    fi
 
+   # remove previous symlinks or files
+   remove_file_if_present "${dstexefile}"
+   remove_file_if_present "${dstlibdir}" || rmdir_safer "${dstlibdir}"
+
    #
    # Developer option, since I don't want to edit copies. Doesn't work
-   # on mingw, but shucks
+   # on mingw, but shucks.
    #
    if [ "${srclibname}" = "src" -a "${MULLE_ENV_DEVELOPER}" != "NO" ]
    then
@@ -281,12 +285,17 @@ env_mulle_tools_need_update()
    then
       fail "Style \"mulle\" needs mulle-craft to be in PATH.
 
-Use \"--style none\", if you don't need mulle-craft"
+Reinit with \"--style none\", if you don't need mulle-craft"
    fi
 
-   if [ "${OPTION_MAGNUM_FORCE}" = "YES" ] || \
-      [ ! -d "${directory}/bin/mulle-craft" ]
+   if [ "${OPTION_MAGNUM_FORCE}" = "YES" ]
    then
+      return 0
+   fi
+
+   if [ ! -e "${directory}/bin/mulle-craft" ]
+   then
+      log_fluff "\"${directory}/bin/mulle-craft\" is not there yet"
       return 0
    fi
 
@@ -317,6 +326,7 @@ env_mulle_enter_subshell()
                "${MULLE_VIRTUAL_ROOT}" \
                "${PATH}" \
                "SCRIPT" \
+               "${TRACE}" \
                "${exepath}" "--share"
          )
       fi
