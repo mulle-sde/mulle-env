@@ -41,17 +41,17 @@ print_mulle_startup_body_sh()
 #
 case "\${MULLE_UNAME}" in
    darwin)
-      MULLE_FETCH_MIRROR_DIR="~/Library/Caches/mulle-fetch/git-mirrors"
-      MULLE_FETCH_ARCHIVE_DIR="~/Library/Caches/mulle-fetch/archives"
+      MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/git-mirrors"
+      MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/archives"
    ;;
 
    *)
-      MULLE_FETCH_MIRROR_DIR="~/.cache/mulle-fetch/git-mirrors"
-      MULLE_FETCH_ARCHIVE_DIR="~/.cache/mulle-fetch/archives"
+      MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/git-mirrors"
+      MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/archives"
    ;;
 esac
 
-MULLE_FETCH_SEARCH_PATH="${MULLE_VIRTUAL_ROOT}/.."
+MULLE_FETCH_SEARCH_PATH="\${MULLE_VIRTUAL_ROOT}/.."
 MULLE_SYMLINK="YES"
 
 #
@@ -201,6 +201,7 @@ print_mulle_tools_sh()
    #
    cat <<EOF
 curl
+column
 git
 uuidgen
 EOF

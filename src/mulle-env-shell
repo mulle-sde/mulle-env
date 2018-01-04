@@ -34,6 +34,35 @@
 
 # a separate file to that env can call it. there is no error checking or
 # log output here
+emit_initfile()
+{
+   if [ "${TRACE}" = "YES" ]
+   then
+      echo "set -x"
+   fi
+
+   echo "${env_string}" >> "${initfile}"
+   echo "[ -f \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\" ] && \
+TRACE=\"${TRACE}\" && \
+. \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\""
+   # try to set terminal title
+   echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
+
+   if [ "${TRACE}" = "YES" ]
+   then
+      echo "set +x"
+   fi
+   echo "unset TRACE"
+
+
+   if [ "${OPTION_KEEP_TMP}" = "NO" ]
+   then
+      # run in envelope subshell to squelch job control message
+      # remove all f
+      echo "( ( /bin/sleep 1 ; /bin/rm \"${initfile}\" 2> /dev/null ) &)"
+   fi
+}
+
 
 run_shell()
 {
@@ -66,31 +95,7 @@ run_shell()
       *ash)
          initfile=".mulle-env.tmp.`uuidgen`" || exit 1
 
-         if [ "${TRACE}" = "YES" ]
-         then
-            echo "set -x" > "${initfile}"
-         else
-            echo "# " > "${initfile}"
-         fi
-
-         echo "${env_string}" >> "${initfile}"
-         echo "[ -f \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\" ] && \
-TRACE=\"${TRACE}\" && \
-. \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\"" >> "${initfile}"
-         # try to set terminal title
-         echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"  >> "${initfile}"
-
-         if [ "${TRACE}" = "YES" ]
-         then
-            echo "set +x" >> "${initfile}"
-         fi
-
-         if [ "${OPTION_KEEP_TMP}" = "NO" ]
-         then
-            # run in envelope subshell to squelch job control message
-            # remove all f
-            echo "( ( /bin/sleep 1 ; /bin/rm \"${initfile}\" 2> /dev/null ) &)" >> "${initfile}"
-         fi
+         emit_initfile > "${initfile}"
 
          # specifying --norc disables --rcfile
          cmd_options="--rcfile '${initfile}' --noprofile"

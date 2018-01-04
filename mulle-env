@@ -806,18 +806,23 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 
    s=""
 
-   [ ! -z "${DISPLAY}" ] && s="`concat "${s}" "DISPLAY='${DISPLAY}'"`"
-   [ ! -z "${EDITOR}" ]  && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
-   [ ! -z "${HOME}" ]    && s="`concat "${s}" "HOME='${HOME}'"`"
-   [ ! -z "${LOGNAME}" ] && s="`concat "${s}" "LOGNAME='${LOGNAME}'"`"
+   [ ! -z "${DISPLAY}" ]   && s="`concat "${s}" "DISPLAY='${DISPLAY}'"`"
+   [ ! -z "${EDITOR}" ]    && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
+   [ ! -z "${HOME}" ]      && s="`concat "${s}" "HOME='${HOME}'"`"
+   [ ! -z "${LOGNAME}" ]   && s="`concat "${s}" "LOGNAME='${LOGNAME}'"`"
    [ ! -z "${LS_COLORS}" ] && s="`concat "${s}" "LS_COLORS='${LS_COLORS}'"`"
    [ ! -z "${SSH_CONNECTION}" ] \
-                         && s="`concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'"`"
-   [ ! -z "${SSH_TTY}" ] && s="`concat "${s}" "SSH_TTY='${SSH_TTY}'"`"
-   [ ! -z "${TERM}" ]    && s="`concat "${s}" "TERM='${TERM}'"`"
-   [ ! -z "${TMPDIR}" ]  && s="`concat "${s}" "TMPDIR='${TMPDIR}'"`"
-   [ ! -z "${USER}" ]    && s="`concat "${s}" "USER='${USER}'"`"
-   [ ! -z "${VISUAL}" ]  && s="`concat "${s}" "VISUAL='${VISUAL}'"`"
+                           && s="`concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'"`"
+   [ ! -z "${SSH_TTY}" ]   && s="`concat "${s}" "SSH_TTY='${SSH_TTY}'"`"
+   [ ! -z "${TERM}" ]      && s="`concat "${s}" "TERM='${TERM}'"`"
+   [ ! -z "${TMPDIR}" ]    && s="`concat "${s}" "TMPDIR='${TMPDIR}'"`"
+   [ ! -z "${USER}" ]      && s="`concat "${s}" "USER='${USER}'"`"
+   [ ! -z "${VISUAL}" ]    && s="`concat "${s}" "VISUAL='${VISUAL}'"`"
+   [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
+                           && s="`concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'"`"
+
+   # remember old path
+   s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
 
    #
    # home is needed for git

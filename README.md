@@ -10,7 +10,7 @@ sub-shell protects you from the following common mistakes:
 Executable          | Description
 --------------------|--------------------------------
 `mulle-env`         | Virtual environment sub-shell
-
+`mudo`              | Run a command with the unrestricted PATH
 
 
 ## Install
@@ -140,9 +140,9 @@ mulle-env /tmp/a
 
 ## Add environment variables
 
-During the start of the sub-shell the file `.mulle-env/environment.sh` will be
-sourced. You can edit this file. Unless you reinitialize with
-"mulle-sde init -f", your changes will be safe.
+During the start of the sub-shell the file `.mulle-env/environment-aux.sh` will 
+be sourced. Even if you reinitialize with "mulle-sde init -f", your edits are 
+safe.
 
 > Hint: Do not forget to `export` your environment variables.
 
@@ -153,10 +153,12 @@ sourced. You can edit this file. Unless you reinitialize with
 #### Add /bin and /usr/bin to your sub-shell PATH
 
 Use `mulle-env -style none:restricted init` when initalizing your environment.
+`none:restricted` is the default.
 
 #### Reinitialize an environment
 
 Use `mulle-env -f init` to overwrite a previous environment.
+
 
 #### Specify a global list of tools
 

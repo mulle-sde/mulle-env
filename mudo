@@ -1,0 +1,10 @@
+#! /bin/sh
+
+[ "${TRACE}" = "YES" ] && set -x && : mudo
+
+if [ -z "${MULLE_OLDPATH}" ]
+then
+   exec "$@"
+else
+   PATH="${MULLE_OLDPATH}" exec "$@"
+fi
