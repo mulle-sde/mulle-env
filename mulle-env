@@ -34,9 +34,10 @@
 MULLE_ENV_VERSION="0.7.2"
 
 #
-# use none:restricted as the default suitable for first time users
+# use mulle:restricted as the default suitable for first time mulle-sde
+# users
 #
-MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-none:restricted}"
+MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:restricted}"
 
 
 usage()

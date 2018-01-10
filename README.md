@@ -1,7 +1,6 @@
 # mulle-env, 🌳 Virtual environment for Unix
 
-mulle-env is a terminal based software development environment. It opens a
-sub-shell, with a restricted environment. Developing inside a **mulle-env**
+**mulle-env** is a sub-shell that provides a restricted environment. Developing inside the **mulle-env**
 sub-shell protects you from the following common mistakes:
 
 * inadvertant reliance on non-standard tools
@@ -140,8 +139,8 @@ mulle-env /tmp/a
 
 ## Add environment variables
 
-During the start of the sub-shell the file `.mulle-env/environment-aux.sh` will 
-be sourced. Even if you reinitialize with "mulle-sde init -f", your edits are 
+During the start of the sub-shell the file `.mulle-env/environment-aux.sh` will
+be sourced. Even if you reinitialize with "mulle-sde init -f", your edits are
 safe.
 
 > Hint: Do not forget to `export` your environment variables.
@@ -153,7 +152,7 @@ safe.
 #### Add /bin and /usr/bin to your sub-shell PATH
 
 Use `mulle-env -style none:restricted init` when initalizing your environment.
-`none:restricted` is the default.
+> `mulle:restricted` is the default as it gives access to the **mulle-sde**.
 
 #### Reinitialize an environment
 

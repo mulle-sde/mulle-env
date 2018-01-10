@@ -237,6 +237,19 @@ EOF
 }
 
 
+print_mulle_startup_footer_sh()
+{
+   print_none_startup_footer_sh
+
+   cat << EOF
+
+   if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd" ]
+   then
+      cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd"
+   fi
+EOF
+}
+
 
 ## callback
 print_mulle_startup_sh()
@@ -245,7 +258,7 @@ print_mulle_startup_sh()
 
    print_none_startup_header_sh "$@"
    print_mulle_startup_body_sh "$@"
-   print_none_startup_footer_sh "$@"
+   print_mulle_startup_footer_sh "$@"
 }
 
 
@@ -271,7 +284,8 @@ env_setup_mulle_tools()
       env_copy_mulle_tool "mulle-make"       "${directory}" &&
       env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
       env_copy_mulle_tool "mulle-sourcetree" "${directory}" &&
-      env_copy_mulle_tool "mulle-craft"      "${directory}"
+      env_copy_mulle_tool "mulle-craft"      "${directory}" &&
+      env_copy_mulle_tool "mulle-sde"        "${directory}"
    ) || return 1
 }
 

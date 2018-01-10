@@ -40,8 +40,8 @@ emit_initfile()
    then
       echo "set -x"
    fi
+   echo "set +o posix"  # turn back to default
 
-   echo "${env_string}" >> "${initfile}"
    echo "[ -f \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\" ] && \
 TRACE=\"${TRACE}\" && \
 . \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\""
@@ -70,7 +70,7 @@ run_shell()
 
    envname="`basename -- "${MULLE_VIRTUAL_ROOT}"`"
 
-   local env_string
+   local cmd_env
    local cmd_string
    local cmd_options
 
@@ -91,34 +91,16 @@ run_shell()
    # check vs bash/dash
    # not sure dash can do this, or does even still exist
    #
-   case "${cmd_string}" in
-      *ash)
-         initfile=".mulle-env.tmp.`uuidgen`" || exit 1
+   initfile=".mulle-env.tmp.`uuidgen`" || exit 1
 
-         emit_initfile > "${initfile}"
+   emit_initfile > "${initfile}"
 
-         # specifying --norc disables --rcfile
-         cmd_options="--rcfile '${initfile}' --noprofile"
-      ;;
-   esac
+   #
+   # only way to avoid SYS_BASHRC is to go posix
+   #
+   cmd_env="ENV='${initfile}'"
+   cmd_options="--posix --noprofile"
 
-   case "${cmd_string}" in
-      *ash)
-         case "${PS1}" in
-            *\\h[*)
-               prompt_string="PS1='${PS1}'"
-            ;;
-
-            *\\h*)
-               prompt_string="PS1='$(sed "s/\\\\h/\\\\h\\[${envname}\\]/" <<< "${PS1}")"
-            ;;
-
-            *)
-               prompt_string="PS1='\u@\h[${envname}] \W$ '"
-            ;;
-         esac
-      ;;
-   esac
 
    local args
 
@@ -136,8 +118,9 @@ run_shell()
         "MULLE_SHELL_MODE='${MODE}'" \
         "TRACE='${TRACE}'" \
         "PATH='${RUNPATH}'" \
-        "${env_string}" \
+        "PS1='${PS1}'" \
         "${prompt_string}" \
+        "${cmd_env}" \
             "'${cmd_string}'" \
                "${cmd_options}" \
                "${args}"

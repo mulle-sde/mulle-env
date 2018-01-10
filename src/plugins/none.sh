@@ -54,6 +54,27 @@ then
 your convenience" >&2
 fi
 
+
+#
+# Set PS1 so that we can see, that we are in a mulle-env
+#
+envname="\`basename -- "\${MULLE_VIRTUAL_ROOT}"\`"
+
+case "\${PS1}" in
+   *\\\\h\\[*)
+   ;;
+
+   *\\\\h*)
+      PS1="\$(sed 's/\\\\h/\\\\h\\['\${envname}'\\]/' <<< '\${PS1}' )"
+   ;;
+
+   *)
+      PS1='\\u@\\h['\${envname}'] \\W\$ '
+   ;;
+esac
+
+unset envname
+
 EOF
 }
 
