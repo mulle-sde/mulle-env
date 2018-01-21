@@ -1,3 +1,11 @@
+### 0.7.3
+
+* optional tools added
+* use --posix mode to avoid SYS_BASHRC backdoor on debian/linux
+* add mudo command
+* improve TRACE facility
+* add environment-aux.sh to read files
+
 ### 0.7.2
 
 * use mulle-craft instead of mulle-build now

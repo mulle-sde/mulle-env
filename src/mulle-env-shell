@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${4}" = "YES" ] && set -x && : mulle-env-shell
+[ "${5}" = "YES" ] && set -x && : mulle-env-shell
 
 
 # a separate file to that env can call it. there is no error checking or
@@ -96,11 +96,20 @@ run_shell()
    emit_initfile > "${initfile}"
 
    #
-   # only way to avoid SYS_BASHRC is to go posix
+   # The only way to avoid SYS_BASHRC is to go posix.
+   # But --posix doesn't work propely on darwin. But that doesn't have
+   # SYS_BASHRC ...
    #
-   cmd_env="ENV='${initfile}'"
-   cmd_options="--posix --noprofile"
+   case "${MULLE_UNAME}" in
+      darwin)
+        cmd_options="--noprofile --rcfile '${initfile}'"
+      ;;
 
+      *)
+        cmd_env="ENV='${initfile}'"
+        cmd_options="--posix --noprofile"
+      ;;
+   esac
 
    local args
 
@@ -116,9 +125,9 @@ run_shell()
 
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
+        "MULLE_UNAME='${MULLE_UNAME}'" \
         "TRACE='${TRACE}'" \
         "PATH='${RUNPATH}'" \
-        "PS1='${PS1}'" \
         "${prompt_string}" \
         "${cmd_env}" \
             "'${cmd_string}'" \
@@ -163,22 +172,28 @@ main()
       shift
    done
 
+   local MULLE_UNAME
+
+   MULLE_UNAME="$1"
+   [ -z "${MULLE_UNAME}" ] && echo "empty MULLE_UNAME" >&2 && exit 1
+   shift
+
    local MULLE_VIRTUAL_ROOT
 
    MULLE_VIRTUAL_ROOT="$1"
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && echo  "empty RUNPATH" >&2 && exit 1
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && echo "empty MULLE_VIRTUAL_ROOT" >&2 && exit 1
    shift
 
    local RUNPATH
 
    RUNPATH="$1"
-   [ -z "${RUNPATH}" ] && echo  "empty RUNPATH" >&2 && exit 1
+   [ -z "${RUNPATH}" ] && echo "empty RUNPATH" >&2 && exit 1
    shift
 
    local MODE  # either SCRIPT or INTERACTIVE
 
    MODE="$1"
-   [ -z "${MODE}" ] && echo  "empty MODE" >&2 && exit 1
+   [ -z "${MODE}" ] && echo "empty MODE" >&2 && exit 1
    shift
 
    local TRACE  # either YES or usually empty

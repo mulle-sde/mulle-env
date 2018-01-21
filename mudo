@@ -1,7 +1,23 @@
 #! /bin/sh
 
-[ "${TRACE}" = "YES" ] && set -x && : mudo
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
+if [ $# -eq 0 ]
+then
+   cat <<EOF >&2
+usage:
+   mudo <command> ...
+
+   mudo is like sudo, except simpler. And it doesn't make you superuser.
+   But your PATH will be unrestricted, when executing <command> and it's
+   arguments.
+EOF
+   exit 1
+fi
+
+#
+# does not work with builtins like `command -v ps`
+#
 if [ -z "${MULLE_OLDPATH}" ]
 then
    exec "$@"

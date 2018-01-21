@@ -127,9 +127,8 @@ exit
 
 ## Add more commandline tools
 
-> It is assumed, that your project is still in `/tmp/a`.
-
-Edit the `.mulle-env/tools` file. The re-enter the sub-shell.
+It is assumed, that your project is still in `/tmp/a`.
+Edit the `.mulle-env/tools` file. Then re-enter the sub-shell.
 For example like this:
 
 ```

@@ -237,16 +237,33 @@ EOF
 }
 
 
+print_mulle_optional_tools_sh()
+{
+   log_entry "print_mulle_optional_tools_sh" "$@"
+
+   print_none_optional_tools_sh "$@"
+
+   cat <<EOF
+fswatch
+inotifywait
+EOF
+}
+
+
+
 print_mulle_startup_footer_sh()
 {
    print_none_startup_footer_sh
 
    cat << EOF
 
-   if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd" ]
-   then
-      cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd"
-   fi
+#
+# show motd, if any
+#
+if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd" ]
+then
+   cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd"
+fi
 EOF
 }
 
@@ -285,7 +302,8 @@ env_setup_mulle_tools()
       env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
       env_copy_mulle_tool "mulle-sourcetree" "${directory}" &&
       env_copy_mulle_tool "mulle-craft"      "${directory}" &&
-      env_copy_mulle_tool "mulle-sde"        "${directory}"
+      env_copy_mulle_tool "mulle-sde"        "${directory}" &&
+      env_copy_mulle_tool "mulle-env"        "${directory}"
    ) || return 1
 }
 
@@ -338,6 +356,7 @@ env_mulle_enter_subshell()
          (
             cd "${directory}" ;
             "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
+               "${MULLE_UNAME}" \
                "${MULLE_VIRTUAL_ROOT}" \
                "${PATH}" \
                "SCRIPT" \

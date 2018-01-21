@@ -35,11 +35,13 @@ print_none_startup_header_sh()
    log_entry "print_none_startup_header_sh" "$@"
 
    cat <<EOF
-[ "\${TRACE}" = "YES" ] && set -x  && : \${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh
+[ "\${TRACE}" = "YES" ] && set -x  && : \$0 "\$@"
 
 #
-# If mulle-env is broken, sometimes its nice just to source this file
-# But we need some stuff to get things going:
+# If mulle-env is broken, sometimes its nice just to source this file.
+# If you're sourcing this manually on a regular basis, you're doint it wrong.
+#
+# We need some minimal stuff to get things going though:
 #     sed, cut, tr, hostname, pwd, uname
 #
 if [ -z "\${MULLE_UNAME}" ]
@@ -72,6 +74,7 @@ case "\${PS1}" in
       PS1='\\u@\\h['\${envname}'] \\W\$ '
    ;;
 esac
+export PS1
 
 unset envname
 
@@ -130,6 +133,7 @@ print_none_startup_sh()
    print_none_startup_footer_sh "$@"
 }
 
+#
 # http://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html
 #
 MINIMAL_BIN_BINARIES="
@@ -168,8 +172,13 @@ umount
 uname
 "
 
+#
+# somewhat arbitrarily hand-picked. Rule of thumb: if a mulle scripts use
+# it, it's in here for sure (like base64 by mulle-sourcetree)
+#
 EXPECTED_DEVELOPER_BINARIES="awk
 basename
+base64
 bash
 clear
 command
@@ -184,21 +193,21 @@ fgrep
 grep
 head
 less
-man
 more
-nroff
-pager
 readlink
 sleep
 sort
 stat
 tail
-tbl
 test
 tr
+uuidgen
 vi
 wc
 which"
+
+
+# monitor needs it, but not all platforms will have it
 
 
 # callback
@@ -234,4 +243,27 @@ EOF
    fi
 }
 
+
+print_none_optional_tools_sh()
+{
+   log_entry "print_none_optional_tools_sh" "$@"
+
+   #
+   # set of "minimal" commands for use in development
+   #
+   case "$1" in
+      *:inherit)
+         return
+      ;;
+   esac
+
+   cat <<EOF
+${OPTIONAL_BINARIES}
+EOF
+
+   if [ ! -z "${OPTION_OTHER_OPTIONAL_TOOLS}" ]
+   then
+      echo "${OPTION_OTHER_OPTIONAL_TOOLS}"
+   fi
+}
 

@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : mulle-env
 
-MULLE_ENV_VERSION="0.7.2"
+MULLE_ENV_VERSION="0.7.3"
 
 #
 # use mulle:restricted as the default suitable for first time mulle-sde
@@ -44,7 +44,7 @@ usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE} [options] [commands] [path|url]
+   ${MULLE_EXECUTABLE_NAME} [options] [commands] [path|url]
 
    Create a virtual environment for project in directory.
    If the directory at path does not exist and the path looks like an url,
@@ -52,8 +52,8 @@ Usage:
 
 Commands:
    init              : set up the environment for the first time
-   uname             : return the mulle-env specfic uname
-   version           : return the mulle-env version (no options possible)
+   uname             : return the ${MULLE_EXECUTABLE_NAME} specfic uname
+   version           : return the ${MULLE_EXECUTABLE_NAME} version
    --                : enter the environment. Can be left out if path, url are
                        not named like the other commands.
 Options:
@@ -116,13 +116,20 @@ env_link_other_tool()
 
    local toolname="$1"
    local bindir="$2"
+   local isrequired="$3"
 
    local filename
 
    filename="`command -v "${toolname}" `"
    if [ -z "${filename}" ]
    then
-      fail "Required tool \"${toolname}\" not found"
+      if [ "${isrequired}" = "YES" ]
+      then
+         fail "Required tool \"${toolname}\" not found"
+      fi
+
+      log_fluff "\"${toolname}\" not found, but it's optional"
+      return 1
    fi
 
    log_fluff "Creating symlink \"${bindir}/${toolname}\""
@@ -137,6 +144,7 @@ env_link_other_tools()
 
    local toolnames="$1"
    local directory="$2"
+   local isrequired="$3"
 
    local toolname
 
@@ -157,7 +165,7 @@ env_link_other_tools()
          continue
       fi
 
-      env_link_other_tool "${toolname}" "${bindir}"
+      env_link_other_tool "${toolname}" "${bindir}" "${isrequired}"
    done
 
    IFS="${DEFAULT_IFS}"
@@ -168,6 +176,8 @@ env_link_other_tools()
 
 env_other_tool_files()
 {
+   log_entry "env_other_tool_files" "$@"
+
    local configdir="$1"
 
    [ -z "${configdir}" ] && internal_fail "configdir must not be empty"
@@ -175,14 +185,18 @@ env_other_tool_files()
    if [ ! -z "${HOME}" ]
    then
       echo "${HOME}/.config/mulle-env/tools"
+      echo "${HOME}/.config/mulle-env/optional-tools"
    fi
 
    echo "${configdir}/.mulle-env/tools"
+   echo "${configdir}/.mulle-env/optional-tools"
 }
 
 
 env_setup_other_tools()
 {
+   log_entry "env_setup_other_tools" "$@"
+
    local toolfiles="$1"
    local directory="$2"
 
@@ -197,7 +211,15 @@ env_setup_other_tools()
 
       if tools="`cat "${toolfile}" `"
       then
-         env_link_other_tools "${tools}" "${directory}"
+         case "${toolfile}" in
+            optional-*|*/optional-*)
+               env_link_other_tools "${tools}" "${directory}" "NO"
+            ;;
+
+            *)
+               env_link_other_tools "${tools}" "${directory}" "YES"
+            ;;
+         esac
       fi
    done
    IFS="${DEFAULT_IFS}"
@@ -361,6 +383,7 @@ env_init()
    local OPTION_STYLE="DEFAULT"
    local OPTION_AUTOCONF="DEFAULT"
    local OPTION_OTHER_TOOLS=
+   local OPTION_BLURB="DEFAULT"
 
    while [ $# -ne 0 ]
    do
@@ -379,6 +402,14 @@ env_init()
 
          --no-autoconf)
             OPTION_AUTOCONF="NO"
+         ;;
+
+         --blurb)
+            OPTION_BLURB="YES"
+         ;;
+
+         --no-blurb)
+            OPTION_BLURB="NO"
          ;;
 
          --cmake)
@@ -445,10 +476,12 @@ env_init()
    local toolsfile
    local stylefile
    local configdir
+   local optional_toolsfile
 
    configdir="${directory}/.mulle-env"
    envfile="${configdir}/environment.sh"
    toolsfile="${configdir}/tools"
+   optional_toolsfile="${configdir}/optional-tools"
    stylefile="${configdir}/style"
 
    if [ "${OPTION_MAGNUM_FORCE}" != "YES" ] && [ -f "${envfile}" ]
@@ -482,13 +515,21 @@ env_init()
    fi
    redirect_exekutor "${toolsfile}" echo "${text}"
 
+   log_verbose "Creating \"${optional_toolsfile}\""
+   if ! text="`print_${flavor}_optional_tools_sh "${style}" `"
+   then
+      return 1
+   fi
+   redirect_exekutor "${optional_toolsfile}" echo "${text}"
+
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
 
-   log_info "Did set up mulle-env environment in \"${directory}\"
-To enter the environment say:
-      ${C_RESET_BOLD}mulle-env \"${directory}\"${C_INFO}"
-
+   if [ "${OPTION_BLURB}" != "NO" ]
+   then
+      log_info "Enter the environment:
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory}\"${C_INFO}"
+   fi
 }
 
 
@@ -812,6 +853,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    [ ! -z "${HOME}" ]      && s="`concat "${s}" "HOME='${HOME}'"`"
    [ ! -z "${LOGNAME}" ]   && s="`concat "${s}" "LOGNAME='${LOGNAME}'"`"
    [ ! -z "${LS_COLORS}" ] && s="`concat "${s}" "LS_COLORS='${LS_COLORS}'"`"
+   [ ! -z "${PS1}" ]       && s="`concat "${s}" "PS1='${PS1}'"`"
    [ ! -z "${SSH_CONNECTION}" ] \
                            && s="`concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'"`"
    [ ! -z "${SSH_TTY}" ]   && s="`concat "${s}" "SSH_TTY='${SSH_TTY}'"`"
@@ -834,6 +876,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       eval env -i \
              "${s}" \
              "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
+               "'${MULLE_UNAME}'" \
                "'${MULLE_VIRTUAL_ROOT}'" \
                "'${runpath}'" \
                "INTERACTIVE" \
