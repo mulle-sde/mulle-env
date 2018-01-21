@@ -1,0 +1,27 @@
+digraph G {
+    graph [rankdir = TD];
+
+    node[shape=note];
+    edge[arrowhead=none];
+
+        "mulle-env init" [ label="mulle-env init -d project --style none:empty",
+                           fontname="monospace",
+                           fontcolor="blue",
+                           shape="none" ]
+
+        "mulle-env init" -> "project" [ arrowhead="", style="dotted", label=" create"]
+         "project"     [ shape="folder", penwidth="2" ]
+        ".mulle-env"   [ shape="folder" ]
+        "bin"          [ shape="folder" ]
+
+        "tools"
+        "environment.sh"
+
+        "project" ->  ".mulle-env"
+        ".mulle-env" -> "environment.sh"
+        ".mulle-env" -> "tools"
+        ".mulle-env" -> "optional-tools"
+        ".mulle-env" -> "bin"
+        "bin" ->     "..."
+        "..." [ shape="none"]
+}

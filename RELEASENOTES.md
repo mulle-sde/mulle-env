@@ -1,3 +1,12 @@
+### 0.7.4
+
+* improve README.md a bit
+* optional tools added
+* use --posix mode to avoid SYS_BASHRC backdoor on debian/linux
+* add mudo command
+* improve TRACE facility
+* add environment-aux.sh to read files
+
 ### 0.7.3
 
 * optional tools added

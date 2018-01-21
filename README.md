@@ -83,47 +83,57 @@ Notice the absence of most environment variables and see how restricted the
 ## Prepare a directory to use mulle-env
 
 A directory must be "init"ed, before you can use **mulle-env** with it.
-Let's try an example with a `/tmp/a` directory. We want a minimal portable set
+Let's try an example with a `project` directory. We want a minimal portable set
 of commandline tools, so we specify the style as "none:empty".
 
 ```
-mulle-env init --style none:empty /tmp/a
+mulle-env init -d project --style none:empty 
 ```
 
 And this is what happens:
 
+![dox](dox/mulle-env-overview.png)
+
+
+
 ```
-$ mulle-env /tmp/a
-Did set up mulle-env environment in "/tmp/a"
-To enter the environment say:
-      mulle-env "/tmp/a"
-$ mulle-env "/tmp/a"
+$ mulle-env project
+Enter the environment:
+   mulle-env "project"
+$ mulle-env "project"
 $ ls
-bin
 $ echo $PATH
-/private/tmp/a/bin
-$ ls -l bin
-total 328
-lrwxr-xr-x  1 nat  wheel  12 Dec 19 16:20 awk -> /usr/bin/awk
-lrwxr-xr-x  1 nat  wheel  17 Dec 19 16:20 basename -> /usr/bin/basename
+/tmp/project/.mulle-env/bin
+$ ls -l $PATH
+total 0
+lrwxrwxrwx 1 nat nat 12 Jan 21 22:28 awk -> /usr/bin/awk
+lrwxrwxrwx 1 nat nat 15 Jan 21 22:28 base64 -> /usr/bin/base64
 ...
 ...
 ...
-lrwxr-xr-x  1 nat  wheel  14 Dec 19 16:20 which -> /usr/bin/which
+lrwxrwxrwx 1 nat nat 14 Jan 21 22:28 which -> /usr/bin/which
 ```
 
-## Enter the subshell
+And we leave the subshell with
+
+```
+$ exit
+```
+
+## Taskss
+
+#### Enter the subshell 
 
 ```
 mulle-env
 ```
 
-## Leave the subshell
+
+#### Leave the subshell 
 
 ```
 exit
 ```
-
 
 ## Add more commandline tools
 
@@ -163,6 +173,11 @@ Use `mulle-env -f init` to overwrite a previous environment.
 Tools that you always require can be specified globally
 `~/.config/mulle-env/tools`. These will be installed in addition to those found
 in `.mulle-env/tools`.
+
+#### Specify optionals tools
+
+Tools that are nice to have, but aren't required for building the project
+can be placed into `.mulle-env/optional-tools`.
 
 #### Specify platform specific tools
 

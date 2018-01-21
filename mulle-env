@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : mulle-env
 
-MULLE_ENV_VERSION="0.7.3"
+MULLE_ENV_VERSION="0.7.4"
 
 #
 # use mulle:restricted as the default suitable for first time mulle-sde
@@ -50,27 +50,34 @@ Usage:
    If the directory at path does not exist and the path looks like an url,
    ${MULLE_EXECUTABLE} will attempt to git clone the project from that url.
 
-Commands:
-   init              : set up the environment for the first time
-   uname             : return the ${MULLE_EXECUTABLE_NAME} specfic uname
-   version           : return the ${MULLE_EXECUTABLE_NAME} version
-   --                : enter the environment. Can be left out if path, url are
-                       not named like the other commands.
-Options:
-   --inherit-path    : use PATH as is
-   --no-bootstrap    : don't execute mulle-build
-   --no-path         : do not inherit PATH contents
-   --restricted-path : only inherit ${RESTRICTED_PATH}
-   --style <style>   : initialize environment with a certain flavor
-   -c <cmd>          : shell command to execute instead of interactive shell
-   -d <dir>          : specify different directory, than the one taken from the url
+   Styles are a toolstyle and a pathstyle, separated by ':'
 
-Styles:
+Commands:
+   init                 : set up the environment for the first time
+   uname                : return the ${MULLE_EXECUTABLE_NAME} specfic uname
+   version              : return the ${MULLE_EXECUTABLE_NAME} version
+   --                   : enter the environment. Can be left out if path, url are
+                          not named like the other commands.
+Options:
+   --style <tool:path>  : initialize environment with a certain flavor
+   -c <cmd>             : shell command to execute instead of interactive shell
+   -d <dir>             : specify different directory, than the one taken from the url
+EOF
+   options_technical_flags_usage "               : "
+
+   cat <<EOF >&2
+
+Tool-style:
    none              : no additions
    mulle             : additionally support mulle-build (default)
+
+Path-style:
+   none              : all tools must be specified in .mulle-sde/tools
+   restricted        : /bin and /usr/bin is inherited. All other tools must
+                       be specified.
+   inherit           : inherit PATH, don't use tools links
 EOF
 
-   options_technical_flags_usage
 
   exit 1
 }
@@ -188,8 +195,8 @@ env_other_tool_files()
       echo "${HOME}/.config/mulle-env/optional-tools"
    fi
 
-   echo "${configdir}/.mulle-env/tools"
-   echo "${configdir}/.mulle-env/optional-tools"
+   echo "${configdir}/tools"
+   echo "${configdir}/optional-tools"
 }
 
 
@@ -247,7 +254,7 @@ env_setup_if_needed()
    callback="env_${flavor}_tools_need_update"
    if [ "`type -t "${callback}"`" = "function" ]
    then
-      if ${callback} "${directory}"
+      if ${callback} "${configdir}"
       then
          log_fluff "Flavor \"${flavor}\" needs update"
          needs_flavor_update="YES"
@@ -259,7 +266,7 @@ env_setup_if_needed()
    local uptodatefile
    local myhost
 
-   uptodatefile="${MULLE_VIRTUAL_ROOT}/.mulle-env/.tools-updated"
+   uptodatefile="${configdir}/.tools-updated"
 
    oldhost="`cat "${uptodatefile}" 2> /dev/null`"
    myhost="`hostname -s`"
@@ -268,14 +275,14 @@ env_setup_if_needed()
    then
       log_fluff "Regenerating tools as the host has changed"
 
-      exekutor chmod ug+w "${directory}/bin" 2> /dev/null
+      exekutor chmod ug+w "${configdir}/bin" 2> /dev/null
       remove_file_if_present "${uptodatefile}"
-      exekutor chmod ug-w "${directory}/bin" 2> /dev/null
+      exekutor chmod ug-w "${configdir}/bin" 2> /dev/null
    fi
 
    IFS="
 "
-   for toolfile in `env_other_tool_files "${directory}"`
+   for toolfile in `env_other_tool_files "${configdir}"`
    do
       IFS="${DEFAULT_IFS}"
 
@@ -302,20 +309,20 @@ env_setup_if_needed()
    #
    # unprotect
    #
-   exekutor chmod -R ug+w "${directory}/bin" 2> /dev/null
-   exekutor chmod -R ug+w "${directory}/libexec" 2> /dev/null
+   exekutor chmod -R ug+w "${configdir}/bin" 2> /dev/null
+   exekutor chmod -R ug+w "${configdir}/libexec" 2> /dev/null
 
    local callback
 
    callback="env_setup_${flavor}_tools"
    if [ "`type -t "${callback}"`" = "function" ]
    then
-      ${callback} "${directory}"
+      ${callback} "${configdir}"
    fi
 
    if [ ! -z "${needs_bin_update}" ]
    then
-      env_setup_other_tools "${needs_bin_update}" "${directory}"
+      env_setup_other_tools "${needs_bin_update}" "${configdir}"
 
       log_fluff "Writing \"${uptodatefile}\""
 
@@ -325,8 +332,8 @@ env_setup_if_needed()
    #
    # protect from accidents
    #
-   exekutor chmod -R ugo-w "${directory}/bin" 2> /dev/null
-   exekutor chmod -R ugo-w "${directory}/libexec" 2> /dev/null
+   exekutor chmod -R ugo-w "${configdir}/bin" 2> /dev/null
+   exekutor chmod -R ugo-w "${configdir}/libexec" 2> /dev/null
 }
 
 
@@ -334,13 +341,13 @@ __get_saved_style_flavor()
 {
    log_entry "__get_saved_style_flavor" "$@"
 
-   local directory="$1"
+   local configdir="$1"
 
-   style="`cat "${directory}/.mulle-env/style" 2> /dev/null`"
+   style="`cat "${configdir}/style" 2> /dev/null`"
    if [ -z "${style}" ]
    then
       fail "No mulle-env environment found.
-You must ${C_RESET_BOLD}mulle-env init \"${directory}\"${C_ERROR} first before you can enter it."
+You must ${C_RESET_BOLD}mulle-env init \"${configdir}\"${C_ERROR} first before you can enter it."
    fi
    flavor="`cut -d: -f1 <<< "${style}"`"
 }
@@ -385,11 +392,22 @@ env_init()
    local OPTION_OTHER_TOOLS=
    local OPTION_BLURB="DEFAULT"
 
+   local directory
+
+   directory=="${PWD}"
+
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help)
             usage
+         ;;
+
+         -d|--directory)
+            [ $# -eq 1 ] && fail "Missing argument to $1"
+            shift
+
+            directory="$1"
          ;;
 
          -f|--force)
@@ -461,16 +479,6 @@ env_init()
 
       shift
    done
-
-   local directory
-
-   if [ $# -ne 0 ]
-   then
-      directory="$1"
-      shift
-   else
-      directory="${PWD}"
-   fi
 
    local envfile
    local toolsfile
@@ -792,10 +800,14 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    [ ! -d "${physicaldir}" ] && internal_fail "physicalpath failed"
    MULLE_VIRTUAL_ROOT="${physicaldir}"
 
+   local configdir
+
+   configdir="${physicaldir}/.mulle-env"
+
    local style
    local flavor
 
-   __get_saved_style_flavor "${directory}"
+   __get_saved_style_flavor "${configdir}"
    __load_flavor_plugin "${flavor}"
 
    local run_shell_args
@@ -826,7 +838,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       rundirectory="${callerdirectory}"
    fi
 
-   runpath="`colon_concat "${runpath}" "${MULLE_VIRTUAL_ROOT}/bin" `"
+   runpath="`colon_concat "${runpath}" "${configdir}/bin" `"
    runpath="`colon_concat "${runpath}" "${inherit_path}" `"
    runpath="`apply_flavor_to_runpath "${MULLE_VIRTUAL_ROOT}" "${flavor}" "${runpath}" `"
 
