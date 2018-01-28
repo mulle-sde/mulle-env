@@ -394,7 +394,7 @@ env_init()
 
    local directory
 
-   directory=="${PWD}"
+   directory="${PWD}"
 
    while [ $# -ne 0 ]
    do
@@ -495,7 +495,7 @@ env_init()
    if [ "${OPTION_MAGNUM_FORCE}" != "YES" ] && [ -f "${envfile}" ]
    then
       log_warning "\"${envfile}\" already exists"
-      return 1
+      return 2
    fi
 
    mkdir_if_missing "${configdir}"
