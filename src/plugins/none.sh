@@ -93,29 +93,42 @@ print_none_startup_footer_sh()
 #
 HOSTNAME="\`hostname -s\`" # don't export it
 
-if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh" ]
+MULLE_ENV_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
+
+if [ -f "\${MULLE_ENV_DIR}/environment-\${MULLE_UNAME}-os.sh" ]
 then
-   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${MULLE_UNAME}-os.sh"
+   . "\${MULLE_ENV_DIR}/environment-\${MULLE_UNAME}-os.sh"
 fi
 
-if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.\${HOSTNAME}-host.sh" ]
+if [ -f "\${MULLE_ENV_DIR}/environment.\${HOSTNAME}-host.sh" ]
 then
-   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${HOSTNAME}-host.sh"
+   . "\${MULLE_ENV_DIR}/environment-\${HOSTNAME}-host.sh"
 fi
 
-if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh" ]
+if [ -f "\${MULLE_ENV_DIR}/environment-\${USER}-user.sh" ]
 then
-   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-\${USER}-user.sh"
+   . "\${MULLE_ENV_DIR}/environment-\${USER}-user.sh"
 fi
 
 #
 # it's convenient to put changes into aux, as you can then reinit
 # with -f
 #
-if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-aux.sh" ]
+if [ -f "\${MULLE_ENV_DIR}/environment-aux.sh" ]
 then
-   . "\${MULLE_VIRTUAL_ROOT}/.mulle-env/environment-aux.sh"
+   . "\${MULLE_ENV_DIR}/environment-aux.sh"
 fi
+
+unset MULLE_ENV_DIR
+
+EOF
+}
+
+
+print_none_aux_sh()
+{
+   cat <<EOF
+# add your stuff here
 EOF
 }
 
@@ -173,7 +186,7 @@ uname
 "
 
 #
-# somewhat arbitrarily hand-picked. Rule of thumb: if a mulle scripts use
+# somewhat arbitrarily hand-picked. Rule of thumb: if a mulle script uses
 # it, it's in here for sure (like base64 by mulle-sourcetree)
 #
 EXPECTED_DEVELOPER_BINARIES="awk
@@ -207,9 +220,6 @@ wc
 which"
 
 
-# monitor needs it, but not all platforms will have it
-
-
 # callback
 print_none_tools_sh()
 {
@@ -231,11 +241,17 @@ print_none_tools_sh()
 #
       *)
          cat <<EOF
-mudo
 ${MINIMAL_BIN_BINARIES}
 ${EXPECTED_DEVELOPER_BINARIES}
 EOF
    esac
+
+   #
+   # stuff that we also need
+   #
+   cat <<EOF
+mudo
+EOF
 
    if [ ! -z "${OPTION_OTHER_TOOLS}" ]
    then

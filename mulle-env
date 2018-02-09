@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : mulle-env
 
-MULLE_ENV_VERSION="0.7.4"
+MULLE_ENV_VERSION="0.8.0"
 
 #
 # use mulle:restricted as the default suitable for first time mulle-sde
@@ -68,20 +68,19 @@ EOF
    cat <<EOF >&2
 
 Tool-style:
-   none              : no additions
-   mulle             : additionally support mulle-build (default)
+   none                 : no additions
+   mulle                : additionally support mulle-build (default)
 
 Path-style:
-   none              : all tools must be specified in .mulle-sde/tools
-   restricted        : /bin and /usr/bin is inherited. All other tools must
-                       be specified.
-   inherit           : inherit PATH, don't use tools links
+   none                 : all tools must be specified in .mulle-env/etc/tools
+   restricted           : /bin and /usr/bin is inherited. All other tools must
+                          be specified.
+   inherit              : inherit PATH, don't use tools links
 EOF
 
 
   exit 1
 }
-
 
 
 censored_path()
@@ -185,9 +184,9 @@ env_other_tool_files()
 {
    log_entry "env_other_tool_files" "$@"
 
-   local configdir="$1"
+   local directory="$1"
 
-   [ -z "${configdir}" ] && internal_fail "configdir must not be empty"
+   [ -z "${directory}" ] && internal_fail "directory must not be empty"
 
    if [ ! -z "${HOME}" ]
    then
@@ -195,8 +194,8 @@ env_other_tool_files()
       echo "${HOME}/.config/mulle-env/optional-tools"
    fi
 
-   echo "${configdir}/tools"
-   echo "${configdir}/optional-tools"
+   echo "${directory}/etc/tools"
+   echo "${directory}/etc/optional-tools"
 }
 
 
@@ -249,15 +248,27 @@ env_setup_if_needed()
    needs_flavor_update=
    needs_bin_update=
 
+   local etcdir
+   local bindir
+   local libexecdir
+   local cachedir
+
+   cachedir="${directory}/cache"
+   etcdir="${directory}/etc"
+   bindir="${directory}/bin"
+   libexecdir="${directory}/libexecdir"
+
    local callback
 
    callback="env_${flavor}_tools_need_update"
    if [ "`type -t "${callback}"`" = "function" ]
    then
-      if ${callback} "${configdir}"
+      if ${callback} "${directory}"
       then
          log_fluff "Flavor \"${flavor}\" needs update"
          needs_flavor_update="YES"
+      else
+         log_fluff "Flavor \"${flavor}\" is up-to-date"
       fi
    fi
 
@@ -266,7 +277,7 @@ env_setup_if_needed()
    local uptodatefile
    local myhost
 
-   uptodatefile="${configdir}/.tools-updated"
+   uptodatefile="${cachedir}/tools-updated"
 
    oldhost="`cat "${uptodatefile}" 2> /dev/null`"
    myhost="`hostname -s`"
@@ -275,14 +286,14 @@ env_setup_if_needed()
    then
       log_fluff "Regenerating tools as the host has changed"
 
-      exekutor chmod ug+w "${configdir}/bin" 2> /dev/null
+      exekutor chmod ug+w "${bindir}" 2> /dev/null
       remove_file_if_present "${uptodatefile}"
-      exekutor chmod ug-w "${configdir}/bin" 2> /dev/null
+      exekutor chmod ug-w "${bindir}" 2> /dev/null
    fi
 
    IFS="
 "
-   for toolfile in `env_other_tool_files "${configdir}"`
+   for toolfile in `env_other_tool_files "${directory}"`
    do
       IFS="${DEFAULT_IFS}"
 
@@ -309,31 +320,32 @@ env_setup_if_needed()
    #
    # unprotect
    #
-   exekutor chmod -R ug+w "${configdir}/bin" 2> /dev/null
-   exekutor chmod -R ug+w "${configdir}/libexec" 2> /dev/null
+   exekutor chmod -R ug+w "${bindir}" 2> /dev/null
+   exekutor chmod -R ug+w "${libexecdir}" 2> /dev/null
 
    local callback
 
    callback="env_setup_${flavor}_tools"
    if [ "`type -t "${callback}"`" = "function" ]
    then
-      ${callback} "${configdir}"
+      ${callback} "${directory}"
    fi
 
    if [ ! -z "${needs_bin_update}" ]
    then
-      env_setup_other_tools "${needs_bin_update}" "${configdir}"
+      env_setup_other_tools "${needs_bin_update}" "${directory}"
 
       log_fluff "Writing \"${uptodatefile}\""
 
+      mkdir_if_missing "${cachedir}"
       redirect_exekutor "${uptodatefile}" echo "${myhost}"
    fi
 
    #
    # protect from accidents
    #
-   exekutor chmod -R ugo-w "${configdir}/bin" 2> /dev/null
-   exekutor chmod -R ugo-w "${configdir}/libexec" 2> /dev/null
+   exekutor chmod -R ugo-w "${libexecdir}" 2> /dev/null
+   exekutor chmod -R ugo-w "${bindir}" 2> /dev/null
 }
 
 
@@ -341,13 +353,13 @@ __get_saved_style_flavor()
 {
    log_entry "__get_saved_style_flavor" "$@"
 
-   local configdir="$1"
+   local etcdir="$1"
 
-   style="`cat "${configdir}/style" 2> /dev/null`"
+   style="`sed -e '/^#/d' -e 's/--style //' < "${etcdir}/style" 2> /dev/null`"
    if [ -z "${style}" ]
    then
       fail "No mulle-env environment found.
-You must ${C_RESET_BOLD}mulle-env init \"${configdir}\"${C_ERROR} first before you can enter it."
+You must ${C_RESET_BOLD}mulle-env init \"${etcdir}\"${C_ERROR} first before you can enter it."
    fi
    flavor="`cut -d: -f1 <<< "${style}"`"
 }
@@ -483,14 +495,24 @@ env_init()
    local envfile
    local toolsfile
    local stylefile
-   local configdir
+   local versionfile
+   local etcdir
+   local sharedir
    local optional_toolsfile
 
-   configdir="${directory}/.mulle-env"
-   envfile="${configdir}/environment.sh"
-   toolsfile="${configdir}/tools"
-   optional_toolsfile="${configdir}/optional-tools"
-   stylefile="${configdir}/style"
+   MULLE_ENV_DIR="${directory}/.mulle-env"
+
+   etcdir="${MULLE_ENV_DIR}/etc"
+   sharedir="${MULLE_ENV_DIR}/share"
+
+   envfile="${sharedir}/environment.sh"
+   # user editable stuff in etc
+   auxfile="${etcdir}/environment-aux.sh"
+
+   toolsfile="${etcdir}/tools"
+   optional_toolsfile="${etcdir}/optional-tools"
+   stylefile="${etcdir}/style"
+   versionfile="${etcdir}/version"
 
    if [ "${OPTION_MAGNUM_FORCE}" != "YES" ] && [ -f "${envfile}" ]
    then
@@ -498,7 +520,8 @@ env_init()
       return 2
    fi
 
-   mkdir_if_missing "${configdir}"
+   mkdir_if_missing "${etcdir}"
+   mkdir_if_missing "${sharedir}"
 
    local style
    local flavor
@@ -516,6 +539,13 @@ env_init()
    fi
    redirect_exekutor "${envfile}" echo "${text}"
 
+   log_verbose "Creating \"${auxfile}\""
+   if ! text="`print_${flavor}_aux_sh "${style}" `"
+   then
+      return 1
+   fi
+   redirect_exekutor "${auxfile}" echo "${text}"
+
    log_verbose "Creating \"${toolsfile}\""
    if ! text="`print_${flavor}_tools_sh "${style}" `"
    then
@@ -531,7 +561,10 @@ env_init()
    redirect_exekutor "${optional_toolsfile}" echo "${text}"
 
    log_verbose "Creating \"${stylefile}\""
-   redirect_exekutor "${stylefile}" echo "${style}"
+   redirect_exekutor "${stylefile}" echo "--style ${style}"
+
+   log_verbose "Creating \"${versionfile}\""
+   redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
 
    if [ "${OPTION_BLURB}" != "NO" ]
    then
@@ -556,7 +589,7 @@ find_best_environment()
    do
       directory="`dirname -- "${directory}"`"
 
-      # look for .mulle-env/environment.sh going up to root, if we
+      # look for .mulle-env/*/environment.sh going up to root, if we
       # find one, we latch onto it
       if [ "${directory}" = "/" ]
       then
@@ -564,9 +597,13 @@ find_best_environment()
          return
       fi
 
-      if [ -f "${directory}/.mulle-env/environment.sh" ]
+      # use globbing
+      if [ -f "${directory}/".mulle-env/*/environment.sh ]
       then
-         log_fluff "Found superior environment \"${directory}\""
+         log_info "Found and using a superior mulle-env environment at \
+${C_RESET_BOLD}${directory}/.mulle-env${C_INFO}.
+Suppress this behaviour with:
+   ${C_RESET_BOLD}mulle-env --no-search"
          best="${directory}"
       fi
    done
@@ -616,7 +653,7 @@ main()
    log_entry "main" "$@"
 
    local OPTION_DIRECTORY
-   local OPTION_BOOTSTRAP="YES"
+   local OPTION_BOOTSTRAP="NO"
    local OPTION_SHELL_COMMAND
    local OPTION_KEEP_TMP="NO"
    local OPTION_MAGNUM_FORCE=
@@ -678,6 +715,10 @@ main()
             OPTION_SEARCH="NO"
          ;;
 
+         --bootstrap)
+            OPTION_BOOTSTRAP="YES"
+         ;;
+
          -nb|--no-bootstrap)
             OPTION_BOOTSTRAP="NO"
          ;;
@@ -722,7 +763,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    local callerdirectory
    # directory is where we are supposed to execute
    local directory
-   # MULLE_VIRTUAL_ROOT is where the .mulle-env/environment.sh is
+   # MULLE_VIRTUAL_ROOT is where the .mulle-env/env/environment.sh is
    local MULLE_VIRTUAL_ROOT
 
    callerdirectory="`pwd -P`"
@@ -800,14 +841,20 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    [ ! -d "${physicaldir}" ] && internal_fail "physicalpath failed"
    MULLE_VIRTUAL_ROOT="${physicaldir}"
 
-   local configdir
+   log_verbose "MULLE_VIRTUAL_ROOT set to \"${MULLE_VIRTUAL_ROOT}\""
 
-   configdir="${physicaldir}/.mulle-env"
+   local MULLE_ENV_DIR
+
+   MULLE_ENV_DIR="${physicaldir}/.mulle-env"
+
+   local etcdir
+
+   etcdir="${MULLE_ENV_DIR}/etc"
 
    local style
    local flavor
 
-   __get_saved_style_flavor "${configdir}"
+   __get_saved_style_flavor "${etcdir}"
    __load_flavor_plugin "${flavor}"
 
    local run_shell_args
@@ -827,7 +874,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
    esac
 
-   env_setup_if_needed "${directory}" "${flavor}"
+   env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
 
    local runpath
    local rundirectory
@@ -838,7 +885,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       rundirectory="${callerdirectory}"
    fi
 
-   runpath="`colon_concat "${runpath}" "${configdir}/bin" `"
+   runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
    runpath="`colon_concat "${runpath}" "${inherit_path}" `"
    runpath="`apply_flavor_to_runpath "${MULLE_VIRTUAL_ROOT}" "${flavor}" "${runpath}" `"
 
@@ -995,7 +1042,9 @@ _init()
       echo "mulle-bashfunctions-env not installed" >&2 && \
       exit 1
 
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" "minimal" || exit 1
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || exit 1
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
 
    MULLE_ENV_LIBEXEC_DIR="`sourcetree_libexec_path "$0"`"
    if [ -z "${MULLE_ENV_LIBEXEC_DIR}" ]

@@ -31,13 +31,13 @@
 #
 MULLE_ENV_MULLE_PLUGIN_SH="included"
 
-print_mulle_startup_body_sh()
+print_mulle_aux_sh()
 {
-   log_entry "print_mulle_startup_body_sh" "$@"
+   log_entry "print_mulle_aux_sh" "$@"
 
    cat <<EOF
 #
-# Globally appropriate definitions
+# Git mirror and Zip/TGZ cache to conserve bandwidth
 #
 case "\${MULLE_UNAME}" in
    darwin)
@@ -51,24 +51,20 @@ case "\${MULLE_UNAME}" in
    ;;
 esac
 
-MULLE_FETCH_SEARCH_PATH="\${MULLE_VIRTUAL_ROOT}/.."
-MULLE_SYMLINK="YES"
+export MULLE_FETCH_MIRROR_DIR
+export MULLE_FETCH_ARCHIVE_DIR
 
 #
 # PATH to search for git repositories locally
 #
+MULLE_FETCH_SEARCH_PATH="\${MULLE_VIRTUAL_ROOT}/.."
 export MULLE_FETCH_SEARCH_PATH
 
 #
 # Prefer symlinks to local git repositories found via MULLE_FETCH_SEARCH_PATH
 #
+MULLE_SYMLINK="YES"
 export MULLE_SYMLINK
-
-#
-# Git mirror and Zip/TGZ cache to conserve bandwidth
-#
-export MULLE_FETCH_MIRROR_DIR
-export MULLE_FETCH_ARCHIVE_DIR
 
 #
 # Use common folder for sharable projects
@@ -82,15 +78,19 @@ export MULLE_SOURCETREE_SHARE_DIR
 BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
 export BUILD_DIR
 
-
 #
 # Share dependencies directory (absolute for ease of use)
 #
 DEPENDENCIES_DIR="\${MULLE_VIRTUAL_ROOT}/dependencies"
 export DEPENDENCIES_DIR
 
-EOF
+#
+# Share addictions directory (absolute for ease of use)
+#
+ADDICTIONS_DIR="\${MULLE_VIRTUAL_ROOT}/addictions"
+export ADDICTIONS_DIR
 
+EOF
 }
 
 
@@ -196,6 +196,14 @@ print_mulle_tools_sh()
    print_none_tools_sh "$@"
 
    #
+   # aux scripts from mulle-sde
+   # ... ugliness ensues...
+   cat <<EOF
+mulle-sde-cmake-source-update
+mulle-sde-cmake-dependency-update
+EOF
+
+   #
    # set of "minimal" commands for use in development
    # many or most are required by the mulle scripts
    #
@@ -237,6 +245,7 @@ EOF
 }
 
 
+
 print_mulle_optional_tools_sh()
 {
    log_entry "print_mulle_optional_tools_sh" "$@"
@@ -246,6 +255,7 @@ print_mulle_optional_tools_sh()
    cat <<EOF
 fswatch
 inotifywait
+ssh
 EOF
 }
 
@@ -260,9 +270,9 @@ print_mulle_startup_footer_sh()
 #
 # show motd, if any
 #
-if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd" ]
+if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd" ]
 then
-   cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/motd"
+   cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd"
 fi
 EOF
 }
@@ -274,7 +284,6 @@ print_mulle_startup_sh()
    log_entry "print_mulle_startup_sh" "$@"
 
    print_none_startup_header_sh "$@"
-   print_mulle_startup_body_sh "$@"
    print_mulle_startup_footer_sh "$@"
 }
 
@@ -297,13 +306,14 @@ env_setup_mulle_tools()
    #
    (
       env_copy_mulle_tool "mulle-bashfunctions-env" "${directory}" "library" &&
+      env_copy_mulle_tool "mulle-craft"      "${directory}" &&
+      env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
+      env_copy_mulle_tool "mulle-env"        "${directory}" &&
       env_copy_mulle_tool "mulle-fetch"      "${directory}" &&
       env_copy_mulle_tool "mulle-make"       "${directory}" &&
-      env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
-      env_copy_mulle_tool "mulle-sourcetree" "${directory}" &&
-      env_copy_mulle_tool "mulle-craft"      "${directory}" &&
+      env_copy_mulle_tool "mulle-monitor"    "${directory}" &&
       env_copy_mulle_tool "mulle-sde"        "${directory}" &&
-      env_copy_mulle_tool "mulle-env"        "${directory}"
+      env_copy_mulle_tool "mulle-sourcetree" "${directory}"
    ) || return 1
 }
 

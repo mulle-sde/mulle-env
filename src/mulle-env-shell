@@ -42,9 +42,24 @@ emit_initfile()
    fi
    echo "set +o posix"  # turn back to default
 
-   echo "[ -f \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\" ] && \
-TRACE=\"${TRACE}\" && \
-. \"${MULLE_VIRTUAL_ROOT}/.mulle-env/environment.sh\""
+   local envfile
+
+   envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/environment.sh"
+   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/environment.sh" ]
+   then
+      envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment.sh"
+   fi
+   if [ -f "${envfile}" ]
+   then
+      if [ "${TRACE}" = "YES" ]
+      then
+        echo "TRACE=\"${TRACE}\" && . \"${envfile}\""
+        echo "unset TRACE"
+      else
+        echo ". \"${envfile}\""
+      fi
+   fi
+
    # try to set terminal title
    echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
 
@@ -52,13 +67,12 @@ TRACE=\"${TRACE}\" && \
    then
       echo "set +x"
    fi
-   echo "unset TRACE"
-
 
    if [ "${OPTION_KEEP_TMP}" = "NO" ]
    then
+      #
       # run in envelope subshell to squelch job control message
-      # remove all f
+      #
       echo "( ( /bin/sleep 1 ; /bin/rm \"${initfile}\" 2> /dev/null ) &)"
    fi
 }
@@ -91,9 +105,11 @@ run_shell()
    # check vs bash/dash
    # not sure dash can do this, or does even still exist
    #
-   initfile=".mulle-env.tmp.`uuidgen`" || exit 1
+   mkdir -p ".mulle-env/var/tmp" 2> /dev/null
 
-   emit_initfile > "${initfile}"
+   initfile=".mulle-env/var/tmp/`uuidgen`" || exit 1
+
+   emit_initfile > "${initfile}" || exit 1
 
    #
    # The only way to avoid SYS_BASHRC is to go posix.

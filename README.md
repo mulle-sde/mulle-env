@@ -87,7 +87,7 @@ Let's try an example with a `project` directory. We want a minimal portable set
 of commandline tools, so we specify the style as "none:empty".
 
 ```
-mulle-env init -d project --style none:empty 
+mulle-env init -d project --style none:empty
 ```
 
 And this is what happens:
@@ -122,14 +122,14 @@ $ exit
 
 ## Taskss
 
-#### Enter the subshell 
+#### Enter the subshell
 
 ```
 mulle-env
 ```
 
 
-#### Leave the subshell 
+#### Leave the subshell
 
 ```
 exit
@@ -142,13 +142,13 @@ Edit the `.mulle-env/tools` file. Then re-enter the sub-shell.
 For example like this:
 
 ```
-echo "cc" >> /tmp/a/.mulle-env/tools
+echo "cc" >> /tmp/a/.mulle-env/etc/tools
 mulle-env /tmp/a
 ```
 
 ## Add environment variables
 
-During the start of the sub-shell the file `.mulle-env/environment-aux.sh` will
+During the start of the sub-shell the file `.mulle-env/etc/environment-aux.sh` will
 be sourced. Even if you reinitialize with "mulle-sde init -f", your edits are
 safe.
 
@@ -172,18 +172,18 @@ Use `mulle-env -f init` to overwrite a previous environment.
 
 Tools that you always require can be specified globally
 `~/.config/mulle-env/tools`. These will be installed in addition to those found
-in `.mulle-env/tools`.
+in `.mulle-env/etc/tools`.
 
 #### Specify optionals tools
 
 Tools that are nice to have, but aren't required for building the project
-can be placed into `.mulle-env/optional-tools`.
+can be placed into `.mulle-env/etc/optional-tools`.
 
 #### Specify platform specific tools
 
 If you need some tools only on a certain platform, figure out the platform name
 with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
-`~/.config/mulle-env/tools.${MULLE_UNAME}` or `.mulle-env/tools.${MULLE_UNAME}`.
+`~/.config/mulle-env/tools.${MULLE_UNAME}` or `.mulle-env/etc/tools.${MULLE_UNAME}`.
 
 Platform specific tool configuration files take precedence over the
 cross-platform ones without the extension.
@@ -192,10 +192,10 @@ cross-platform ones without the extension.
 
 Short of executing `exec zsh` - or whatever the shell flavor du jour is -
 everytime you enter the **mulle-env** subshell, you can add this to your
-`.mulle-env/environment-${USER}-user.sh` file:
+`.mulle-env/etc/environment-${USER}-user.sh` file:
 
 ```
-$ cat <<EOF >> .mulle-env/environment-${USER}-user.sh
+$ cat <<EOF >> .mulle-env/etc/environment-${USER}-user.sh
 if [ "${MULLE_ENV_SHELL}" = "INTERACTIVE" ]
 then
    exec /bin/zsh
