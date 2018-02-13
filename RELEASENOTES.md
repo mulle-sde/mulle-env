@@ -1,3 +1,7 @@
+### 0.8.1
+
+* adapt to new mulle-bashfunctions 1.3
+
 ### 0.7.4
 
 * improve README.md a bit

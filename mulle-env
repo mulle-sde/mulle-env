@@ -29,9 +29,9 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${TRACE}" = "YES" ] && set -x && : mulle-env
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.8.0"
+MULLE_ENV_VERSION="0.8.1"
 
 #
 # use mulle:restricted as the default suitable for first time mulle-sde
@@ -355,7 +355,11 @@ __get_saved_style_flavor()
 
    local etcdir="$1"
 
-   style="`sed -e '/^#/d' -e 's/--style //' < "${etcdir}/style" 2> /dev/null`"
+   style=""
+   if [ -f "${etcdir}/style" ]
+   then
+      style="`sed -e '/^#/d' -e 's/--style //' < "${etcdir}/style" `"
+   fi
    if [ -z "${style}" ]
    then
       fail "No mulle-env environment found.
@@ -951,84 +955,6 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 ###
 ### INIT
 ###
-
-#
-# stolen from:
-# http://stackoverflow.com/questions/1055671/how-can-i-get-the-behavior-of-gnus-readlink-f-on-a-mac
-# ----
-#
-_prepend_path_if_relative()
-{
-   case "$2" in
-      /*)
-         echo "$2"
-      ;;
-      *)
-         echo "$1/$2"
-      ;;
-   esac
-}
-
-
-resolve_symlinks()
-{
-   local dir_context
-   local linkpath
-
-   if linkpath="`readlink "$1"`"
-   then
-      dir_context=`dirname -- "$1"`
-      resolve_symlinks "`_prepend_path_if_relative "${dir_context}" "${linkpath}"`"
-   else
-      echo "$1"
-   fi
-}
-
-
-sourcetree_libexec_path()
-{
-   local executablepath="$1"
-
-   local exedir
-   local exedirpath
-   local prefix
-   local libexecpath
-
-   case "${executablepath}" in
-      \.*|/*|~*)
-      ;;
-
-      *)
-         executablepath="`command -v "${executablepath}"`"
-      ;;
-   esac
-
-   executablepath="`resolve_symlinks "${executablepath}"`"
-   exedirpath="`dirname "${executablepath}"`"
-   prefix="`dirname "${exedirpath}"`"
-   libexecpath="${prefix}/libexec/mulle-env"
-
-   if [ ! -x "${libexecpath}/mulle-env-shell" ]
-   then
-      libexecpath="${exedirpath}/src"
-   fi
-
-   case "$libexecpath" in
-      /*|~*)
-      ;;
-
-      *)
-         libexecpath="$PWD/$libexecpath"
-      ;;
-   esac
-
-   if [ -x "${libexecpath}/mulle-env-shell" ]
-   then
-      echo "${libexecpath}"
-   fi
-}
-
-
 _init()
 {
    if [ "$1" = "version" ]
@@ -1046,11 +972,15 @@ _init()
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || exit 1
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
 
-   MULLE_ENV_LIBEXEC_DIR="`sourcetree_libexec_path "$0"`"
-   if [ -z "${MULLE_ENV_LIBEXEC_DIR}" ]
+   local _libexec_dir
+
+   _get_libexec_dir "$0" "mulle-env" "mulle-env-shell"
+
+   if [ -z "${_libexec_dir}" ]
    then
       fail "Fatal Error: Could not find libexec for ${MULLE_EXECUTABLE} ($PWD)"
    fi
+   MULLE_ENV_LIBEXEC_DIR="${_libexec_dir}"
 
    #
    # minimal setup exit
