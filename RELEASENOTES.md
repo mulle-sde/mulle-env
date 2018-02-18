@@ -1,3 +1,8 @@
+## 0.9.0
+
+* renamed restricted to restrict
+
+
 ### 0.8.1
 
 * adapt to new mulle-bashfunctions 1.3

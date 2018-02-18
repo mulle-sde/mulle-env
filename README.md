@@ -1,7 +1,8 @@
 # mulle-env, 🌳 Virtual environment for Unix
 
-**mulle-env** is a sub-shell that provides a restricted environment. Developing inside the **mulle-env**
-sub-shell protects you from the following common mistakes:
+**mulle-env** is a sub-shell that provides a restricted environment. 
+Developing inside the **mulle-env** sub-shell protects you from the following 
+common mistakes:
 
 * inadvertant reliance on non-standard tools
 * reproducabilty problems due to non-standard environment variables
@@ -148,9 +149,9 @@ mulle-env /tmp/a
 
 ## Add environment variables
 
-During the start of the sub-shell the file `.mulle-env/etc/environment-aux.sh` will
-be sourced. Even if you reinitialize with "mulle-sde init -f", your edits are
-safe.
+During the start of the sub-shell the file `.mulle-env/etc/environment-aux.sh`
+will be sourced. Even if you reinitialize with "mulle-sde init -f", your edits 
+are safe.
 
 > Hint: Do not forget to `export` your environment variables.
 
@@ -160,8 +161,8 @@ safe.
 
 #### Add /bin and /usr/bin to your sub-shell PATH
 
-Use `mulle-env -style none:restricted init` when initalizing your environment.
-> `mulle:restricted` is the default as it gives access to the **mulle-sde**.
+Use `mulle-env -style none:restrict init` when initalizing your environment.
+> `mulle:restrict` is the default as it gives access to the **mulle-sde**.
 
 #### Reinitialize an environment
 
@@ -183,7 +184,8 @@ can be placed into `.mulle-env/etc/optional-tools`.
 
 If you need some tools only on a certain platform, figure out the platform name
 with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
-`~/.config/mulle-env/tools.${MULLE_UNAME}` or `.mulle-env/etc/tools.${MULLE_UNAME}`.
+`~/.config/mulle-env/tools.${MULLE_UNAME}` or 
+`.mulle-env/etc/tools.${MULLE_UNAME}`.
 
 Platform specific tool configuration files take precedence over the
 cross-platform ones without the extension.

@@ -31,10 +31,10 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.8.1"
+MULLE_ENV_VERSION="0.9.0"
 
 #
-# use mulle:restricted as the default suitable for first time mulle-sde
+# use mulle:restrict as the default suitable for first time mulle-sde
 # users
 #
 MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:restricted}"
@@ -73,9 +73,9 @@ Tool-style:
 
 Path-style:
    none                 : all tools must be specified in .mulle-env/etc/tools
-   restricted           : /bin and /usr/bin is inherited. All other tools must
-                          be specified.
    inherit              : inherit PATH, don't use tools links
+   restrict             : /bin and /usr/bin are inherited. All other tools must
+                          be specified.
 EOF
 
 
@@ -863,38 +863,53 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 
    local run_shell_args
    local inherit_path
+   local runpath
+   local rundirectory
 
    case "${style}" in
-      *:inherited)
-         inherit_path="${PATH}"
+      *:*)
       ;;
 
-      *:restricted)
-         inherit_path="`censored_path "${PATH}"`"
-      ;;
-
-      *)
-         inherit_path=""
+      *) # no : like none
+         style="${style:none}"
       ;;
    esac
 
-   env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
 
-   local runpath
-   local rundirectory
+   case "${style}" in
+      *:inherit)
+         inherit_path="${PATH}"
+         # don't use .mulle-env/bin
+      ;;
+
+      *:restrict)
+         env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
+         inherit_path="`censored_path "${PATH}"`"
+         runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
+      ;;
+
+      *:none)
+         inherit_path=""
+         env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
+         runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
+      ;;
+
+      *)
+         fail "unknown style \"${style}\""
+      ;;
+   esac
+
+
+   runpath="`colon_concat "${runpath}" "${inherit_path}" `"
+   runpath="`apply_flavor_to_runpath "${MULLE_VIRTUAL_ROOT}" "${flavor}" "${runpath}" `"
+
+   log_debug "future PATH=${runpath}"
 
    rundirectory="${MULLE_VIRTUAL_ROOT}"
    if [ "${OPTION_SEARCH}" = "YES" ]
    then
       rundirectory="${callerdirectory}"
    fi
-
-   runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
-   runpath="`colon_concat "${runpath}" "${inherit_path}" `"
-   runpath="`apply_flavor_to_runpath "${MULLE_VIRTUAL_ROOT}" "${flavor}" "${runpath}" `"
-
-   log_debug "future PATH=${runpath}"
-
    apply_style_to_directory "${rundirectory}" "${style}" "${flavor}"
 
    #

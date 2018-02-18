@@ -3,4 +3,6 @@
 tmp.*
 build/
 build-*.d/
+mulle-project/publisher-info.sh._.DS_Store
+._.DS_Store
 mulle-project/publisher-info.sh

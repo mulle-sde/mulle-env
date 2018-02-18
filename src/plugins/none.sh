@@ -233,7 +233,7 @@ print_none_tools_sh()
          return
       ;;
 
-      *:restricted)
+      *:restrict)
       ;;
 
 #

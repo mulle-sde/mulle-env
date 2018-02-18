@@ -200,7 +200,7 @@ print_mulle_tools_sh()
    # ... ugliness ensues...
    cat <<EOF
 mulle-sde-cmake-source-update
-mulle-sde-cmake-dependency-update
+mulle-sde-cmake-sourcetree-update
 EOF
 
    #
