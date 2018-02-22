@@ -90,29 +90,34 @@ print_none_startup_footer_sh()
 #
 # Load in some modifications depending on osname, hostname, username
 # Of course this could be "cased" in a single file, but it seems convenient.
+# ... and easier to generate with a tool
 #
 HOSTNAME="\`hostname -s\`" # don't export it
 
 MULLE_ENV_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 
-if [ -f "\${MULLE_ENV_DIR}/environment-\${MULLE_UNAME}-os.sh" ]
+if [ -f "\${MULLE_ENV_DIR}/environment-all.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-\${MULLE_UNAME}-os.sh"
+   . "\${MULLE_ENV_DIR}/environment-all.sh"
 fi
 
-if [ -f "\${MULLE_ENV_DIR}/environment.\${HOSTNAME}-host.sh" ]
+if [ -f "\${MULLE_ENV_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-\${HOSTNAME}-host.sh"
+   . "\${MULLE_ENV_DIR}/environment-os-\${MULLE_UNAME}.sh"
 fi
 
-if [ -f "\${MULLE_ENV_DIR}/environment-\${USER}-user.sh" ]
+if [ -f "\${MULLE_ENV_DIR}/environment-host-\${HOSTNAME}.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-\${USER}-user.sh"
+   . "\${MULLE_ENV_DIR}/environment-host-\${HOSTNAME}.sh"
+fi
+
+if [ -f "\${MULLE_ENV_DIR}/environment-user-\${USER}.sh" ]
+then
+   . "\${MULLE_ENV_DIR}/environment-user-\${USER}.sh"
 fi
 
 #
-# it's convenient to put changes into aux, as you can then reinit
-# with -f
+# For more complex edits, that don't work with the cmdline tool
 #
 if [ -f "\${MULLE_ENV_DIR}/environment-aux.sh" ]
 then
@@ -229,7 +234,7 @@ print_none_tools_sh()
    # set of "minimal" commands for use in development
    #
    case "$1" in
-      *:inherit)
+      *:inherit|*:wild)
          return
       ;;
 
@@ -268,7 +273,7 @@ print_none_optional_tools_sh()
    # set of "minimal" commands for use in development
    #
    case "$1" in
-      *:inherit)
+      *:inherit|*:wild)
          return
       ;;
    esac

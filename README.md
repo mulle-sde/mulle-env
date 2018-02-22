@@ -1,7 +1,7 @@
 # mulle-env, 🌳 Virtual environment for Unix
 
-**mulle-env** is a sub-shell that provides a restricted environment. 
-Developing inside the **mulle-env** sub-shell protects you from the following 
+**mulle-env** is a sub-shell that provides a restricted environment.
+Developing inside the **mulle-env** sub-shell protects you from the following
 common mistakes:
 
 * inadvertant reliance on non-standard tools
@@ -85,10 +85,10 @@ Notice the absence of most environment variables and see how restricted the
 
 A directory must be "init"ed, before you can use **mulle-env** with it.
 Let's try an example with a `project` directory. We want a minimal portable set
-of commandline tools, so we specify the style as "none:empty".
+of commandline tools, so we specify the style as "none:none".
 
 ```
-mulle-env init -d project --style none:empty
+mulle-env init -d project --style none:none
 ```
 
 And this is what happens:
@@ -121,7 +121,7 @@ And we leave the subshell with
 $ exit
 ```
 
-## Taskss
+## Tasks
 
 #### Enter the subshell
 
@@ -150,7 +150,7 @@ mulle-env /tmp/a
 ## Add environment variables
 
 During the start of the sub-shell the file `.mulle-env/etc/environment-aux.sh`
-will be sourced. Even if you reinitialize with "mulle-sde init -f", your edits 
+will be sourced. Even if you reinitialize with "mulle-sde init -f", your edits
 are safe.
 
 > Hint: Do not forget to `export` your environment variables.
@@ -161,7 +161,7 @@ are safe.
 
 #### Add /bin and /usr/bin to your sub-shell PATH
 
-Use `mulle-env -style none:restrict init` when initalizing your environment.
+Use `mulle-env --style none:restrict init` when initalizing your environment.
 > `mulle:restrict` is the default as it gives access to the **mulle-sde**.
 
 #### Reinitialize an environment
@@ -184,7 +184,7 @@ can be placed into `.mulle-env/etc/optional-tools`.
 
 If you need some tools only on a certain platform, figure out the platform name
 with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
-`~/.config/mulle-env/tools.${MULLE_UNAME}` or 
+`~/.config/mulle-env/tools.${MULLE_UNAME}` or
 `.mulle-env/etc/tools.${MULLE_UNAME}`.
 
 Platform specific tool configuration files take precedence over the

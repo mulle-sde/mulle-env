@@ -31,64 +31,65 @@
 #
 MULLE_ENV_MULLE_PLUGIN_SH="included"
 
-print_mulle_aux_sh()
+print_mulle_environment_os_darwin_sh()
 {
-   log_entry "print_mulle_aux_sh" "$@"
+   log_entry "print_mulle_environment_os_darwin_sh" "$@"
 
    cat <<EOF
 #
 # Git mirror and Zip/TGZ cache to conserve bandwidth
 #
-case "\${MULLE_UNAME}" in
-   darwin)
-      MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/git-mirrors"
-      MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/archives"
-   ;;
+export MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/git-mirrors"
+export MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/archives"
+EOF
+}
 
-   *)
-      MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/git-mirrors"
-      MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/archives"
-   ;;
-esac
 
-export MULLE_FETCH_MIRROR_DIR
-export MULLE_FETCH_ARCHIVE_DIR
+print_mulle_environment_all_sh()
+{
+   log_entry "print_mulle_environment_all_sh" "$@"
+
+   cat <<EOF
+#
+# Git mirror and Zip/TGZ cache to conserve bandwidth
+# Memo: override in os-specific env file
+#
+export MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/git-mirrors"
+
+#
+# Git mirror and Zip/TGZ cache to conserve bandwidth
+#
+export MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/archives"
 
 #
 # PATH to search for git repositories locally
 #
-MULLE_FETCH_SEARCH_PATH="\${MULLE_VIRTUAL_ROOT}/.."
-export MULLE_FETCH_SEARCH_PATH
+export MULLE_FETCH_SEARCH_PATH="\${MULLE_VIRTUAL_ROOT}/.."
 
 #
 # Prefer symlinks to local git repositories found via MULLE_FETCH_SEARCH_PATH
 #
-MULLE_SYMLINK="YES"
-export MULLE_SYMLINK
+export MULLE_SYMLINK="YES"
 
 #
 # Use common folder for sharable projects
 #
-MULLE_SOURCETREE_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/stashes"
-export MULLE_SOURCETREE_SHARE_DIR
+export MULLE_SOURCETREE_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/stashes"
 
 #
 # Use common build directory
 #
-BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
-export BUILD_DIR
+export BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
 
 #
 # Share dependencies directory (absolute for ease of use)
 #
-DEPENDENCIES_DIR="\${MULLE_VIRTUAL_ROOT}/dependencies"
-export DEPENDENCIES_DIR
+export DEPENDENCIES_DIR="\${MULLE_VIRTUAL_ROOT}/dependencies"
 
 #
 # Share addictions directory (absolute for ease of use)
 #
-ADDICTIONS_DIR="\${MULLE_VIRTUAL_ROOT}/addictions"
-export ADDICTIONS_DIR
+export ADDICTIONS_DIR="\${MULLE_VIRTUAL_ROOT}/addictions"
 
 EOF
 }
@@ -346,36 +347,38 @@ Reinit with \"--style none\", if you don't need mulle-craft"
 }
 
 
-## callback
-env_mulle_enter_subshell()
-{
-   log_entry "env_mulle_enter_subshell" "$@"
+## ## callback
+## env_mulle_enter_subshell()
+## {
+##    log_entry "env_mulle_enter_subshell" "$@"
+##
+##    local directory="$1"
+##    local style="$2"
+##
+##    if [ "${OPTION_BOOTSTRAP}" = "YES" ] && \
+##       [ -f "${directory}/.mulle-sourcetree"  ] && \
+##       [ ! -d "${MULLE_VIRTUAL_ROOT}/dependencies" ]
+##    then
+##       local exepath
+##
+##       if [ $? -eq 0 ]
+##       then
+##          exepath="`command -v mulle-craft`"
+##          log_fluff "Running mulle-craft in \"${directory}\"..."
+##          (
+##             cd "${directory}" ;
+##             "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
+##                "${MULLE_UNAME}" \
+##                "${MULLE_VIRTUAL_ROOT}" \
+##                "${PATH}" \
+##                "SCRIPT" \
+##                "${TRACE}" \
+##                "${exepath}" "--share"
+##          )
+##       fi
+##    fi
+## }
 
-   local directory="$1"
-
-   if [ "${OPTION_BOOTSTRAP}" = "YES" ] && \
-      [ -f "${directory}/.mulle-sourcetree"  ] && \
-      [ ! -d "${MULLE_VIRTUAL_ROOT}/dependencies" ]
-   then
-      local exepath
-
-      if [ $? -eq 0 ]
-      then
-         exepath="`command -v mulle-craft`"
-         log_fluff "Running mulle-craft in \"${directory}\"..."
-         (
-            cd "${directory}" ;
-            "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
-               "${MULLE_UNAME}" \
-               "${MULLE_VIRTUAL_ROOT}" \
-               "${PATH}" \
-               "SCRIPT" \
-               "${TRACE}" \
-               "${exepath}" "--share"
-         )
-      fi
-   fi
-}
 
 ## callback
 env_mulle_add_runpath()
