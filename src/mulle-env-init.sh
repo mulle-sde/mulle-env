@@ -32,6 +32,38 @@
 MULLE_ENV_INIT_SH="included"
 
 
+env_init_options()
+{
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} init [options]
+
+   Initialize the working directory for mulle-env.
+
+Options:
+   --style <tool:path>  : specify environment style
+   -d <dir>             : specify directory
+
+EOF
+
+   cat <<EOF >&2
+
+Tool-style:
+   none                 : no additions
+   mulle                : additionally support mulle-build (default)
+
+Path-style:
+   none                 : all tools must be specified in .mulle-env/etc/tools
+   inherit              : inherit PATH, don't use tools links
+   restrict             : /bin and /usr/bin are inherited. All other tools must
+                          be specified.
+   wild                 : inherit PATH and inherit environment
+EOF
+   exit 1
+}
+
+
+
 env_init_main()
 {
    log_entry "env_init_main" "$@"
@@ -132,7 +164,10 @@ env_init_main()
       shift
    done
 
+   [ "$#" -eq 0 ] || fail "Superflous arguments $*"
+
    local envfile
+   local envincludefile
    local toolsfile
    local stylefile
    local versionfile
@@ -146,6 +181,8 @@ env_init_main()
    sharedir="${MULLE_ENV_DIR}/share"
 
    envfile="${sharedir}/environment.sh"
+   envincludefile="${sharedir}/environment-include.sh"
+
    # user editable stuff in etc
    auxfile="${etcdir}/environment-all.sh"
    darwinauxfile="${etcdir}/environment-os-darwin.sh"
@@ -179,6 +216,15 @@ env_init_main()
       return 1
    fi
    redirect_exekutor "${envfile}" echo "${text}"
+
+   local text
+
+   log_verbose "Creating \"${envincludefile}\""
+   if ! text="`print_${flavor}_include_sh "${style}" `"
+   then
+      return 1
+   fi
+   redirect_exekutor "${envincludefile}" echo "${text}"
 
    log_verbose "Creating \"${auxfile}\""
    if ! text="`print_${flavor}_environment_all_sh "${style}" `"

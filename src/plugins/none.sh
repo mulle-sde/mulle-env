@@ -30,23 +30,23 @@
 #   POSSIBILITY OF SUCH DAMAGE.
 #
 
-print_none_startup_header_sh()
+print_none_startup_sh()
 {
-   log_entry "print_none_startup_header_sh" "$@"
+   log_entry "print_none_startup_sh" "$@"
 
    cat <<EOF
-[ "\${TRACE}" = "YES" ] && set -x  && : \$0 "\$@"
+[ "\${TRACE}" = "YES" ] && set -x  && : "\$0" "\$@"
 
 #
 # If mulle-env is broken, sometimes its nice just to source this file.
-# If you're sourcing this manually on a regular basis, you're doint it wrong.
+# If you're sourcing this manually on a regular basis, you're doing it wrong.
 #
 # We need some minimal stuff to get things going though:
 #     sed, cut, tr, hostname, pwd, uname
 #
 if [ -z "\${MULLE_UNAME}" ]
 then
-   MULLE_UNAME="`uname | cut -d_ -f1 | sed 's/64$//' | tr 'A-Z' 'a-z'`"
+   MULLE_UNAME="\`uname | cut -d_ -f1 | sed 's/64$//' | tr 'A-Z' 'a-z'\`"
    export MULLE_UNAME
 fi
 if [ -z "\${MULLE_VIRTUAL_ROOT}" ]
@@ -78,78 +78,87 @@ export PS1
 
 unset envname
 
+. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment-include.sh"
+
 EOF
 }
 
 
-print_none_startup_footer_sh()
+print_none_include_sh()
 {
-   log_entry "print_none_startup_footer_sh" "$@"
+   log_entry "print_none_include_sh" "$@"
 
    cat <<EOF
+[ "\${TRACE}" = "YES" ] && set -x  && : "\$0" "\$@"
+
+[ -z "\${MULLE_VIRTUAL_ROOT}" -o -z "\${MULLE_UNAME}"  ] && \\
+   echo "Your script needs to setup MULLE_VIRTUAL_ROOT \\
+and MULLE_UNAME properly" >&2  && exit 1
+
+HOSTNAME="\`hostname -s\`" # don't export it
+
+MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
+MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
+
+#
+# Default environment values set by extensions. The user should never
+# edit them.
+#
+
+if [ -f "\${MULLE_ENV_SHARE_DIR}/share/environment-default.sh" ]
+then
+   . "\${MULLE_ENV_SHARE_DIR}/share/environment-default.sh"
+fi
+
 #
 # Load in some modifications depending on osname, hostname, username
 # Of course this could be "cased" in a single file, but it seems convenient.
 # ... and easier to generate with a tool
 #
-HOSTNAME="\`hostname -s\`" # don't export it
 
-MULLE_ENV_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
-
-if [ -f "\${MULLE_ENV_DIR}/environment-all.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-all.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-all.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-all.sh"
 fi
 
-if [ -f "\${MULLE_ENV_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-os-\${MULLE_UNAME}.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh"
 fi
 
-if [ -f "\${MULLE_ENV_DIR}/environment-host-\${HOSTNAME}.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-host-\${HOSTNAME}.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-host-\${HOSTNAME}.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-host-\${HOSTNAME}.sh"
 fi
 
-if [ -f "\${MULLE_ENV_DIR}/environment-user-\${USER}.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-user-\${USER}.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-user-\${USER}.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-user-\${USER}.sh"
 fi
 
 #
 # For more complex edits, that don't work with the cmdline tool
 #
-if [ -f "\${MULLE_ENV_DIR}/environment-aux.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-aux.sh" ]
 then
-   . "\${MULLE_ENV_DIR}/environment-aux.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-aux.sh"
 fi
 
-unset MULLE_ENV_DIR
+unset MULLE_ENV_ETC_DIR
+unset MULLE_ENV_SHARE_DIR
+unset HOSTNAME
 
 EOF
 }
 
 
-print_none_aux_sh()
+print_none_environment_all_sh()
 {
    cat <<EOF
 # add your stuff here
 EOF
 }
 
-
-##
-## CALLBACKS
-##
-
-# callback
-print_none_startup_sh()
-{
-   log_entry "print_none_startup_sh" "$@"
-
-   print_none_startup_header_sh "$@"
-   print_none_startup_footer_sh "$@"
-}
 
 #
 # http://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html

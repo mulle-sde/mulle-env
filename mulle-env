@@ -37,7 +37,7 @@ MULLE_ENV_VERSION="0.10.0"
 # use mulle:restrict as the default suitable for first time mulle-sde
 # users
 #
-MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:restricted}"
+MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:restrict}"
 
 
 usage()
@@ -46,9 +46,9 @@ usage()
 Usage:
    ${MULLE_EXECUTABLE_NAME} [options] [commands] [path|url]
 
-   Create a virtual environment for project in directory.
+   Use a virtual environment for your project.
    If the directory at path does not exist and the path looks like an url,
-   ${MULLE_EXECUTABLE} will attempt to git clone the project from that url.
+   ${MULLE_EXECUTABLE_NAME} will attempt to git clone the project from that url.
 
    Styles are a toolstyle and a pathstyle, separated by ':'
 
@@ -61,9 +61,9 @@ Commands:
    --                   : enter the environment. Can be left out if path, url are
                           not named like the other commands.
 Options:
-   --style <tool:path>  : initialize environment with a certain flavor
+   --style <tool:path>  : enter environment with a certain flavor
    -c <cmd>             : shell command to execute instead of interactive shell
-   -d <dir>             : specify different directory, than the one taken from the url
+   -d <dir>             : specify directory
 EOF
    options_technical_flags_usage "               : "
 
@@ -367,7 +367,7 @@ __get_saved_style_flavor()
    fi
    if [ -z "${style}" ]
    then
-      fail "No mulle-env environment found"
+      fail "No mulle-env environment found. \"$directory/style\" is missing"
    fi
    flavor="`cut -d: -f1 <<< "${style}"`"
 }
@@ -441,8 +441,9 @@ apply_style_to_directory()
    log_entry "apply_style_to_directory" "$@"
 
    local directory="$1"
-   local style="$2"
-   local flavor="$3"
+   local sharedir="$2"
+   local style="$3"
+   local flavor="$4"
 
    local callback
 
@@ -451,6 +452,9 @@ apply_style_to_directory()
    then
       ${callback} "${directory}" "${style}"
    fi
+
+   # memorize new style
+   redirect_exekutor "${sharedir}/style" echo "--style ${style}"
 }
 
 
@@ -472,6 +476,7 @@ apply_flavor_to_runpath()
       echo "${runpath}"
    fi
 }
+
 
 _setup_environment()
 {
@@ -498,9 +503,8 @@ _default_setup_environment()
 {
    log_entry "_default_setup_environment" "$@"
 
-   local directory
+   local directory="${1:-${PWD}}"
 
-   directory="$PWD"
    if [ "${OPTION_SEARCH}" = "YES" ]
    then
       directory="`find_best_environment "${PWD}"`"
@@ -533,8 +537,12 @@ main()
    local RESTRICTED_PATH
 
    # mingw needs different values here
-   MULLE_UNAME="${UNAME}"
+
    case "${MULLE_UNAME}" in
+      "")
+         internal_fail "MULLE_UNAME not set"
+      ;;
+
       *)
          RESTRICTED_PATH="/usr/bin:/bin"
       ;;
@@ -611,15 +619,6 @@ main()
    options_setup_trace "${MULLE_TRACE}"
    export MULLE_TRACE
 
-   #
-   # lets do this for now
-   #
-   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
-   then
-      fail "You are already in the virtual \
-environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
-   fi
-
    local arg
    local url
 
@@ -658,7 +657,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
          # shellcheck source=src/mulle-env-environment.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
 
-         _default_setup_environment
+         _default_setup_environment "${PWD}"
          env_environment_main "$@"
          return $?
       ;;
@@ -667,11 +666,20 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
          # shellcheck source=src/mulle-env-tool.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
 
-         _default_setup_environment
+         _default_setup_environment "${PWD}"
          env_tool_main "$@"
          return $?
       ;;
    esac
+
+   #
+   # lets do this for now
+   #
+   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
+   then
+      fail "You are already in the virtual \
+environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
+   fi
 
    if [ ! -z "${OPTION_DIRECTORY}" ]
    then
@@ -741,6 +749,11 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
    esac
 
+
+   local s
+
+   s=""
+
    local env_flag
 
    env_flag="-i"
@@ -759,12 +772,16 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
          env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
          inherit_path="`censored_path "${PATH}"`"
          runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
+
+         s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
       ;;
 
       *:none)
          inherit_path=""
          env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
          runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
+
+         s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
       ;;
 
       *)
@@ -783,7 +800,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    then
       rundirectory="${callerdirectory}"
    fi
-   apply_style_to_directory "${rundirectory}" "${style}" "${flavor}"
+   apply_style_to_directory "${rundirectory}" "${sharedir}" "${style}" "${flavor}"
 
    #
    #
@@ -795,28 +812,29 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       run_shell_args="-c '${OPTION_SHELL_COMMAND}"
    fi
 
-   local s
+   case "${style}" in
+      *:wild)
+         unset MULLE_EXECUTABLE_NAME
+      ;;
 
-   s=""
-
-   [ ! -z "${DISPLAY}" ]   && s="`concat "${s}" "DISPLAY='${DISPLAY}'"`"
-   [ ! -z "${EDITOR}" ]    && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
-   [ ! -z "${HOME}" ]      && s="`concat "${s}" "HOME='${HOME}'"`"
-   [ ! -z "${LOGNAME}" ]   && s="`concat "${s}" "LOGNAME='${LOGNAME}'"`"
-   [ ! -z "${LS_COLORS}" ] && s="`concat "${s}" "LS_COLORS='${LS_COLORS}'"`"
-   [ ! -z "${PS1}" ]       && s="`concat "${s}" "PS1='${PS1}'"`"
-   [ ! -z "${SSH_CONNECTION}" ] \
-                           && s="`concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'"`"
-   [ ! -z "${SSH_TTY}" ]   && s="`concat "${s}" "SSH_TTY='${SSH_TTY}'"`"
-   [ ! -z "${TERM}" ]      && s="`concat "${s}" "TERM='${TERM}'"`"
-   [ ! -z "${TMPDIR}" ]    && s="`concat "${s}" "TMPDIR='${TMPDIR}'"`"
-   [ ! -z "${USER}" ]      && s="`concat "${s}" "USER='${USER}'"`"
-   [ ! -z "${VISUAL}" ]    && s="`concat "${s}" "VISUAL='${VISUAL}'"`"
-   [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
-                           && s="`concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'"`"
-
-   # remember old path
-   s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
+      *)
+         [ ! -z "${DISPLAY}" ]   && s="`concat "${s}" "DISPLAY='${DISPLAY}'"`"
+         [ ! -z "${EDITOR}" ]    && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
+         [ ! -z "${HOME}" ]      && s="`concat "${s}" "HOME='${HOME}'"`"
+         [ ! -z "${LOGNAME}" ]   && s="`concat "${s}" "LOGNAME='${LOGNAME}'"`"
+         [ ! -z "${LS_COLORS}" ] && s="`concat "${s}" "LS_COLORS='${LS_COLORS}'"`"
+         [ ! -z "${PS1}" ]       && s="`concat "${s}" "PS1='${PS1}'"`"
+         [ ! -z "${SSH_CONNECTION}" ] \
+                                 && s="`concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'"`"
+         [ ! -z "${SSH_TTY}" ]   && s="`concat "${s}" "SSH_TTY='${SSH_TTY}'"`"
+         [ ! -z "${TERM}" ]      && s="`concat "${s}" "TERM='${TERM}'"`"
+         [ ! -z "${TMPDIR}" ]    && s="`concat "${s}" "TMPDIR='${TMPDIR}'"`"
+         [ ! -z "${USER}" ]      && s="`concat "${s}" "USER='${USER}'"`"
+         [ ! -z "${VISUAL}" ]    && s="`concat "${s}" "VISUAL='${VISUAL}'"`"
+         [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
+                                 && s="`concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'"`"
+      ;;
+   esac
 
    #
    # home is needed for git

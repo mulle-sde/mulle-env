@@ -31,6 +31,7 @@
 #
 MULLE_ENV_MULLE_PLUGIN_SH="included"
 
+
 print_mulle_environment_os_darwin_sh()
 {
    log_entry "print_mulle_environment_os_darwin_sh" "$@"
@@ -92,6 +93,14 @@ export DEPENDENCIES_DIR="\${MULLE_VIRTUAL_ROOT}/dependencies"
 export ADDICTIONS_DIR="\${MULLE_VIRTUAL_ROOT}/addictions"
 
 EOF
+}
+
+
+print_mulle_include_sh()
+{
+   log_entry "print_mulle_include_sh" "$@"
+
+   print_none_include_sh "$@"
 }
 
 
@@ -262,9 +271,9 @@ EOF
 
 
 
-print_mulle_startup_footer_sh()
+print_mulle_startup_sh()
 {
-   print_none_startup_footer_sh
+   print_none_startup_sh
 
    cat << EOF
 
@@ -279,18 +288,6 @@ EOF
 }
 
 
-## callback
-print_mulle_startup_sh()
-{
-   log_entry "print_mulle_startup_sh" "$@"
-
-   print_none_startup_header_sh "$@"
-   print_mulle_startup_footer_sh "$@"
-}
-
-
-
-## callback
 env_setup_mulle_tools()
 {
    log_entry "env_setup_mulle_tools" "$@"
