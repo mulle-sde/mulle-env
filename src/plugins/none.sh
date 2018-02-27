@@ -105,9 +105,9 @@ MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 # edit them.
 #
 
-if [ -f "\${MULLE_ENV_SHARE_DIR}/share/environment-default.sh" ]
+if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-default.sh" ]
 then
-   . "\${MULLE_ENV_SHARE_DIR}/share/environment-default.sh"
+   . "\${MULLE_ENV_SHARE_DIR}/environment-default.sh"
 fi
 
 #

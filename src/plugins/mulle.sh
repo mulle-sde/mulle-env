@@ -270,9 +270,10 @@ EOF
 }
 
 
-
 print_mulle_startup_sh()
 {
+   log_entry "print_mulle_startup_sh" "$@"
+
    print_none_startup_sh
 
    cat << EOF

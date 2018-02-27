@@ -1,3 +1,8 @@
+## 0.11.0
+
+* Various small improvements
+
+
 ## 0.9.0
 
 * renamed restricted to restrict
