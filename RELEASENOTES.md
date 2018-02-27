@@ -1,7 +1,12 @@
-## 0.11.0
+### 0.10.1
 
 * Various small improvements
 
+## 0.10.0
+
+* change environment file scheme a bit to make it easier for --output-eval
+* moved tool from mulle-sde to mulle-env where it belongs
+* added environment editing functionality
 
 ## 0.9.0
 
