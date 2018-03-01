@@ -14,13 +14,13 @@ digraph G {
         ".mulle-env"   [ shape="folder" ]
         "bin"          [ shape="folder" ]
 
-        "tools"
+        "tool"
         "environment.sh"
 
         "project" ->  ".mulle-env"
         ".mulle-env" -> "environment.sh"
-        ".mulle-env" -> "tools"
-        ".mulle-env" -> "optional-tools"
+        ".mulle-env" -> "tool"
+        ".mulle-env" -> "optional-tool"
         ".mulle-env" -> "bin"
         "bin" ->     "..."
         "..." [ shape="none"]

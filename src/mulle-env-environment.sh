@@ -313,7 +313,7 @@ env_environment_set_main()
    local OPTION_COMMENT_OUT_EMPTY="NO"
    local OPTION_ADD_EMPTY="NO"
    
-   while [ $# -ne 0 ]
+   while :
    do
       case "$1" in
          -h|--help|help)
@@ -549,7 +549,7 @@ env_environment_get_main()
 
    getter="_env_environment_get" 
    
-   while [ $# -ne 0 ]
+   while :
    do
       case "$1" in
          -h|--help|help)
@@ -819,7 +819,7 @@ env_environment_list_main()
 
    lister="_env_environment_list" 
 
-   while [ $# -ne 0 ]
+   while :
    do
       case "$1" in
          -h|--help|help)

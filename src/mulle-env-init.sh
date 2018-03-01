@@ -185,10 +185,15 @@ env_init_main()
    auxfile="${sharedir}/environment-global.sh"
    darwinauxfile="${sharedir}/environment-os-darwin.sh"
 
-   toolsfile="${sharedir}/tools"
-   optional_toolsfile="${sharedir}/optional-tools"
-   stylefile="${sharedir}/style"
+   toolsfile="${sharedir}/tool"
+   optional_toolsfile="${sharedir}/optional-tool"
    versionfile="${sharedir}/version"
+
+   #
+   # style is written (possibly) everytime we execute mulle-sde so
+   # it is in env (considered a user change)
+   #
+   stylefile="${MULLE_ENV_DIR}/etc/style"
 
    if [ "${OPTION_MAGNUM_FORCE}" != "YES" ] && [ -f "${envfile}" ]
    then
@@ -265,6 +270,7 @@ env_init_main()
    fi
    redirect_exekutor "${optional_toolsfile}" echo "${text}"
 
+   mkdir_if_missing "${MULLE_ENV_DIR}/etc"
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "--style ${style}"
 
