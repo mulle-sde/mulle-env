@@ -195,6 +195,7 @@ env_init_main()
    #
    stylefile="${MULLE_ENV_DIR}/etc/style"
 
+
    if [ "${OPTION_MAGNUM_FORCE}" != "YES" ] && [ -f "${envfile}" ]
    then
       log_warning "\"${envfile}\" already exists"
@@ -272,7 +273,7 @@ env_init_main()
 
    mkdir_if_missing "${MULLE_ENV_DIR}/etc"
    log_verbose "Creating \"${stylefile}\""
-   redirect_exekutor "${stylefile}" echo "--style ${style}"
+   redirect_exekutor "${stylefile}" echo "${style}"
 
    log_verbose "Creating \"${versionfile}\""
    redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"

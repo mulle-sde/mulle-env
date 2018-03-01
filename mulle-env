@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.10.3"
+MULLE_ENV_VERSION="0.10.4"
 
 #
 # use mulle:restrict as the default suitable for first time mulle-sde
@@ -365,7 +365,7 @@ __get_saved_style_flavor()
    style=""
    if [ -f "${directory}/style" ]
    then
-      style="`sed -e '/^#/d' -e 's/--style //' "${directory}/style" `"
+      style="`sed -e '/^#/d' "${directory}/style" `"
    fi
    if [ -z "${style}" ]
    then
@@ -427,7 +427,7 @@ find_best_environment()
       fi
 
       # use globbing
-      if [ -f "${directory}/".mulle-env/*/environment.sh ]
+      if [ -f "${directory}/".mulle-env/share/environment.sh ]
       then
          log_info "Found and using a superior mulle-env environment at \
 ${C_RESET_BOLD}${directory}/.mulle-env${C_INFO}.
@@ -458,7 +458,7 @@ apply_style_to_directory()
 
    # memorize new style
    # since this always changes on user reques its in etc
-   redirect_exekutor "${MULLE_ENV_DIR}/etc/style" echo "--style ${style}"
+   redirect_exekutor "${MULLE_ENV_DIR}/etc/style" echo "${style}"
 }
 
 
@@ -754,7 +754,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
 
       *) # no : like none
-         style="${style:none}"
+         style="none:${style}"
       ;;
    esac
 
