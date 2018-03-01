@@ -231,7 +231,7 @@ _mulle_tool_remove_file()
    local escaped
 
    escaped="`escaped_sed_pattern "${tool}"`"
-   exekutor sed -i'.bak' "/^${escaped}\$/d" "${toolsfile}"
+   exekutor sed -i "/^${escaped}\$/d" "${toolsfile}"
 
    local bindir
 

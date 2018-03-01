@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.10.4"
+MULLE_ENV_VERSION="0.10.5"
 
 #
 # use mulle:restrict as the default suitable for first time mulle-sde

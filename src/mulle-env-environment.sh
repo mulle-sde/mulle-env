@@ -53,7 +53,7 @@ Usage:
 
    Manage environment variables as set by mulle-env when entering an
    environment. You general settings will be in scope "global". There
-   other scopes based on the login user, the current host and the 
+   other scopes based on the login user, the current host and the
    current platform (os).
 
 Options:
@@ -105,17 +105,17 @@ env_environment_set_usage()
 Usage:
    ${MULLE_USAGE_NAME} environment set [options] <key> [value] [comment]
 
-   Set the value of an environment variable. Specify the scope of your 
+   Set the value of an environment variable. Specify the scope of your
    environment variable with the `${MULLE_USAGE_NAME} environment`
    options.
 
    Set by default will save into the user scope!
 
-   Use the alias \`mulle-env-reload\` to update your shell environment 
+   Use the alias \`mulle-env-reload\` to update your shell environment
    variables after edits.
 
    Example:
-      ${MULLE_USAGE_NAME} environment --global set FOO "A value" 
+      ${MULLE_USAGE_NAME} environment --global set FOO "A value"
 
 Options:
 EOF
@@ -129,13 +129,13 @@ env_environment_list_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment list [options] 
+   ${MULLE_USAGE_NAME} environment list [options]
 
    List environment variables. If you specified no scope, you will get
    a combined listing of all scopes. Specify the scope using the
-   environment options. 
+   environment options.
 
-      ${MULLE_USAGE_NAME} environment --global list 
+      ${MULLE_USAGE_NAME} environment --global list
 
 
 Options:
@@ -183,7 +183,7 @@ env_prepare_for_add()
    log_entry "env_prepare_for_add" "$@"
 
    local etctoolsfile="$1"
-   local sharetoolsfile="$2" 
+   local sharetoolsfile="$2"
 
    mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
    if [ ! -f "${etctoolsfile}" ]
@@ -201,7 +201,7 @@ env_prepare_for_remove()
    log_entry "env_prepare_for_remove" "$@"
 
    local etctoolsfile="$1"
-   local sharetoolsfile="$2" 
+   local sharetoolsfile="$2"
 
    if [ ! -f "${etctoolsfile}" ]
    then
@@ -260,18 +260,18 @@ _env_environment_set()
    then
       if [ -f "${filename}" ]
       then
-         exekutor sed -i'.bak' -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
+         exekutor sed -i -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
       fi
       return
    fi
 
    #
-   # first try inplace-replacement 
+   # first try inplace-replacement
    #
    if [ -f "${filename}" ]
    then
-      exekutor sed -i'.bak' -e "s/^[ #]*export *${sed_escaped_key}=.*/\
+      exekutor sed -i -e "s/^[ #]*export *${sed_escaped_key}=.*/\
 export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
       if rexekutor egrep -q -s "^export *${sed_escaped_key}=" "${filename}"
       then
@@ -290,7 +290,7 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
    # If that fails append to end, except if empty
    #
    if [  -z "${value}" -a "${OPTION_ADD_EMPTY}" = "NO"  ]
-   then  
+   then
       return
    fi
 
@@ -312,7 +312,7 @@ env_environment_set_main()
    local scope="$1"; shift
    local OPTION_COMMENT_OUT_EMPTY="NO"
    local OPTION_ADD_EMPTY="NO"
-   
+
    while :
    do
       case "$1" in
@@ -378,7 +378,7 @@ env_environment_set_main()
                   ${MULLE_ENV_ETC_DIR}/environment-user-*.sh
          do
             shopt -u nullglob
-            _env_environment_set "$i" "${key}" "" 
+            _env_environment_set "$i" "${key}" ""
          done
          shopt -u nullglob
       ;;
@@ -387,7 +387,7 @@ env_environment_set_main()
          local rval
 
          filename="${MULLE_ENV_DIR}/share/environment-global.sh"
-         
+
          exekutor chmod ug+w "${filename}" 2> /dev/null
          exekutor chmod ug+wX "${MULLE_ENV_DIR}/share" 2> /dev/null
 
@@ -547,8 +547,8 @@ env_environment_get_main()
    local infix="_"
    local getter
 
-   getter="_env_environment_get" 
-   
+   getter="_env_environment_get"
+
    while :
    do
       case "$1" in
@@ -557,11 +557,11 @@ env_environment_get_main()
          ;;
 
          --output-eval)
-            getter="_env_environment_eval_get" 
+            getter="_env_environment_eval_get"
          ;;
 
          --output-sed)
-            getter="_env_environment_sed_get" 
+            getter="_env_environment_sed_get"
          ;;
 
          --sed-key-prefix)
@@ -596,7 +596,7 @@ env_environment_get_main()
    [ -z "${key}" ] && fail "empty key"
 
    local filename
-   
+
    case "${scope}" in
       "")
          filename="${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
@@ -604,24 +604,24 @@ env_environment_get_main()
          then
             return
          fi
-         filename="${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh" 
+         filename="${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh"
          if ${getter} "${filename}" "${key}"
          then
             return
          fi
-      
+
          filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"
          if [ ! -f "${filename}" ]
-         then 
+         then
             filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh"
          fi
          if ${getter} "${filename}" "${key}"
          then
             return
          fi
-         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh" 
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
          if [ ! -f "${filename}" ]
-         then 
+         then
             filename="${MULLE_ENV_DIR}/share/environment-global.sh"
          fi
          if ${getter} "${filename}" "${key}"
@@ -641,7 +641,7 @@ env_environment_get_main()
       *)
          filename="${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"
          if [ ! -f "${filename}" ]
-         then 
+         then
             filename="${MULLE_ENV_DIR}/share/environment-${scope}.sh"
          fi
          ${getter} "${filename}" "${key}"
@@ -708,21 +708,21 @@ _env_environment_combined_list_main()
    local filename
 
    cmdline="_env_environment_combined_list '${text_lister}'"
-   filename="${MULLE_ENV_DIR}/etc/environment-global.sh" 
+   filename="${MULLE_ENV_DIR}/etc/environment-global.sh"
    if [ -f "${filename}" ]
-   then  
+   then
       cmdline="`concat "${cmdline}" "'${filename}'"`"
    else
-      filename="${MULLE_ENV_DIR}/share/environment-global.sh" 
+      filename="${MULLE_ENV_DIR}/share/environment-global.sh"
       cmdline="`concat "${cmdline}" "'${filename}'"`"
    fi
 
-   filename="${MULLE_ENV_DIR}/etc/environment-os-${MULLE_UNAME}.sh" 
+   filename="${MULLE_ENV_DIR}/etc/environment-os-${MULLE_UNAME}.sh"
    if [ -f "${filename}" ]
-   then  
+   then
       cmdline="`concat "${cmdline}" "'${filename}'"`"
    else
-      filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh" 
+      filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh"
       cmdline="`concat "${cmdline}" "'${filename}'"`"
    fi
 
@@ -731,7 +731,7 @@ _env_environment_combined_list_main()
 
    filename="'${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh'"
    cmdline="`concat "${cmdline}" "${filename}" `"
-   
+
    eval "${cmdline}"
 }
 
@@ -749,7 +749,7 @@ _env_environment_list()
          scope="`fast_basename "$1"`"
          scope="${scope%.sh}"
          scope="${scope#environment-}"
-         
+
          log_info "${C_MAGENTA}${C_BOLD}${scope}"
 
          merge_environment_file "$1"
@@ -817,7 +817,7 @@ env_environment_list_main()
 
    local lister
 
-   lister="_env_environment_list" 
+   lister="_env_environment_list"
 
    while :
    do
@@ -827,7 +827,7 @@ env_environment_list_main()
          ;;
 
          --output-eval)
-            lister="_env_environment_eval_list" 
+            lister="_env_environment_eval_list"
             if [ "${scope}" = "DEFAULT" ]
             then
                scope="include"
@@ -835,7 +835,7 @@ env_environment_list_main()
          ;;
 
          --output-sed)
-            lister="_env_environment_sed_list" 
+            lister="_env_environment_sed_list"
             if [ "${scope}" = "DEFAULT" ]
             then
                scope="include"
@@ -876,20 +876,20 @@ env_environment_list_main()
 
    case "${scope}" in
       "separate")
-         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"         
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
          if [ ! -f "${filename}" ]
          then
             filename="${MULLE_ENV_DIR}/share/environment-global.sh"
          fi
          "${lister}" "${filename}"
 
-         filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"         
+         filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"
          if [ ! -f "${filename}" ]
          then
             filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh"
          fi
          "${lister}" "${filename}"
-         
+
          "${lister}" "${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh"
          "${lister}" "${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
       ;;
@@ -907,7 +907,7 @@ env_environment_list_main()
       ;;
 
       *)
-         filename="${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"         
+         filename="${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"
          if [ ! -f "${filename}" ]
          then
             filename="${MULLE_ENV_DIR}/share/environment-${scope}.sh"
