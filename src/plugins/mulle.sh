@@ -206,14 +206,6 @@ print_mulle_tools_sh()
    print_none_tools_sh "$@"
 
    #
-   # aux scripts from mulle-sde
-   # ... ugliness ensues...
-   cat <<EOF
-mulle-sde-cmake-source-update
-mulle-sde-cmake-sourcetree-update
-EOF
-
-   #
    # set of "minimal" commands for use in development
    # many or most are required by the mulle scripts
    #
@@ -284,6 +276,11 @@ print_mulle_startup_sh()
 if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd" ]
 then
    cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd"
+else
+   if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd" ]
+   then
+      cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd"
+   fi
 fi
 EOF
 }

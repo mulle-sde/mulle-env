@@ -34,9 +34,11 @@ MULLE_ENV_TOOL_SH="included"
 
 env_tool_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} tool [options] [command]
+   ${MULLE_USAGE_NAME} tool [options] [command]
 
    Add and remove commandline tool from the environment. This is only
    of interest, if you are using the :restricted or :none path style.
@@ -56,67 +58,111 @@ EOF
 }
 
 
+prepare_for_add()
+{
+   log_entry "prepare_for_add" "$@"
+
+   local etctoolsfile="$1"
+   local sharetoolsfile="$2" 
+
+   mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
+   if [ ! -f "${etctoolsfile}" ]
+   then
+      if [ -f "${sharetoolsfile}" ]
+      then
+         exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
+      fi
+   fi
+}
+
+prepare_for_remove()
+{
+   log_entry "prepare_for_remove" "$@"
+
+   local etctoolsfile="$1"
+   local sharetoolsfile="$2" 
+
+   if [ ! -f "${etctoolsfile}" ]
+   then
+      if [ ! -f "${sharetoolsfile}" ]
+      then
+         return 1
+      fi
+      mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
+      exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
+   fi
+}
+
+
 _mulle_tool_add()
 {
    log_entry "_mulle_tool_add" "$@"
 
    local toolsfile="$1" ; shift
+   local fallbacktoolsfile="$1" ; shift
 
-   local tool="$1"
+   local tool
 
-   [ -z "${tool}" ] && internal_fail "tool must not be empty"
-   [ -z "${MULLE_ENV_DIR}" ] && internal_fail "MULLE_ENV_DIR not defined"
+   [ -z "${MULLE_ENV_DIR}" ]   && internal_fail "MULLE_ENV_DIR not defined"
+   [ ! -d "${MULLE_ENV_DIR}" ] && fail "Need to \"mulle-env init\" first before adding tools"
+   
+   [ $# -eq 0 ] && env_tool_usage "missing tool name"
 
-   if [ ! -d "${MULLE_ENV_DIR}" ]
-   then
-      fail "Need to \"mulle-env init\" first before adding tools"
-   fi
+   while [ $# -ne 0 ]
+   do
+      tool="$1"
+      shift
 
-   local executable
+      [ -z "${tool}" ] && fail "tool must not be empty"
 
-   #
-   # use mudo to break out of
-   # virtual environment
-   #
-   executable="`mudo which "${tool}" 2> /dev/null`"
-   if [ -z "${executable}" ]
-   then
-      if [ -z "`which "mudo" 2> /dev/null`" ]
+      prepare_for_add "${toolsfile}" "${fallbacktoolsfile}"
+
+      local executable
+
+      #
+      # use mudo to break out of
+      # virtual environment
+      #
+      executable="`mudo which "${tool}" 2> /dev/null`"
+      if [ -z "${executable}" ]
       then
-         fail "\"mudo\" is not present ??? Try again outside of the environment."
-      else
-         fail "Failed to find executable \"${tool}\""
+         if [ -z "`which "mudo" 2> /dev/null`" ]
+         then
+            fail "\"mudo\" is not present ??? Try again outside of the environment."
+         else
+            fail "Failed to find executable \"${tool}\""
+         fi
       fi
-   fi
 
-   if fgrep -q -s -x "${tool}" "${toolsfile}"
-   then
-      log_warning "\"${tool}\" is already in the list of tools, will relink"
-   else
-      redirect_append_exekutor "${toolsfile}" echo "${tool}"
-   fi
+      if fgrep -q -s -x "${tool}" "${toolsfile}"
+      then
+         log_warning "\"${tool}\" is already in the list of tools, will relink"
+      else
+         redirect_append_exekutor "${toolsfile}" echo "${tool}"
+      fi
 
-   local bindir
+      local bindir
 
-   bindir="${MULLE_ENV_DIR}/bin"
-   mkdir_if_missing "${bindir}"
+      bindir="${MULLE_ENV_DIR}/bin"
+      mkdir_if_missing "${bindir}"
 
-   local dstfile
+      local dstfile
 
-   dstfile="${bindir}/${tool}"
+      dstfile="${bindir}/${tool}"
 
-   exekutor chmod ugo+w "${bindir}" || return 1
-   if [ -e "${dstfile}" ]
-   then
-      # since it's usually a symlink this won't work
-      # but on mingw it's better safe than sorry
-      exekutor chmod ugo+w "${dstfile}" 2> /dev/null
-   fi
+      exekutor chmod ugo+w "${bindir}" || return 1
+      if [ -e "${dstfile}" ]
+      then
+         # since it's usually a symlink this won't work
+         # but on mingw it's better safe than sorry
+         exekutor chmod ugo+w "${dstfile}" 2> /dev/null
+      fi
 
-   exekutor ln -sf "${executable}" "${bindir}/" || exit 1
+      exekutor ln -sf "${executable}" "${bindir}/" || exit 1
 
-   exekutor chmod ugo-w "${dstfile}" 2> /dev/null || : # see above
-   exekutor chmod ugo-w "${bindir}"
+      exekutor chmod ugo-w "${dstfile}" 2> /dev/null || : # see above
+      exekutor chmod ugo-w "${bindir}"
+   done
 }
 
 
@@ -125,30 +171,37 @@ _mulle_tool_remove()
    log_entry "_mulle_tool_remove" "$@"
 
    local toolsfile="$1" ; shift
+   local fallbacktoolsfile="$1" ; shift 
 
-   local tool="$1"
-
-   [ -z "${tool}" ] && internal_fail "tool must not be empty"
    [ -z "${MULLE_ENV_DIR}" ] && internal_fail "MULLE_ENV_DIR not defined"
+   [ $# -eq 0 ] && env_tool_usage "missing tool name"
 
-   if [ ! -f "${toolsfile}" ]
-   then
-      log_warning "No tools present. Check your PATH."
-      return 2
+   local tool
+
+   while [ $# -ne 0 ]
+   do
+      tool="$1"
+      shift
+      
+      if ! prepare_for_remove "${toolsfile}" "${fallbacktoolsfile}"
+      then 
+         log_warning "There is nothing to remove"
+         exit 0
+      fi
+
+      local escaped
+
+      escaped="`escaped_sed_pattern "${tool}"`"
+      exekutor sed -i'.bak' "/^${escaped}\$/d" "${toolsfile}"
+
+      local bindir
+
+      bindir="${MULLE_ENV_DIR}/bin"
+
+      exekutor chmod ugo+w "${bindir}" || return 1
+      remove_file_if_present "${bindir}/${tool}" &&
+      exekutor chmod ugo-w "${bindir}"
    fi
-
-   local escaped
-
-   escaped="`escaped_sed_pattern "${tool}"`"
-   exekutor sed -i'.bak' "/^${escaped}\$/d" "${toolsfile}"
-
-   local bindir
-
-   bindir="${MULLE_ENV_DIR}/bin"
-
-   exekutor chmod ugo+w "${bindir}" || return 1
-   remove_file_if_present "${bindir}/${tool}" &&
-   exekutor chmod ugo-w "${bindir}"
 }
 
 
@@ -156,7 +209,13 @@ _mulle_tool_list()
 {
    log_entry "_mulle_tool_list" "$@"
 
-   local toolsfile="$1" ; shift
+   local toolsfile="$1"
+   local fallbacktoolsfile="$2" 
+
+   if [ ! -f "${toolsfile}" ]
+   then
+      toolsfile="${fallbacktoolsfile}"
+   fi
 
    if [ ! -f "${toolsfile}" ]
    then
@@ -168,7 +227,6 @@ _mulle_tool_list()
 
    LC_ALL=C egrep -v '^#' | sed '/^[ ]*$/d' | sort
 }
-
 
 
 ###
@@ -192,7 +250,7 @@ env_tool_main()
    do
       case "$1" in
          -*)
-            env_tool_usage
+            env_tool_usage "unknown option \"$1\""
          ;;
 
          -o|--optional|--no-required)
@@ -213,15 +271,20 @@ env_tool_main()
 
    local cmd="$1"
 
-   [ $# -ne 0 ] && shift
-
    case "${cmd}" in
       add|list|remove)
-         _mulle_tool_${cmd} "${MULLE_ENV_DIR}/etc/${TOOLSFILE}" "$@"
+         shift
+         _mulle_tool_${cmd} "${MULLE_ENV_DIR}/etc/${TOOLSFILE}" \
+                            "${MULLE_ENV_DIR}/share/${TOOLSFILE}" \
+                            "$@"
+      ;;
+
+      "")
+         env_tool_usage
       ;;
 
       *)
-         env_tool_usage
+         env_tool_usage "unknown command \"${cmd}\""
       ;;
    esac
 }

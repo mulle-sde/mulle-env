@@ -38,34 +38,30 @@ env_environment_usage()
 
 SHOWN_COMMANDS="\
    list              : list environment variables
-   set <key> <value> : set an environment variable
-   get <key>         : get value of an environment variable
+   set               : set an environment variable
+   get               : get value of an environment variable
 "
 
 HIDDEN_COMMANDS="\
    hostname          : show current hostname value
    user              : show current username value
-   uname             : show current uname value
+   uname             : show current operating system value
 "
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} environment [options] [command]*
+   ${MULLE_USAGE_NAME} environment [options] [command]*
 
    Manage environment variables as set by mulle-env when entering an
-   environment. You general setting will be in --all, which is the
-   default for *set*.
-
-   Use list --separate to see where definitions are made.
-   Use list --output-eval to see the resolved values.
+   environment. You general settings will be in scope "global". There
+   other scopes based on the login user, the current host and the 
+   current platform (os).
 
 Options:
    -h                : show this usage
-   --all             : environment variables for all, but no specialized ones
-   --hostname        : environment variables only for this host (`hostname`)
-   --user            : environment variables only for this user ($USER)
-   --os              : environment variables only for this os ($MULLE_UNAME)
-   --output-eval     : resolve values
-   --separate        : list all files where environment variables are defined
+   --global          : scope for general environments variables
+   --hostname        : narrow scope to this host only (`hostname`)
+   --user            : narrow scope to this user only ($USER)
+   --os              : narrow scope to this operating system only ($MULLE_UNAME)
 
 Commands:
 EOF
@@ -80,6 +76,71 @@ EOF
 
    cat <<EOF >&2
          (use -v for more commands)
+EOF
+   exit 1
+}
+
+
+env_environment_get_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} environment get [options] <key>
+
+   Get the value of an environment variable.
+
+Options:
+   --output-eval : resolve value
+EOF
+   exit 1
+}
+
+env_environment_set_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} environment set [options] <key> [value] [comment]
+
+   Set the value of an environment variable. Specify the scope of your 
+   environment variable with the `${MULLE_USAGE_NAME} environment`
+   options.
+
+   Set by default will save into the user scope!
+
+   Use the alias \`mulle-env-reload\` to update your shell environment 
+   variables after edits.
+
+   Example:
+      ${MULLE_USAGE_NAME} environment --global set FOO "A value" 
+
+Options:
+EOF
+   exit 1
+}
+
+
+env_environment_list_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} environment list [options] 
+
+   List environment variables. If you specified no scope, you will get
+   a combined listing of all scopes. Specify the scope using the
+   environment options. 
+
+      ${MULLE_USAGE_NAME} environment --global list 
+
+
+Options:
+   --separate    : list all files where environment variables are defined
+   --output-eval : resolve values
 EOF
    exit 1
 }
@@ -114,6 +175,43 @@ key_values_to_sed()
       echo "-e 's/${sed_escaped_key}/${sed_escaped_value}/g'"
    done
    IFS="${DEFAULT_IFS}"
+}
+
+
+env_prepare_for_add()
+{
+   log_entry "env_prepare_for_add" "$@"
+
+   local etctoolsfile="$1"
+   local sharetoolsfile="$2" 
+
+   mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
+   if [ ! -f "${etctoolsfile}" ]
+   then
+      if [ -f "${sharetoolsfile}" ]
+      then
+         exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
+         exekutor chmod ug+w "${etctoolsfile}"
+      fi
+   fi
+}
+
+env_prepare_for_remove()
+{
+   log_entry "env_prepare_for_remove" "$@"
+
+   local etctoolsfile="$1"
+   local sharetoolsfile="$2" 
+
+   if [ ! -f "${etctoolsfile}" ]
+   then
+      if [ ! -f "${sharetoolsfile}" ]
+      then
+         return 1
+      fi
+      mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
+      exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
+   fi
 }
 
 
@@ -157,8 +255,8 @@ _env_environment_set()
    sed_escaped_key="`escaped_sed_pattern "${key}"`"
    sed_escaped_value="`escaped_sed_pattern "${value}"`"
 
-   # we don't delete the line, we comment it out (if present)
-   if [ -z "${value}" ]
+   # on request, we comment it out
+   if [ "${OPTION_COMMENT_OUT_EMPTY}" = "YES" -a -z "${value}" ]
    then
       if [ -f "${filename}" ]
       then
@@ -169,7 +267,7 @@ _env_environment_set()
    fi
 
    #
-   # first try inplace-replacement (comment out)
+   # first try inplace-replacement 
    #
    if [ -f "${filename}" ]
    then
@@ -188,7 +286,14 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
 #"
    fi
 
-   # if that fails append to end
+   #
+   # If that fails append to end, except if empty
+   #
+   if [  -z "${value}" -a "${OPTION_ADD_EMPTY}" = "NO"  ]
+   then  
+      return
+   fi
+
    local text
 
    text="\
@@ -205,11 +310,41 @@ env_environment_set_main()
    log_entry "env_environment_set_main" "$@"
 
    local scope="$1"; shift
+   local OPTION_COMMENT_OUT_EMPTY="NO"
+   local OPTION_ADD_EMPTY="NO"
+   
+   while [ $# -ne 0 ]
+   do
+      case "$1" in
+         -h|--help|help)
+            env_environment_set_usage
+         ;;
+
+         --comment-out-empty)
+            OPTION_COMMENT_OUT_EMPTY="YES"
+         ;;
+
+         --add-empty)
+            OPTION_ADD_EMPTY="YES"
+         ;;
+
+         -*)
+            env_environment_set_usage "unknown option \"$1\""
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
    local key="$1"
    local value="$2"
    local comment="$3"
 
-   [ -z "${key}" ] && fail "empty key"
+   [ -z "${key}" ] && env_environment_set_usage "empty key"
 
    local identifier
 
@@ -228,17 +363,22 @@ env_environment_set_main()
 
    local filename
 
+   log_verbose "Use \`mulle-env-reload\' to get the actual value in your shell"
+
    case "${scope}" in
       "")
-         filename="${MULLE_ENV_ETC_DIR}/environment-all.sh"
+         env_prepare_for_add "${filename}" "${MULLE_ENV_DIR}/share/environment-global.sh"
+
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
          _env_environment_set "${filename}" "${key}" "${value}" "${comment}" || exit 1
+
          shopt -s nullglob
          for i in ${MULLE_ENV_ETC_DIR}/environment-os-*.sh \
                   ${MULLE_ENV_ETC_DIR}/environment-host-*.sh \
                   ${MULLE_ENV_ETC_DIR}/environment-user-*.sh
          do
             shopt -u nullglob
-            _env_environment_set "$i" "${key}" "" "${comment}"
+            _env_environment_set "$i" "${key}" "" 
          done
          shopt -u nullglob
       ;;
@@ -246,9 +386,10 @@ env_environment_set_main()
       share)
          local rval
 
-         filename="${MULLE_ENV_DIR}/share/environment-default.sh"
-         exekutor chmod a+w "${filename}" 2> /dev/null
-         exekutor chmod a+wX "${MULLE_ENV_DIR}/share" 2> /dev/null
+         filename="${MULLE_ENV_DIR}/share/environment-global.sh"
+         
+         exekutor chmod ug+w "${filename}" 2> /dev/null
+         exekutor chmod ug+wX "${MULLE_ENV_DIR}/share" 2> /dev/null
 
          _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
          rval="$?"
@@ -261,6 +402,8 @@ env_environment_set_main()
 
       *)
          filename="${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"
+         env_prepare_for_add "${filename}" "${MULLE_ENV_DIR}/share/environment-${scope}.sh"
+
          _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
       ;;
    esac
@@ -368,8 +511,6 @@ _env_environment_sed_get()
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT not set up"
    [ -z "${MULLE_UNAME}" ] && internal_fail "MULLE_UNAME not set up"
 
-   local sedexpr
-
    local value
 
    if [ ! -f "${filename}" ]
@@ -397,74 +538,116 @@ _env_environment_sed_get()
 }
 
 
-_env_environment_get_main()
+env_environment_get_main()
 {
    log_entry "_env_environment_get_main" "$@"
 
-   local getter="$1"; shift
    local scope="$1"; shift
-   local key="$1"
 
-   [ "$#" -ne 1 ]  && env_environment_usage "wrong number of arguments \"$*\""
+   local infix="_"
+   local getter
+
+   getter="_env_environment_get" 
+   
+   while [ $# -ne 0 ]
+   do
+      case "$1" in
+         -h|--help|help)
+            env_environment_get_usage
+         ;;
+
+         --output-eval)
+            getter="_env_environment_eval_get" 
+         ;;
+
+         --output-sed)
+            getter="_env_environment_sed_get" 
+         ;;
+
+         --sed-key-prefix)
+            [ $# -eq 1 ] && env_environment_get_usage "missing argument to $1"
+            shift
+
+            OPTION_SED_KEY_PREFIX="$1"
+         ;;
+
+         --sed-key-suffix)
+            [ $# -eq 1 ] && env_environment_get_usage "missing argument to $1"
+            shift
+
+            OPTION_SED_KEY_SUFFIX="$1"
+         ;;
+
+         -*)
+            env_environment_get_usage "unknown option \"$1\""
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ "$#" -ne 1 ]  && env_environment_get_usage "wrong number of arguments \"$*\""
+
+   local key="$1"
    [ -z "${key}" ] && fail "empty key"
 
+   local filename
+   
    case "${scope}" in
       "")
-         if ${getter} "${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh" "${key}"
+         filename="${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
+         if ${getter} "${filename}" "${key}"
          then
             return
          fi
-         if ${getter} "${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh" "${key}"
+         filename="${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh" 
+         if ${getter} "${filename}" "${key}"
          then
             return
          fi
-         if ${getter} "${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh" "${key}"
+      
+         filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"
+         if [ ! -f "${filename}" ]
+         then 
+            filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh"
+         fi
+         if ${getter} "${filename}" "${key}"
          then
             return
          fi
-         if ${getter} "${MULLE_ENV_ETC_DIR}/environment-all.sh" "${key}"
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh" 
+         if [ ! -f "${filename}" ]
+         then 
+            filename="${MULLE_ENV_DIR}/share/environment-global.sh"
+         fi
+         if ${getter} "${filename}" "${key}"
          then
             return
          fi
       ;;
 
       include)
-         ${getter} "${MULLE_ENV_DIR}/share/environment-default.sh" "${key}"
+         ${getter} "${MULLE_ENV_DIR}/share/environment-include.sh" "${key}"
       ;;
 
       share)
-         ${getter} "${MULLE_ENV_DIR}/share/environment-default.sh" "${key}"
+         ${getter} "${MULLE_ENV_DIR}/share/environment-global.sh" "${key}"
       ;;
 
       *)
-         ${getter} "${MULLE_ENV_ETC_DIR}/environment-${scope}.sh" "${key}"
+         filename="${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"
+         if [ ! -f "${filename}" ]
+         then 
+            filename="${MULLE_ENV_DIR}/share/environment-${scope}.sh"
+         fi
+         ${getter} "${filename}" "${key}"
       ;;
    esac
 }
-
-
-env_environment_get_main()
-{
-   log_entry "env_environment_get_main" "$@"
-
-   _env_environment_get_main "_env_environment_get" "$@"
-}
-
-
-env_environment_eval_get_main()
-{
-   log_entry "env_environment_eval_get_main" "$@"
-
-   _env_environment_get_main "_env_environment_eval_get" "$@"
-}
-
-env_environment_sed_get_main()
-{
-   log_entry "env_environment_sed_get_main" "$@"
-
-   _env_environment_get_main "_env_environment_sed_get" "$@"
-}
-
 
 #
 # List
@@ -485,15 +668,89 @@ merge_environment_file()
 }
 
 
-__env_environment_list()
+_env_environment_combined_list()
 {
-   log_entry "_env_environment_list" "$@"
+   log_entry "_env_environment_combined_list" "$@"
+
+   local text_lister="$1"; shift
+
+   local text
+   local contents
 
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
       then
-         log_info "${C_RESET_BOLD}`fast_basename "$1"`:"
+         contents="`cat "$1"`"
+         if [ ! -z "${contents}" ]
+         then
+            text="`add_line "${text}" "${contents}"`"
+         fi
+      else
+         log_fluff "\"$1\" does not exist"
+      fi
+      shift
+   done
+
+   "${text_lister}" "${text}"
+}
+
+
+_env_environment_combined_list_main()
+{
+   log_entry "_env_environment_combined_list_main" "$@"
+
+   local text_lister="$1" ; shift
+
+   [ "$#" -ne 0 ] && env_environment_list_usage "wrong number of arguments \"$*\""
+
+   local cmdline
+   local filename
+
+   cmdline="_env_environment_combined_list '${text_lister}'"
+   filename="${MULLE_ENV_DIR}/etc/environment-global.sh" 
+   if [ -f "${filename}" ]
+   then  
+      cmdline="`concat "${cmdline}" "'${filename}'"`"
+   else
+      filename="${MULLE_ENV_DIR}/share/environment-global.sh" 
+      cmdline="`concat "${cmdline}" "'${filename}'"`"
+   fi
+
+   filename="${MULLE_ENV_DIR}/etc/environment-os-${MULLE_UNAME}.sh" 
+   if [ -f "${filename}" ]
+   then  
+      cmdline="`concat "${cmdline}" "'${filename}'"`"
+   else
+      filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh" 
+      cmdline="`concat "${cmdline}" "'${filename}'"`"
+   fi
+
+   filename="'${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh'"
+   cmdline="`concat "${cmdline}" "${filename}" `"
+
+   filename="'${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh'"
+   cmdline="`concat "${cmdline}" "${filename}" `"
+   
+   eval "${cmdline}"
+}
+
+
+_env_environment_list()
+{
+   log_entry "_env_environment_list" "$@"
+
+   local scope
+
+   while [ "$#" -ne 0 ]
+   do
+      if [ -f "$1" ]
+      then
+         scope="`fast_basename "$1"`"
+         scope="${scope%.sh}"
+         scope="${scope#environment-}"
+         
+         log_info "${C_MAGENTA}${C_BOLD}${scope}"
 
          merge_environment_file "$1"
       else
@@ -504,9 +761,9 @@ __env_environment_list()
 }
 
 
-__env_environment_eval_list()
+_env_environment_eval_list()
 {
-   log_entry "__env_environment_eval_list" "$@"
+   log_entry "_env_environment_eval_list" "$@"
 
    local cmdline
 
@@ -544,30 +801,95 @@ MULLE_UNAME=\"${MULLE_UNAME}\" bash -c '"
                                                   -e '/MULLE_VIRTUAL_ROOT=/d'
 }
 
-__env_environment_sed_list()
+_env_environment_sed_list()
 {
-   log_entry "__env_environment_sed_list" "$@"
+   log_entry "_env_environment_sed_list" "$@"
 
-   __env_environment_eval_list "$@" | key_values_to_sed
+   _env_environment_eval_list "$@" | key_values_to_sed
 }
 
 
-_env_environment_list_main()
+env_environment_list_main()
 {
-   log_entry "_env_environment_list_main" "$@"
+   log_entry "env_environment_list_main" "$@"
 
-   local lister="$1"; shift
    local scope="$1"; shift
 
-   [ "$#" -ne 0 ] && env_environment_usage "wrong number of arguments \"$*\""
+   local lister
+
+   lister="_env_environment_list" 
+
+   while [ $# -ne 0 ]
+   do
+      case "$1" in
+         -h|--help|help)
+            env_environment_list_usage
+         ;;
+
+         --output-eval)
+            lister="_env_environment_eval_list" 
+            if [ "${scope}" = "DEFAULT" ]
+            then
+               scope="include"
+            fi
+         ;;
+
+         --output-sed)
+            lister="_env_environment_sed_list" 
+            if [ "${scope}" = "DEFAULT" ]
+            then
+               scope="include"
+            fi
+         ;;
+
+         --sed-key-prefix)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            OPTION_SED_KEY_PREFIX="$1"
+         ;;
+
+         --sed-key-suffix)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            OPTION_SED_KEY_SUFFIX="$1"
+         ;;
+
+         -*)
+            env_environment_list_usage "unknown option \"$1\""
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ "$#" -ne 0 ] && env_environment_list_usage "wrong number of arguments \"$*\""
 
    log_info "Environment"
 
+   local filename
+
    case "${scope}" in
       "separate")
-         "${lister}" "${MULLE_ENV_DIR}/share/environment-default.sh"
-         "${lister}" "${MULLE_ENV_ETC_DIR}/environment-all.sh"
-         "${lister}" "${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"         
+         if [ ! -f "${filename}" ]
+         then
+            filename="${MULLE_ENV_DIR}/share/environment-global.sh"
+         fi
+         "${lister}" "${filename}"
+
+         filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"         
+         if [ ! -f "${filename}" ]
+         then
+            filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh"
+         fi
+         "${lister}" "${filename}"
+         
          "${lister}" "${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh"
          "${lister}" "${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
       ;;
@@ -580,105 +902,19 @@ _env_environment_list_main()
          "${lister}" "${MULLE_ENV_DIR}/share/environment-default.sh"
       ;;
 
+      "DEFAULT")
+         _env_environment_combined_list_main "merge_environment_text" "$@"
+      ;;
+
       *)
-         "${lister}" "${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"
+         filename="${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"         
+         if [ ! -f "${filename}" ]
+         then
+            filename="${MULLE_ENV_DIR}/share/environment-${scope}.sh"
+         fi
       ;;
    esac
 }
-
-
-
-env_environment_list_main()
-{
-   log_entry "env_environment_list_main" "$@"
-
-   _env_environment_list_main "__env_environment_list" "$@"
-}
-
-
-env_environment_eval_list_main()
-{
-   log_entry "env_environment_eval_list_main" "$@"
-
-   _env_environment_list_main "__env_environment_eval_list" "$@"
-}
-
-
-env_environment_sed_list_main()
-{
-   log_entry "env_environment_eval_list_main" "$@"
-
-   _env_environment_list_main "__env_environment_sed_list" "$@"
-}
-
-
-
-_env_environment_combined_list()
-{
-   log_entry "_env_environment_combined_list" "$@"
-
-   local text_lister="$1"; shift
-
-   local text
-   local contents
-
-   while [ "$#" -ne 0 ]
-   do
-      if [ -f "$1" ]
-      then
-         contents="`cat "$1"`"
-         if [ ! -z "${contents}" ]
-         then
-            text="`add_line "${text}" "${contents}"`"
-         fi
-      else
-         log_fluff "\"$1\" does not exist"
-      fi
-      shift
-   done
-
-   "${text_lister}" "${text}"
-}
-
-
-_env_environment_combined_list_main()
-{
-   log_entry "_env_environment_combined_list_main" "$@"
-
-   local text_lister="$1" ; shift
-
-   [ "$#" -ne 0 ] && env_environment_usage "wrong number of arguments \"$*\""
-
-   log_info "Environment"
-
-   _env_environment_combined_list "${text_lister}" \
-                                  "${MULLE_ENV_DIR}/share/environment-default.sh" \
-                                  "${MULLE_ENV_ETC_DIR}/environment-all.sh" \
-                                  "${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh" \
-                                  "${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh" \
-                                  "${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
-}
-
-
-env_environment_combined_list_main()
-{
-   log_entry "env_environment_combined_list_main" "$@"
-
-   _env_environment_combined_list_main "merge_environment_text" "$@"
-}
-
-
-env_environment_combined_eval_list_main()
-{
-   _env_environment_list_main "__env_environment_eval_list" "include"
-}
-
-
-env_environment_combined_sed_list_main()
-{
-   _env_environment_list_main "__env_environment_sed_list" "include"
-}
-
 
 ###
 ### parameters and environment variables
@@ -703,11 +939,11 @@ env_environment_main()
    while :
    do
       case "$1" in
-         -h|--help)
+         -h|--help|help)
             env_environment_usage
          ;;
 
-         --all|--hostname-*|--user-*|--os-*|--separate|--share)
+         --global|--hostname-*|--user-*|--os-*|--share)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="${1:2}"
@@ -729,28 +965,6 @@ env_environment_main()
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="os-${MULLE_UNAME}"
-         ;;
-
-         --output-eval)
-            infix="_eval_"
-         ;;
-
-         --output-sed)
-            infix="_sed_"
-         ;;
-
-         --sed-key-prefix)
-            [ $# -eq 1 ] && fail "missing argument to $1"
-            shift
-
-            OPTION_SED_KEY_PREFIX="$1"
-         ;;
-
-         --sed-key-suffix)
-            [ $# -eq 1 ] && fail "missing argument to $1"
-            shift
-
-            OPTION_SED_KEY_SUFFIX="$1"
          ;;
 
          -*)
@@ -786,16 +1000,11 @@ env_environment_main()
          then
             OPTION_SCOPE=""
          fi
-         env_environment${infix}get_main "${OPTION_SCOPE}" "$@"
+         env_environment_get_main "${OPTION_SCOPE}" "$@"
       ;;
 
       list)
-         if [ "${OPTION_SCOPE}" = "DEFAULT" ]
-         then
-            env_environment_combined${infix}list_main "$@"
-         else
-            env_environment${infix}list_main "${OPTION_SCOPE}" "$@"
-         fi
+         env_environment_list_main "${OPTION_SCOPE}" "$@"
       ;;
 
       set)
@@ -803,7 +1012,6 @@ env_environment_main()
          then
             OPTION_SCOPE="${MULLE_ENV_DEFAULT_SET_SCOPE:-user-${USER}}"
          fi
-
          env_environment_set_main "${OPTION_SCOPE}" "$@"
       ;;
 

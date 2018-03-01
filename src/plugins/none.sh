@@ -78,7 +78,9 @@ export PS1
 
 unset envname
 
-. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment-include.sh"
+alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment-include.sh"'
+
+mulle-env-reload
 
 EOF
 }
@@ -101,30 +103,37 @@ MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 
 #
-# Default environment values set by extensions. The user should never
-# edit them.
+# Default environment values set by plugins and extensions. 
+# The user should never edit them. He can override settings 
+# in etc.
 #
-
-if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-default.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-global.sh" ]
 then
-   . "\${MULLE_ENV_SHARE_DIR}/environment-default.sh"
-fi
-
-#
-# Load in some modifications depending on osname, hostname, username
-# Of course this could be "cased" in a single file, but it seems convenient.
-# ... and easier to generate with a tool
-#
-
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-all.sh" ]
-then
-   . "\${MULLE_ENV_ETC_DIR}/environment-all.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-global.sh"
+else
+   if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-global.sh" ]
+   then
+      . "\${MULLE_ENV_SHARE_DIR}/environment-global.sh"
+   fi
 fi
 
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
 then
    . "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh"
+else
+   if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
+   then
+      . "\${MULLE_ENV_SHARE_DIR}/environment-os-\${MULLE_UNAME}.sh"
+   fi
 fi
+
+#
+# Load in some modifications depending on  hostname, username. These
+# won't be provided by extensions or plugins.
+#
+# These settings could be "cased" in a single file, but it seems convenient.
+# And more managable for mulle-env environment
+#
 
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-host-\${HOSTNAME}.sh" ]
 then

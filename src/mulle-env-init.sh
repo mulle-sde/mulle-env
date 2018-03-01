@@ -36,7 +36,7 @@ env_init_options()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} init [options]
+   ${MULLE_USAGE_NAME} init [options]
 
    Initialize the working directory for mulle-env.
 
@@ -171,24 +171,22 @@ env_init_main()
    local toolsfile
    local stylefile
    local versionfile
-   local etcdir
    local sharedir
    local optional_toolsfile
 
    MULLE_ENV_DIR="${directory}/.mulle-env"
 
-   etcdir="${MULLE_ENV_DIR}/etc"
    sharedir="${MULLE_ENV_DIR}/share"
 
    envfile="${sharedir}/environment.sh"
    envincludefile="${sharedir}/environment-include.sh"
 
    # user editable stuff in etc
-   auxfile="${etcdir}/environment-all.sh"
-   darwinauxfile="${etcdir}/environment-os-darwin.sh"
+   auxfile="${sharedir}/environment-global.sh"
+   darwinauxfile="${sharedir}/environment-os-darwin.sh"
 
-   toolsfile="${etcdir}/tools"
-   optional_toolsfile="${etcdir}/optional-tools"
+   toolsfile="${sharedir}/tools"
+   optional_toolsfile="${sharedir}/optional-tools"
    stylefile="${sharedir}/style"
    versionfile="${sharedir}/version"
 
@@ -198,7 +196,6 @@ env_init_main()
       return 2
    fi
 
-   mkdir_if_missing "${etcdir}"
    mkdir_if_missing "${sharedir}"
 
    local style
@@ -206,6 +203,15 @@ env_init_main()
 
    __get_user_style_flavor "${OPTION_STYLE}"
    __load_flavor_plugin "${flavor}"
+
+   case "${style}" in
+      *:wild|*:inherit|*:restrict|*:none)
+      ;;
+
+      *)
+         fail "unknown style \"${style}\""
+      ;;
+   esac
 
    log_verbose "Creating \"${envfile}\""
 

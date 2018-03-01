@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.10.1"
+MULLE_ENV_VERSION="0.10.2"
 
 #
 # use mulle:restrict as the default suitable for first time mulle-sde
@@ -42,13 +42,15 @@ MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:restrict}"
 
 usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [options] [commands] [path|url]
+   ${MULLE_USAGE_NAME} [options] [commands] [path|url]
 
    Use a virtual environment for your project.
    If the directory at path does not exist and the path looks like an url,
-   ${MULLE_EXECUTABLE_NAME} will attempt to git clone the project from that url.
+   ${MULLE_USAGE_NAME} will attempt to git clone the project from that url.
 
    Styles are a toolstyle and a pathstyle, separated by ':'
 
@@ -56,8 +58,8 @@ Commands:
    environment          : manage environment variables
    init                 : set up the environment for the first time
    tool                 : manage tools
-   uname                : return the ${MULLE_EXECUTABLE_NAME} specfic uname
-   version              : return the ${MULLE_EXECUTABLE_NAME} version
+   uname                : return the ${MULLE_USAGE_NAME} specfic uname
+   version              : return the ${MULLE_USAGE_NAME} version
    --                   : enter the environment. Can be left out if path, url are
                           not named like the other commands.
 Options:
@@ -562,7 +564,7 @@ main()
          ;;
 
          -c)
-            [ $# -eq 1 ] && fail "missing argument to $1"
+            [ $# -eq 1 ] && usage "Missing argument to $1"
             shift
 
             OPTION_SHELL_COMMAND="$1"
@@ -573,7 +575,7 @@ main()
          ;;
 
          -d|--directory)
-            [ $# -eq 1 ] && fail "Missing argument to $1"
+            [ $# -eq 1 ] && usage "Missing argument to $1"
             shift
 
             OPTION_DIRECTORY="$1"
@@ -626,8 +628,6 @@ main()
    local callerdirectory
    # directory is where we are supposed to execute
    local directory
-   # MULLE_VIRTUAL_ROOT is where the .mulle-env/share/environment.sh is
-   local MULLE_VIRTUAL_ROOT
 
    callerdirectory="`pwd -P`"
 
@@ -669,6 +669,13 @@ main()
          _default_setup_environment "${PWD}"
          env_tool_main "$@"
          return $?
+      ;;
+
+      *)
+         if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
+         then
+            usage "Unknown command \"${arg}\""
+         fi
       ;;
    esac
 
