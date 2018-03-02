@@ -20,7 +20,7 @@ digraph G {
         "project" ->  ".mulle-env"
         ".mulle-env" -> "environment.sh"
         ".mulle-env" -> "tool"
-        ".mulle-env" -> "optional-tool"
+        ".mulle-env" -> "optionaltool"
         ".mulle-env" -> "bin"
         "bin" ->     "..."
         "..." [ shape="none"]

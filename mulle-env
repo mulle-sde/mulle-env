@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.10.5"
+MULLE_ENV_VERSION="0.10.6"
 
 #
 # use mulle:restrict as the default suitable for first time mulle-sde
@@ -46,41 +46,51 @@ usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} [options] [commands] [path|url]
+   ${MULLE_USAGE_NAME} [options] [commands] [path-or-url]
 
-   Use a virtual environment for your project.
-   If the directory at path does not exist and the path looks like an url,
-   ${MULLE_USAGE_NAME} will attempt to git clone the project from that url.
+   Creates a virtual environment for your project as a subshell.
 
-   Styles are a toolstyle and a pathstyle, separated by ':'
+   mulle-env manages environment variables and tools (executables) for you.
+   Only environment variables defined via mull-env are available in the
+   subshell. mulle-env also suppresses the reading of any profile or rc files.
+   mulle-env restricts your PATH to only a user-defined subset of tools.
+   Use the style none:wild for no PATH and environment restrictions. aliases
+   and shell settings will still be suppressed though.
+
+   If the directory at "path-or-url" does not exist and the path looks like
+   an URL, then ${MULLE_USAGE_NAME} will attempt to "git clone" that URL.
 
 Commands:
-   environment          : manage environment variables
-   init                 : set up the environment for the first time
-   tool                 : manage tools
-   uname                : return the ${MULLE_USAGE_NAME} specfic uname
-   version              : return the ${MULLE_USAGE_NAME} version
-   --                   : enter the environment. Can be left out if path, url are
-                          not named like the other commands.
+   environment      : manage environment variables
+   init             : set up the subshell for the first time
+   tool             : manage tools
+   uname            : return the ${MULLE_USAGE_NAME} specfic uname
+   version          : return the ${MULLE_USAGE_NAME} version
+   --               : enter the subshell. Can be useful if path/url has
+                      the name of a mulle-env command or option
 Options:
-   --style <tool:path>  : enter environment with a certain flavor
-   -c <cmd>             : shell command to execute instead of interactive shell
-   -d <dir>             : specify directory
+   -e <file>        : use a different environment file (environment.sh)
+   -c <cmd>         : shell command to execute instead of interactive shell
+   -d <dir>         : specify directory
+   --s <tool:env>   : enter subshell with a certain style (see below)
+
 EOF
-   options_technical_flags_usage "               : "
+   options_technical_flags_usage "           : "
 
    cat <<EOF >&2
 
 Tool-style:
-   none                 : no additions
-   mulle                : additionally support mulle-build (default)
+   none             : no additions
+   minimal          : none + a minimal set of tools like ls or chmod
+   developer        : minimal + a less minimal set of tools like awk or man
+   mulle            : developer + support mulle-sde (default)
 
-Path-style:
-   none                 : all tools must be specified in .mulle-env/etc/tools
-   inherit              : inherit PATH, don't use tools links
-   restrict             : /bin and /usr/bin are inherited. All other tools must
-                          be specified.
-   wild                 : inherit PATH and inherit environment
+Env-style:
+   tight            : all environment variables are user defined
+   relax            : none + inherit some environment (e.g. SSH_TTY)
+   restrict         : relax + all /bin and /usr/bin tools (default)
+   inherit          : restrict + all PATH tools
+   wild             : no restrictions
 EOF
 
 
@@ -196,11 +206,11 @@ env_other_tool_files()
    if [ ! -z "${HOME}" ]
    then
       echo "${HOME}/.config/mulle-env/tool"
-      echo "${HOME}/.config/mulle-env/optional-tool"
+      echo "${HOME}/.config/mulle-env/optionaltool"
    fi
 
    echo "${directory}/etc/tool"
-   echo "${directory}/etc/optional-tool"
+   echo "${directory}/etc/optionaltool"
 }
 
 
@@ -244,7 +254,10 @@ env_setup_if_needed()
    log_entry "env_setup_if_needed" "$@"
 
    local directory="$1"
-   local flavor="$2"
+   local style="$2"
+   local flavor="$3"
+   local oldstyle="$4"
+   local oldflavor="$5"
 
    local needs_flavor_update
    local needs_bin_update
@@ -253,19 +266,32 @@ env_setup_if_needed()
    needs_flavor_update=
    needs_bin_update=
 
-   local etcdir
-   local sharedir
    local bindir
    local libexecdir
    local cachedir
 
    cachedir="${directory}/var/cache"
-   etcdir="${directory}/etc"
-   sharedir="${directory}/share"
    bindir="${directory}/bin"
    libexecdir="${directory}/libexecdir"
 
    local callback
+
+   #
+   # need to do this to convert from developer back to minimal or none
+   #
+   if [ "${style}" != "${oldstyle}" ]
+   then
+      rmdir_safer "${cachedir}"
+      rmdir_safer "${bindir}"
+      rmdir_safer "${libexecdir}"
+   fi
+
+   if [ "${flavor}" != "${oldflavor}" ]
+   then
+      log_info "Do you intend the tool style change from \
+\"${oldflavor}\" to \"${flavor}\" as a downgrade ?
+If yes, you either need to re-run init or edit your tool lists."
+   fi
 
    callback="env_${flavor}_tools_need_update"
    if [ "`type -t "${callback}"`" = "function" ]
@@ -361,17 +387,23 @@ __get_saved_style_flavor()
    log_entry "__get_saved_style_flavor" "$@"
 
    local directory="$1"
+   local fallback="$2"
 
    style=""
    if [ -f "${directory}/style" ]
    then
       style="`sed -e '/^#/d' "${directory}/style" `"
+   else
+      if [ -f "${fallback}/style" ]
+      then
+         style="`sed -e '/^#/d' "${fallback}/style" `"
+      fi
    fi
    if [ -z "${style}" ]
    then
-      fail "No mulle-env environment found. \"$directory/style\" is missing"
+      fail "No mulle-env environment found. \"${directory}/style\" is missing"
    fi
-   flavor="`cut -d: -f1 <<< "${style}"`"
+   flavor="${style%%\:*}"
 }
 
 
@@ -386,7 +418,7 @@ __get_user_style_flavor()
    then
       style="${MULLE_ENV_DEFAULT_STYLE}"
    fi
-   flavor="`cut -d: -f1 <<< "${style}"`"
+   flavor="${style%%\:*}"
 }
 
 
@@ -539,6 +571,7 @@ main()
    local MULLE_TRACE
 
    local RESTRICTED_PATH
+   local ENVFILENAME="environment.sh"
 
    # mingw needs different values here
 
@@ -583,6 +616,13 @@ main()
             OPTION_DIRECTORY="$1"
          ;;
 
+         -e|--environmet)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            ENVFILENAME="$1"
+         ;;
+
          --search)
             OPTION_SEARCH="YES"
          ;;
@@ -601,6 +641,13 @@ main()
 
          --keep-tmp)
             OPTION_KEEP_TMP="YES"
+         ;;
+
+         -s|--style)
+            [ $# -eq 1 ] && fail "Missing argument to $1"
+            shift
+
+            OPTION_STYLE="$1"
          ;;
 
          --)
@@ -651,7 +698,7 @@ main()
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
-         env_init_main "$@"
+         env_init_main --style "${OPTION_STYLE}" "$@"
          return $?
       ;;
 
@@ -741,8 +788,18 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    local style
    local flavor
 
-   __get_saved_style_flavor "${etcdir}"
-   __load_flavor_plugin "${flavor}"
+   __get_saved_style_flavor "${etcdir}" "${sharedir}"
+
+   local oldstyle
+   local oldflavor
+
+   oldstyle="${style}"
+   oldflavor="${flavor}"
+
+   if [ ! -z "${OPTION_STYLE}" ]
+   then
+      __get_user_style_flavor "${OPTION_STYLE}"
+   fi
 
    local run_shell_args
    local inherit_path
@@ -758,6 +815,8 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
    esac
 
+
+   __load_flavor_plugin "${flavor}"
 
    local s
 
@@ -778,16 +837,26 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
 
       *:restrict)
-         env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
+         env_setup_if_needed "${MULLE_ENV_DIR}" \
+                              "${style}" \
+                              "${flavor}" \
+                              "${oldstyle}" \
+                              "${oldflavor}"
+
          inherit_path="`censored_path "${PATH}"`"
          runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
 
          s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
       ;;
 
-      *:none)
+      *:tight|*:relax)
          inherit_path=""
-         env_setup_if_needed "${MULLE_ENV_DIR}" "${flavor}"
+         env_setup_if_needed "${MULLE_ENV_DIR}" \
+                              "${style}" \
+                              "${flavor}" \
+                              "${oldstyle}" \
+                              "${oldflavor}"
+
          runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
 
          s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
@@ -797,7 +866,6 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
          fail "unknown style \"${style}\""
       ;;
    esac
-
 
    runpath="`colon_concat "${runpath}" "${inherit_path}" `"
    runpath="`apply_flavor_to_runpath "${MULLE_VIRTUAL_ROOT}" "${flavor}" "${runpath}" `"
@@ -824,9 +892,10 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    case "${style}" in
       *:wild)
          unset MULLE_EXECUTABLE_NAME
+         unset MULLE_USAGE_NAME
       ;;
 
-      *)
+      *:relax|*:restrict|*:inherit)
          [ ! -z "${DISPLAY}" ]   && s="`concat "${s}" "DISPLAY='${DISPLAY}'"`"
          [ ! -z "${EDITOR}" ]    && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
          [ ! -z "${HOME}" ]      && s="`concat "${s}" "HOME='${HOME}'"`"
@@ -856,8 +925,10 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
             "'${MULLE_UNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
             "'${runpath}'" \
-            "INTERACTIVE" \
-            "${TRACE}" \
+            "'INTERACTIVE'" \
+            "'${style}'" \
+            "'${ENVFILENAME}'" \
+            "'${TRACE}'" \
             "${run_shell_args}"
    return $?
 }

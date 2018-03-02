@@ -103,8 +103,8 @@ MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 
 #
-# Default environment values set by plugins and extensions. 
-# The user should never edit them. He can override settings 
+# Default environment values set by plugins and extensions.
+# The user should never edit them. He can override settings
 # in etc.
 #
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-global.sh" ]
@@ -169,112 +169,12 @@ EOF
 }
 
 
-#
-# http://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html
-#
-MINIMAL_BIN_BINARIES="
-cat
-chgrp
-chmod
-chown
-cp
-date
-dd
-df
-dmesg
-echo
-false
-hostname
-kill
-ln
-login
-ls
-mkdir
-mknod
-more
-mount
-mv
-ps
-pwd
-rm
-rmdir
-sed
-sh
-stty
-su
-sync
-true
-umount
-uname
-"
-
-#
-# somewhat arbitrarily hand-picked. Rule of thumb: if a mulle script uses
-# it, it's in here for sure (like base64 by mulle-sourcetree)
-#
-EXPECTED_DEVELOPER_BINARIES="awk
-basename
-base64
-bash
-clear
-command
-cut
-dirname
-ed
-egrep
-env
-expr
-find
-fgrep
-grep
-head
-less
-more
-readlink
-sleep
-sort
-stat
-tail
-test
-tr
-uuidgen
-vi
-wc
-which"
-
-
 # callback
 print_none_tools_sh()
 {
    log_entry "print_none_tools_sh" "$@"
 
-   #
-   # set of "minimal" commands for use in development
-   #
-   case "$1" in
-      *:inherit|*:wild)
-         return
-      ;;
-
-      *:restrict)
-      ;;
-
-#
-# [ is built in
-#
-      *)
-         cat <<EOF
-${MINIMAL_BIN_BINARIES}
-${EXPECTED_DEVELOPER_BINARIES}
-EOF
-   esac
-
-   #
-   # stuff that we also need
-   #
-   cat <<EOF
-mudo
-EOF
+   echo "mudo"
 
    if [ ! -z "${OPTION_OTHER_TOOLS}" ]
    then
@@ -286,19 +186,6 @@ EOF
 print_none_optional_tools_sh()
 {
    log_entry "print_none_optional_tools_sh" "$@"
-
-   #
-   # set of "minimal" commands for use in development
-   #
-   case "$1" in
-      *:inherit|*:wild)
-         return
-      ;;
-   esac
-
-   cat <<EOF
-${OPTIONAL_BINARIES}
-EOF
 
    if [ ! -z "${OPTION_OTHER_OPTIONAL_TOOLS}" ]
    then

@@ -85,10 +85,10 @@ Notice the absence of most environment variables and see how restricted the
 
 A directory must be "init"ed, before you can use **mulle-env** with it.
 Let's try an example with a `project` directory. We want a minimal portable set
-of commandline tools, so we specify the style as "none:none".
+of commandline tools, so we specify the style as "none:tight".
 
 ```
-mulle-env init -d project --style none:none
+mulle-env init -d project --style none:tight
 ```
 
 And this is what happens:
@@ -178,7 +178,7 @@ in `.mulle-env/etc/tools`.
 #### Specify optionals tools
 
 Tools that are nice to have, but aren't required for building the project
-can be placed into `.mulle-env/etc/optional-tools`.
+can be placed into `.mulle-env/etc/optionaltool`.
 
 #### Specify platform specific tools
 

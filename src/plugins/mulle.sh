@@ -50,6 +50,8 @@ print_mulle_environment_all_sh()
 {
    log_entry "print_mulle_environment_all_sh" "$@"
 
+   # dont inherit, just clobber
+
    cat <<EOF
 #
 # Git mirror and Zip/TGZ cache to conserve bandwidth
@@ -100,7 +102,7 @@ print_mulle_include_sh()
 {
    log_entry "print_mulle_include_sh" "$@"
 
-   print_none_include_sh "$@"
+   print_developer_include_sh "$@"
 }
 
 
@@ -195,55 +197,11 @@ env_copy_mulle_tool()
 }
 
 
-##
-## CALLBACKS
-##
-
 print_mulle_tools_sh()
 {
    log_entry "print_mulle_tools_sh" "$@"
 
-   print_none_tools_sh "$@"
-
-   #
-   # set of "minimal" commands for use in development
-   # many or most are required by the mulle scripts
-   #
-   cat <<EOF
-curl
-column
-git
-uuidgen
-EOF
-
-   # optional, default yes
-
-   if [ "${OPTION_NINJA}" != "NO" ]
-   then
-      echo "ninja"
-   fi
-
-   if [ "${OPTION_CMAKE}" != "NO" ]
-   then
-      echo "cmake"
-   fi
-
-   # optional, default no
-   if [ "${OPTION_SVN}" = "YES" ]
-   then
-      echo "svn"
-   fi
-
-   if [ "${OPTION_AUTOCONF}" = "YES" ]
-   then
-      echo "autoconf"
-      echo "autoreconf"
-   fi
-
-   if [ ! -z "${OPTION_OTHER_TOOLS}" ]
-   then
-      echo "${OPTION_OTHER_TOOLS}"
-   fi
+   print_developer_tools_sh "$@"
 }
 
 
@@ -252,13 +210,7 @@ print_mulle_optional_tools_sh()
 {
    log_entry "print_mulle_optional_tools_sh" "$@"
 
-   print_none_optional_tools_sh "$@"
-
-   cat <<EOF
-fswatch
-inotifywait
-ssh
-EOF
+   print_developer_optional_tools_sh "$@"
 }
 
 
@@ -266,7 +218,7 @@ print_mulle_startup_sh()
 {
    log_entry "print_mulle_startup_sh" "$@"
 
-   print_none_startup_sh
+   print_developer_startup_sh
 
    cat << EOF
 
@@ -313,67 +265,6 @@ env_setup_mulle_tools()
    ) || return 1
 }
 
-## callback
-env_mulle_tools_need_update()
-{
-   log_entry "env_mulle_tools_need_update" "$@"
-
-   local directory="$1"
-
-   if [ -z "`command -v mulle-craft`" ]
-   then
-      fail "Style \"mulle\" needs mulle-craft to be in PATH.
-
-Reinit with \"--style none\", if you don't need mulle-craft"
-   fi
-
-   if [ "${OPTION_MAGNUM_FORCE}" = "YES" ]
-   then
-      return 0
-   fi
-
-   if [ ! -e "${directory}/bin/mulle-craft" ]
-   then
-      log_fluff "\"${directory}/bin/mulle-craft\" is not there yet"
-      return 0
-   fi
-
-   return 1
-}
-
-
-## ## callback
-## env_mulle_enter_subshell()
-## {
-##    log_entry "env_mulle_enter_subshell" "$@"
-##
-##    local directory="$1"
-##    local style="$2"
-##
-##    if [ "${OPTION_BOOTSTRAP}" = "YES" ] && \
-##       [ -f "${directory}/.mulle-sourcetree"  ] && \
-##       [ ! -d "${MULLE_VIRTUAL_ROOT}/dependencies" ]
-##    then
-##       local exepath
-##
-##       if [ $? -eq 0 ]
-##       then
-##          exepath="`command -v mulle-craft`"
-##          log_fluff "Running mulle-craft in \"${directory}\"..."
-##          (
-##             cd "${directory}" ;
-##             "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell" \
-##                "${MULLE_UNAME}" \
-##                "${MULLE_VIRTUAL_ROOT}" \
-##                "${PATH}" \
-##                "SCRIPT" \
-##                "${TRACE}" \
-##                "${exepath}" "--share"
-##          )
-##       fi
-##    fi
-## }
-
 
 ## callback
 env_mulle_add_runpath()
@@ -383,7 +274,7 @@ env_mulle_add_runpath()
    local directory="$1"
    local runpath="$2"
 
-   # since we prepend, prepend in reversr order, so dependencies is first
+   # prepend in reverse order, so dependencies is first
    runpath="`colon_concat "${runpath}" "${directory}/addictions/bin" "${runpath}"`"
    colon_concat  "${directory}/dependencies/bin" "${runpath}"
 }
@@ -391,7 +282,7 @@ env_mulle_add_runpath()
 
 env_mulle_initialize()
 {
-   env_load_plugin "none"
+   env_load_plugin "developer"
 }
 
 

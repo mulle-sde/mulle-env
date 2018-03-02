@@ -29,11 +29,13 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${5}" = "YES" ] && set -x && : "mulle-env-shell" "$@"
+[ "${7}" = "YES" ] && set -x && : "mulle-env-shell" "$@"
 
 
-# a separate file to that env can call it. there is no error checking or
+#
+# A separate file to that env can call it. there is no error checking or
 # log output here
+#
 emit_initfile()
 {
    if [ "${TRACE}" = "YES" ]
@@ -44,22 +46,24 @@ emit_initfile()
 
    local envfile
 
-   envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/environment.sh"
-   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/environment.sh" ]
+   envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}"
+   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}" ]
    then
-      envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment.sh"
+      envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/share/${ENVFILENAME}"
    fi
-   if [ -f "${envfile}" ]
+   if [ ! -f "${envfile}" ]
    then
-      if [ "${TRACE}" = "YES" ]
-      then
-        echo "TRACE=\"${TRACE}\" && . \"${envfile}\""
-        echo "unset TRACE"
-      else
-        echo ". \"${envfile}\""
-      fi
+      echo "\"${ENVFILENAME}\" not found, can not continue" >&2
+      exit 1
    fi
 
+   if [ "${TRACE}" = "YES" ]
+   then
+     echo "TRACE=\"${TRACE}\" && . \"${envfile}\""
+     echo "unset TRACE"
+   else
+     echo ". \"${envfile}\""
+   fi
    # try to set terminal title
    echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
 
@@ -86,7 +90,6 @@ run_shell()
 
    local cmd_env
    local cmd_string
-   local cmd_options
 
    cmd_string="`command -v "bash"`"
    if [ -z "${cmd_string}" ]
@@ -116,14 +119,23 @@ run_shell()
    # But --posix doesn't work propely on darwin. But that doesn't have
    # SYS_BASHRC ...
    #
+   local cmd_options
+
    case "${MULLE_UNAME}" in
       darwin)
-        cmd_options="--noprofile --rcfile '${initfile}'"
+        cmd_options="--rcfile '${initfile}'"
       ;;
 
       *)
         cmd_env="ENV='${initfile}'"
-        cmd_options="--posix --noprofile"
+        cmd_options="--posix"
+      ;;
+   esac
+
+   # trying to get aliases back in "wild" is not fruitful portably IMO
+   case "${STYLE}" in
+      *)
+         cmd_options="${cmd_options} --noprofile"
       ;;
    esac
 
@@ -210,6 +222,18 @@ main()
 
    MODE="$1"
    [ -z "${MODE}" ] && echo "empty MODE" >&2 && exit 1
+   shift
+
+   local STYLE  # wild or else
+
+   STYLE="$1"
+   [ -z "${STYLE}" ] && echo "empty STYLE" >&2 && exit 1
+   shift
+
+   local ENVFILENAME  # environment.sh or so
+
+   ENVFILENAME="$1"
+   [ -z "${ENVFILENAME}" ] && echo "empty ENVFILENAME" >&2 && exit 1
    shift
 
    local TRACE  # either YES or usually empty

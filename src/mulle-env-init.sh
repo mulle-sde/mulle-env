@@ -142,7 +142,10 @@ env_init_main()
             [ $# -eq 1 ] && fail "Missing argument to $1"
             shift
 
-            OPTION_STYLE="$1"
+            #
+            # can be empty (for mulle-env)
+            #
+            OPTION_STYLE="${1:-DEFAULT}"
          ;;
 
          -t|--tool)
@@ -186,14 +189,10 @@ env_init_main()
    darwinauxfile="${sharedir}/environment-os-darwin.sh"
 
    toolsfile="${sharedir}/tool"
-   optional_toolsfile="${sharedir}/optional-tool"
+   optional_toolsfile="${sharedir}/optionaltool"
    versionfile="${sharedir}/version"
 
-   #
-   # style is written (possibly) everytime we execute mulle-sde so
-   # it is in env (considered a user change)
-   #
-   stylefile="${MULLE_ENV_DIR}/etc/style"
+   stylefile="${sharedir}/style"
 
 
    if [ "${OPTION_MAGNUM_FORCE}" != "YES" ] && [ -f "${envfile}" ]
@@ -211,7 +210,7 @@ env_init_main()
    __load_flavor_plugin "${flavor}"
 
    case "${style}" in
-      *:wild|*:inherit|*:restrict|*:none)
+      *:wild|*:inherit|*:restrict|*:tight)
       ;;
 
       *)
@@ -271,7 +270,6 @@ env_init_main()
    fi
    redirect_exekutor "${optional_toolsfile}" echo "${text}"
 
-   mkdir_if_missing "${MULLE_ENV_DIR}/etc"
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
 

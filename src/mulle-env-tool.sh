@@ -40,7 +40,7 @@ env_tool_usage()
 Usage:
    ${MULLE_USAGE_NAME} tool [options] <command>
 
-   Manage commandline tools for a :restrict or :none  environment.
+   Manage commandline tools for a :restrict or :tight environment.
    See \`${MULLE_EXECUTABLE_NAME} init\` for more information about
    environment styles.
 
@@ -126,6 +126,7 @@ prepare_for_add()
    fi
 }
 
+
 prepare_for_remove()
 {
    log_entry "prepare_for_remove" "$@"
@@ -149,9 +150,10 @@ _mulle_tool_add_file()
 {
    log_entry "_mulle_tool_add_file" "$@"
 
-   local tool="$1"
-   local toolsfile="$2"
-   local fallbacktoolsfile="$3"
+   local scope="$1"
+   local tool="$2"
+   local toolsfile="$3"
+   local fallbacktoolsfile="$4"
 
    prepare_for_add "${toolsfile}" "${fallbacktoolsfile}"
 
@@ -168,7 +170,16 @@ _mulle_tool_add_file()
       then
          fail "\"mudo\" is not present ??? Try again outside of the environment."
       else
-         fail "Failed to find executable \"${tool}\""
+         case "${scope}" in
+            "optional")
+               log_verbose "Optional tool \"${tool}\" not found"
+               return
+            ;;
+
+            *)
+               fail "Failed to find executable \"${tool}\""
+            ;;
+         esac
       fi
    fi
 
@@ -182,7 +193,9 @@ _mulle_tool_add_file()
    local style
    local flavor
 
-   __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
+   # defined in mulle_env
+   __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc" \
+                            "${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 
    case "${style}" in
       *:wild|*:inherit)
@@ -231,7 +244,7 @@ _mulle_tool_remove_file()
    local escaped
 
    escaped="`escaped_sed_pattern "${tool}"`"
-   exekutor sed -i "/^${escaped}\$/d" "${toolsfile}"
+   exekutor sed -i -e "/^${escaped}\$/d" "${toolsfile}"
 
    local bindir
 
@@ -286,14 +299,20 @@ mulle_tool_add()
 
       [ -z "${tool}" ] && fail "tool must not be empty"
 
-      _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optional-tool"
+      _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optionaltool"
       _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/tool"
 
       if [ "${scope}" = "optional" ]
       then
-         _mulle_tool_add_file "${tool}" "${MULLE_ENV_DIR}/etc/optional-tool" "${MULLE_ENV_DIR}/share/optional-tool"
+         _mulle_tool_add_file "${scope}" \
+                              "${tool}" \
+                              "${MULLE_ENV_DIR}/etc/optionaltool" \
+                              "${MULLE_ENV_DIR}/share/optionaltool"
       else
-         _mulle_tool_add_file "${tool}" "${MULLE_ENV_DIR}/etc/tool" "${MULLE_ENV_DIR}/share/tool"
+         _mulle_tool_add_file "${scope}" \
+                              "${tool}" \
+                              "${MULLE_ENV_DIR}/etc/tool" \
+                              "${MULLE_ENV_DIR}/share/tool"
       fi
    done
 }
@@ -345,7 +364,7 @@ mulle_tool_remove()
       fi
       if [ "${scope}" != "required" ]
       then
-         _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optional-tool" "${MULLE_ENV_DIR}/share/optional-tool"
+         _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optionaltool" "${MULLE_ENV_DIR}/share/optionaltool"
       fi
    done
 }
@@ -409,7 +428,7 @@ mulle_tool_list()
    fi
    if [ "${scope}" != "required" ]
    then
-      _mulle_tool_list_file "Optional Tools" "${MULLE_ENV_DIR}/etc/optional-tool" "${MULLE_ENV_DIR}/share/optional-tool"
+      _mulle_tool_list_file "Optional Tools" "${MULLE_ENV_DIR}/etc/optionaltool" "${MULLE_ENV_DIR}/share/optionaltool"
    fi
 }
 
@@ -435,8 +454,8 @@ env_tool_main()
    while :
    do
       case "$1" in
-         -*)
-            env_tool_usage "unknown option \"$1\""
+         -h*|--help|help)
+            env_tool_usage
          ;;
 
          -o|--optional|--no-required)
@@ -445,6 +464,10 @@ env_tool_main()
 
          -r|--required|--no-optional)
             OPTION_SCOPE="required"
+         ;;
+
+         -*)
+            env_tool_usage "unknown option \"$1\""
          ;;
 
          *)

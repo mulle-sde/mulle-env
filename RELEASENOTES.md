@@ -1,3 +1,7 @@
+### 0.10.6
+
+* improved grokability of mulle-env by subdividing plugins
+
 ### 0.10.1
 
 * Various small improvements
