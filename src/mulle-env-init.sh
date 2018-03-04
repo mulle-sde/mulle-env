@@ -83,7 +83,7 @@ env_init_main()
    while [ $# -ne 0 ]
    do
       case "$1" in
-         -h|--help)
+         -h*|--help|help)
             usage
          ;;
 
@@ -201,6 +201,8 @@ env_init_main()
       return 2
    fi
 
+   # indicate a fresh init by removing a possibly old versionfile
+   remove_file_if_present "${versionfile}"
    mkdir_if_missing "${sharedir}"
 
    local style
@@ -273,6 +275,7 @@ env_init_main()
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
 
+   # we create this last, if its present than the init ran through
    log_verbose "Creating \"${versionfile}\""
    redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
 

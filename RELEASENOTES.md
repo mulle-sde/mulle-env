@@ -1,3 +1,7 @@
+### 0.10.8
+
+* * fix option handling for project, lose .bak seds
+
 ### 0.10.6
 
 * improved grokability of mulle-env by subdividing plugins

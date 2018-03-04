@@ -31,13 +31,13 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.10.6"
+MULLE_ENV_VERSION="0.10.8"
 
 #
-# use mulle:restrict as the default suitable for first time mulle-sde
-# users
+# The default for first time mulle-env
 #
-MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-mulle:restrict}"
+MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-none:relax}"
+ENVFILENAME="environment.sh"
 
 
 usage()
@@ -69,10 +69,10 @@ Commands:
    --               : enter the subshell. Can be useful if path/url has
                       the name of a mulle-env command or option
 Options:
-   -e <file>        : use a different environment file (environment.sh)
+   -e <file>        : use a different environment file (${ENVFILENAME})
    -c <cmd>         : shell command to execute instead of interactive shell
    -d <dir>         : specify directory
-   --s <tool:env>   : enter subshell with a certain style (see below)
+   --s <tool:env>   : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
 
 EOF
    options_technical_flags_usage "           : "
@@ -290,7 +290,7 @@ env_setup_if_needed()
    then
       log_info "Do you intend the tool style change from \
 \"${oldflavor}\" to \"${flavor}\" as a downgrade ?
-If yes, you either need to re-run init or edit your tool lists."
+If yes, check your tool lists."
    fi
 
    callback="env_${flavor}_tools_need_update"
@@ -571,7 +571,6 @@ main()
    local MULLE_TRACE
 
    local RESTRICTED_PATH
-   local ENVFILENAME="environment.sh"
 
    # mingw needs different values here
 
@@ -594,7 +593,7 @@ main()
       fi
 
       case "$1" in
-         -h|--help)
+         -h*|--help|help)
             usage
          ;;
 
@@ -711,6 +710,16 @@ main()
          return $?
       ;;
 
+      style)
+         local style
+         local flavor
+
+         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/etc" \
+                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/share"
+         echo "${style}"
+         return 0
+      ;;
+
       tool)
          # shellcheck source=src/mulle-env-tool.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
@@ -796,7 +805,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    oldstyle="${style}"
    oldflavor="${flavor}"
 
-   if [ ! -z "${OPTION_STYLE}" ]
+   if [ "${OPTION_STYLE}" != "DEFAULT" ]
    then
       __get_user_style_flavor "${OPTION_STYLE}"
    fi

@@ -260,7 +260,7 @@ _env_environment_set()
    then
       if [ -f "${filename}" ]
       then
-         exekutor sed -i -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
+         exekutor sed -i'' -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
       fi
       return
@@ -271,7 +271,7 @@ _env_environment_set()
    #
    if [ -f "${filename}" ]
    then
-      exekutor sed -i -e "s/^[ #]*export *${sed_escaped_key}=.*/\
+      exekutor sed -i'' -e "s/^[ #]*export *${sed_escaped_key}=.*/\
 export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
       if rexekutor egrep -q -s "^export *${sed_escaped_key}=" "${filename}"
       then
