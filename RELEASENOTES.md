@@ -1,3 +1,9 @@
+## 0.11.0
+
+* style scheme now uses / as separator for easier bash completion
+* experimental bash completion now available
+
+
 ### 0.10.8
 
 * * fix option handling for project, lose .bak seds

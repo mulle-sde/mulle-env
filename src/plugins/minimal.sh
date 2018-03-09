@@ -46,11 +46,11 @@ print_minimal_include_sh()
 }
 
 
-print_minimal_environment_all_sh()
+print_minimal_environment_global_sh()
 {
-   log_entry "print_minimal_environment_all_sh" "$@"
+   log_entry "print_minimal_environment_global_sh" "$@"
 
-   print_none_environment_all_sh "$@"
+   print_none_environment_global_sh "$@"
 }
 
 

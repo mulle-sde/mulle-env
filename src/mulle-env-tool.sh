@@ -40,7 +40,7 @@ env_tool_usage()
 Usage:
    ${MULLE_USAGE_NAME} tool [options] <command>
 
-   Manage commandline tools for a :restrict or :tight environment.
+   Manage commandline tools for a -restrict or -tight environment.
    See \`${MULLE_EXECUTABLE_NAME} init\` for more information about
    environment styles.
 
@@ -116,12 +116,13 @@ prepare_for_add()
    local etctoolsfile="$1"
    local sharetoolsfile="$2"
 
-   mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
    if [ ! -f "${etctoolsfile}" ]
    then
+      mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
       if [ -f "${sharetoolsfile}" ]
       then
          exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
+         exekutor chmod ug+w "${etctoolsfile}"
       fi
    fi
 }
@@ -142,6 +143,7 @@ prepare_for_remove()
       fi
       mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
       exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
+      exekutor chmod ug+w "${etctoolsfile}"
    fi
 }
 
@@ -198,7 +200,7 @@ _mulle_tool_add_file()
                             "${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 
    case "${style}" in
-      *:wild|*:inherit)
+      */wild|*-inherit)
          return
       ;;
    esac
@@ -244,7 +246,7 @@ _mulle_tool_remove_file()
    local escaped
 
    escaped="`escaped_sed_pattern "${tool}"`"
-   exekutor sed -i'' -e "/^${escaped}\$/d" "${toolsfile}"
+   inplace_sed -e "/^${escaped}\$/d" "${toolsfile}"
 
    local bindir
 

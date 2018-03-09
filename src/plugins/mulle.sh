@@ -46,9 +46,9 @@ EOF
 }
 
 
-print_mulle_environment_all_sh()
+print_mulle_environment_global_sh()
 {
-   log_entry "print_mulle_environment_all_sh" "$@"
+   log_entry "print_mulle_environment_global_sh" "$@"
 
    # dont inherit, just clobber
 
@@ -222,6 +222,26 @@ print_mulle_startup_sh()
 
    cat << EOF
 
+#
+# Source in bash completion if available
+# Assumed is, that they are not user modifiable
+#
+if [ "\${MULLE_SHELL_MODE}" = "INTERACTIVE" ]
+then
+   DEFAULT_IFS="\${IFS}"
+   shopt -s nullglob; IFS="
+"
+   for FILENAME in "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/libexec"/*-bash-completion.sh
+   do
+      . "\${FILENAME}"
+   done
+   shopt -u nullglob; IFS="\${DEFAULT_IFS}"
+
+   unset FILENAME
+   unset DEFAULT_IFS
+fi
+
+#
 #
 # show motd, if any
 #

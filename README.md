@@ -85,10 +85,10 @@ Notice the absence of most environment variables and see how restricted the
 
 A directory must be "init"ed, before you can use **mulle-env** with it.
 Let's try an example with a `project` directory. We want a minimal portable set
-of commandline tools, so we specify the style as "none:tight".
+of commandline tools, so we specify the style as "none-tight".
 
 ```
-mulle-env init -d project --style none:tight
+mulle-env init -d project --style none-tight
 ```
 
 And this is what happens:
@@ -161,8 +161,8 @@ are safe.
 
 #### Add /bin and /usr/bin to your sub-shell PATH
 
-Use `mulle-env --style none:restrict init` when initalizing your environment.
-> `mulle:restrict` is the default as it gives access to the **mulle-sde**.
+Use `mulle-env --style none-restrict init` when initalizing your environment.
+> `mulle-restrict` is the default as it gives access to the **mulle-sde**.
 
 #### Reinitialize an environment
 

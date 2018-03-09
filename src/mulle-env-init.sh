@@ -36,12 +36,14 @@ env_init_options()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} init [options]
+   ${MULLE_USAGE_NAME} [flags] init [options]
 
    Initialize the working directory for mulle-env.
 
-Options:
+Flags:
    --style <tool:path>  : specify environment style
+
+Options:
    -d <dir>             : specify directory
 
 EOF
@@ -71,7 +73,6 @@ env_init_main()
    local OPTION_NINJA="DEFAULT"
    local OPTION_CMAKE="DEFAULT"
    local OPTION_SVN="DEFAULT"
-   local OPTION_STYLE="DEFAULT"
    local OPTION_AUTOCONF="DEFAULT"
    local OPTION_OTHER_TOOLS=
    local OPTION_BLURB="DEFAULT"
@@ -92,10 +93,6 @@ env_init_main()
             shift
 
             directory="$1"
-         ;;
-
-         -f|--force)
-            OPTION_MAGNUM_FORCE="YES"
          ;;
 
          --autoconf)
@@ -138,15 +135,6 @@ env_init_main()
             OPTION_SVN="NO"
          ;;
 
-         --style)
-            [ $# -eq 1 ] && fail "Missing argument to $1"
-            shift
-
-            #
-            # can be empty (for mulle-env)
-            #
-            OPTION_STYLE="${1:-DEFAULT}"
-         ;;
 
          -t|--tool)
             [ $# -eq 1 ] && fail "missing argument to $1"
@@ -176,6 +164,7 @@ env_init_main()
    local versionfile
    local sharedir
    local optional_toolsfile
+   local completionfile
 
    MULLE_ENV_DIR="${directory}/.mulle-env"
 
@@ -187,6 +176,7 @@ env_init_main()
    # user editable stuff in etc
    auxfile="${sharedir}/environment-global.sh"
    darwinauxfile="${sharedir}/environment-os-darwin.sh"
+   completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
 
    toolsfile="${sharedir}/tool"
    optional_toolsfile="${sharedir}/optionaltool"
@@ -194,16 +184,24 @@ env_init_main()
 
    stylefile="${sharedir}/style"
 
-
-   if [ "${OPTION_MAGNUM_FORCE}" != "YES" ] && [ -f "${envfile}" ]
+   if [ "${OPTION_MAGNUM_FORCE}" = "YES" ]
    then
-      log_warning "\"${envfile}\" already exists"
-      return 2
+      rmdir_safer ".mulle-env/bin"
+      rmdir_safer ".mulle-env/libexec"
+      rmdir_safer ".mulle-env/var"
+      rmdir_safer ".mulle-env/share"
+   else
+      if [ -f "${envfile}" ]
+      then
+         log_warning "\"${envfile}\" already exists"
+         return 2
+      fi
    fi
 
    # indicate a fresh init by removing a possibly old versionfile
    remove_file_if_present "${versionfile}"
    mkdir_if_missing "${sharedir}"
+   exekutor chmod -R ug+wX "${sharedir}"
 
    local style
    local flavor
@@ -212,7 +210,7 @@ env_init_main()
    __load_flavor_plugin "${flavor}"
 
    case "${style}" in
-      *:wild|*:inherit|*:restrict|*:tight)
+      */wild|*-inherit|*/restrict|*/tight)
       ;;
 
       *)
@@ -240,7 +238,7 @@ env_init_main()
    redirect_exekutor "${envincludefile}" echo "${text}"
 
    log_verbose "Creating \"${auxfile}\""
-   if ! text="`print_${flavor}_environment_all_sh "${style}" `"
+   if ! text="`print_${flavor}_environment_global_sh "${style}" `"
    then
       return 1
    fi
@@ -272,12 +270,20 @@ env_init_main()
    fi
    redirect_exekutor "${optional_toolsfile}" echo "${text}"
 
+   mkdir_if_missing "${sharedir}/libexec"
+   log_verbose "Installing \"${completionfile}\""
+   exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
+          ${completionfile}
+
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
 
    # we create this last, if its present than the init ran through
    log_verbose "Creating \"${versionfile}\""
    redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
+
+
+   exekutor chmod -R a-w "${sharedir}"
 
    if [ "${OPTION_BLURB}" != "NO" ]
    then

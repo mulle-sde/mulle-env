@@ -31,12 +31,12 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.10.8"
+MULLE_ENV_VERSION="0.11.0"
 
 #
 # The default for first time mulle-env
 #
-MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-none:relax}"
+MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-none/relax}"
 ENVFILENAME="environment.sh"
 
 
@@ -54,7 +54,7 @@ Usage:
    Only environment variables defined via mull-env are available in the
    subshell. mulle-env also suppresses the reading of any profile or rc files.
    mulle-env restricts your PATH to only a user-defined subset of tools.
-   Use the style none:wild for no PATH and environment restrictions. aliases
+   Use the style none/wild for no PATH and environment restrictions. aliases
    and shell settings will still be suppressed though.
 
    If the directory at "path-or-url" does not exist and the path looks like
@@ -69,10 +69,10 @@ Commands:
    --               : enter the subshell. Can be useful if path/url has
                       the name of a mulle-env command or option
 Options:
-   -e <file>        : use a different environment file (${ENVFILENAME})
+   -ef <file>       : use a different environment file (${ENVFILENAME})
    -c <cmd>         : shell command to execute instead of interactive shell
    -d <dir>         : specify directory
-   --s <tool:env>   : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
+   -s <tool/env>    : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
 
 EOF
    options_technical_flags_usage "           : "
@@ -209,8 +209,19 @@ env_other_tool_files()
       echo "${HOME}/.config/mulle-env/optionaltool"
    fi
 
-   echo "${directory}/etc/tool"
-   echo "${directory}/etc/optionaltool"
+   if [ -f "${directory}/etc/tool" ]
+   then
+      echo "${directory}/etc/tool"
+   else
+      echo "${directory}/share/tool"
+   fi
+
+   if [ -f "${directory}/etc/optionaltool" ]
+   then
+      echo "${directory}/etc/optionaltool"
+   else
+      echo "${directory}/share/optionaltool"
+   fi
 }
 
 
@@ -403,7 +414,7 @@ __get_saved_style_flavor()
    then
       fail "No mulle-env environment found. \"${directory}/style\" is missing"
    fi
-   flavor="${style%%\:*}"
+   flavor="${style%%/*}"
 }
 
 
@@ -418,7 +429,7 @@ __get_user_style_flavor()
    then
       style="${MULLE_ENV_DEFAULT_STYLE}"
    fi
-   flavor="${style%%\:*}"
+   flavor="${style%%/*}"
 }
 
 
@@ -490,6 +501,7 @@ apply_style_to_directory()
 
    # memorize new style
    # since this always changes on user reques its in etc
+   mkdir_if_missing "${MULLE_ENV_DIR}/etc"
    redirect_exekutor "${MULLE_ENV_DIR}/etc/style" echo "${style}"
 }
 
@@ -615,7 +627,7 @@ main()
             OPTION_DIRECTORY="$1"
          ;;
 
-         -e|--environmet)
+         -ef|--environment-file)
             [ $# -eq 1 ] && usage "Missing argument to $1"
             shift
 
@@ -697,7 +709,7 @@ main()
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
-         env_init_main --style "${OPTION_STYLE}" "$@"
+         env_init_main "$@"
          return $?
       ;;
 
@@ -836,16 +848,16 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    env_flag="-i"
 
    case "${style}" in
-      *:wild)
+      */wild)
          inherit_path="${PATH}"
          env_flag=""   # do not suppress environment
       ;;
 
-      *:inherit)
+      */inherit)
          inherit_path="${PATH}"
       ;;
 
-      *:restrict)
+      */restrict)
          env_setup_if_needed "${MULLE_ENV_DIR}" \
                               "${style}" \
                               "${flavor}" \
@@ -858,7 +870,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
          s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
       ;;
 
-      *:tight|*:relax)
+      */tight|*/relax)
          inherit_path=""
          env_setup_if_needed "${MULLE_ENV_DIR}" \
                               "${style}" \
@@ -899,12 +911,12 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    fi
 
    case "${style}" in
-      *:wild)
+      */wild)
          unset MULLE_EXECUTABLE_NAME
          unset MULLE_USAGE_NAME
       ;;
 
-      *:relax|*:restrict|*:inherit)
+      */relax|*/restrict|*/inherit)
          [ ! -z "${DISPLAY}" ]   && s="`concat "${s}" "DISPLAY='${DISPLAY}'"`"
          [ ! -z "${EDITOR}" ]    && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
          [ ! -z "${HOME}" ]      && s="`concat "${s}" "HOME='${HOME}'"`"

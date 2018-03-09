@@ -260,7 +260,7 @@ _env_environment_set()
    then
       if [ -f "${filename}" ]
       then
-         exekutor sed -i'' -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
+         inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
       fi
       return
@@ -271,7 +271,7 @@ _env_environment_set()
    #
    if [ -f "${filename}" ]
    then
-      exekutor sed -i'' -e "s/^[ #]*export *${sed_escaped_key}=.*/\
+      inplace_sed -e "s/^[ #]*export *${sed_escaped_key}=.*/\
 export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
       if rexekutor egrep -q -s "^export *${sed_escaped_key}=" "${filename}"
       then
@@ -453,20 +453,30 @@ _env_environment_get()
    local filename="$1"
    local key="$2"
 
-   if [ -f "${filename}" ]
+   if [ ! -f "${filename}" ]
    then
-      log_verbose "Reading ${C_RESET_BOLD}${filename}"
-
-      value="`rexekutor sed -n 's/^ *export *//p' "${filename}" | \
-              rexekutor awk -F '=' "{ value[ \\\$1] = \\\$2 };END{ value[ \\\"${key}\\\"] }"`"
-      if [ -z "${value}" ]
-      then
-         return 1
-      fi
-   else
       log_fluff "\"${filename}\" does not exist"
       return 1
    fi
+   log_verbose "Reading ${C_RESET_BOLD}${filename}"
+
+   value="`rexekutor sed -n 's/^ *export *//p' "${filename}" | \
+           rexekutor awk -F '=' "{ value[ \\\$1] = \\\$2 };END{ print value[ \\\"${key}\\\"] }"`"
+   if [ -z "${value}" ]
+   then
+      return 1
+   fi
+
+   case "${value}" in
+      \"*\")
+         value="${value%?}"
+         echo "${value:1}"
+      ;;
+
+      *)
+         echo "${value}"
+      ;;
+   esac
 }
 
 
@@ -659,6 +669,7 @@ merge_environment_text()
    rexekutor awk -F '=' '{ value[ $1] = $2 };END{for(i in value) print i "=" value[i]}' | \
    rexekutor sort
 }
+
 
 merge_environment_file()
 {

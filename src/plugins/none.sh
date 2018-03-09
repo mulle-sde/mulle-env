@@ -46,13 +46,16 @@ print_none_startup_sh()
 #
 if [ -z "\${MULLE_UNAME}" ]
 then
-   MULLE_UNAME="\`uname | cut -d_ -f1 | sed 's/64$//' | tr 'A-Z' 'a-z'\`"
+   MULLE_UNAME="\`PATH=/bin:/usr/bin uname | \\
+                  PATH=/bin:/usr/bin cut -d_ -f1 | \\
+                  PATH=/bin:/usr/bin sed 's/64\$//' | \\
+                  PATH=/bin:/usr/bin tr 'A-Z' 'a-z'\`"
    export MULLE_UNAME
 fi
 if [ -z "\${MULLE_VIRTUAL_ROOT}" ]
 then
-   MULLE_VIRTUAL_ROOT="\`pwd -P\`"
-   echo "Using \${MULLE_VIRTUAL_ROOT} as MULLE_VIRTUAL_ROOT for \
+   MULLE_VIRTUAL_ROOT="\`PATH=/bin:/usr/bin pwd -P\`"
+   echo "Using \${MULLE_VIRTUAL_ROOT} as MULLE_VIRTUAL_ROOT for \\
 your convenience" >&2
 fi
 
@@ -60,7 +63,7 @@ fi
 #
 # Set PS1 so that we can see, that we are in a mulle-env
 #
-envname="\`basename -- "\${MULLE_VIRTUAL_ROOT}"\`"
+envname="\`PATH=/bin:/usr/bin basename -- "\${MULLE_VIRTUAL_ROOT}"\`"
 
 case "\${PS1}" in
    *\\\\h\\[*)
@@ -97,7 +100,7 @@ print_none_include_sh()
    echo "Your script needs to setup MULLE_VIRTUAL_ROOT \\
 and MULLE_UNAME properly" >&2  && exit 1
 
-HOSTNAME="\`hostname -s\`" # don't export it
+HOSTNAME="\`PATH=/bin:/usr/bin hostname -s\`" # don't export it
 
 MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
@@ -161,7 +164,7 @@ EOF
 }
 
 
-print_none_environment_all_sh()
+print_none_environment_global_sh()
 {
    cat <<EOF
 # add your stuff here
