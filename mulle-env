@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.0"
+MULLE_ENV_VERSION="0.11.1"
 
 #
 # The default for first time mulle-env
@@ -195,6 +195,29 @@ env_link_other_tools()
 }
 
 
+find_tool_file()
+{
+   local name="$1"; shift
+
+   local directory
+   local filename
+
+   set -o noglob;  IFS="
+"
+   for directory in "$@"
+   do
+      set +o noglob; IFS="${DEFAULT_IFS}"
+
+      filename="${directory}/${name}.${MULLE_UNAME}"
+      [ -f "${filename}" ] && echo "${filename}" && return
+
+      filename="${directory}/${name}"
+      [ -f "${filename}" ] && echo "${filename}" && return
+   done
+   set + noglob; IFS="${DEFAULT_IFS}"
+}
+
+
 env_other_tool_files()
 {
    log_entry "env_other_tool_files" "$@"
@@ -205,23 +228,12 @@ env_other_tool_files()
 
    if [ ! -z "${HOME}" ]
    then
-      echo "${HOME}/.config/mulle-env/tool"
-      echo "${HOME}/.config/mulle-env/optionaltool"
+      find_tool_file "tool" "${HOME}/.config"
+      find_tool_file "optionaltool" "${HOME}/.config"
    fi
 
-   if [ -f "${directory}/etc/tool" ]
-   then
-      echo "${directory}/etc/tool"
-   else
-      echo "${directory}/share/tool"
-   fi
-
-   if [ -f "${directory}/etc/optionaltool" ]
-   then
-      echo "${directory}/etc/optionaltool"
-   else
-      echo "${directory}/share/optionaltool"
-   fi
+   get_tool_file tool  "tool" "${MULLE_ENV_DIR}/etc" "${MULLE_ENV_DIR}/share"
+   get_tool_file tool  "optionaltool" "${MULLE_ENV_DIR}/etc" "${MULLE_ENV_DIR}/share"
 }
 
 
@@ -340,11 +352,6 @@ If yes, check your tool lists."
    for toolfile in `env_other_tool_files "${directory}"`
    do
       IFS="${DEFAULT_IFS}"
-
-      if [ -f "${toolfile}.${UNAME}" ]
-      then
-         toolfile="${toolfile}.${UNAME}"
-      fi
 
       if [ "${OPTION_MAGNUM_FORCE}" = "YES" -a -f "${toolfile}" ] || \
          [ "${toolfile}" -nt "${uptodatefile}" ]

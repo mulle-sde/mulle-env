@@ -4,7 +4,7 @@ digraph G {
     node[shape=note];
     edge[arrowhead=none];
 
-        "mulle-env init" [ label="mulle-env init -d project --style none:empty",
+        "mulle-env init" [ label="mulle-env init -d project --style none:tight",
                            fontname="monospace",
                            fontcolor="blue",
                            shape="none" ]
@@ -12,16 +12,18 @@ digraph G {
         "mulle-env init" -> "project" [ arrowhead="", style="dotted", label=" create"]
          "project"     [ shape="folder", penwidth="2" ]
         ".mulle-env"   [ shape="folder" ]
+        "share"        [ shape="folder" ]
         "bin"          [ shape="folder" ]
 
         "tool"
         "environment.sh"
 
-        "project" ->  ".mulle-env"
-        ".mulle-env" -> "environment.sh"
-        ".mulle-env" -> "tool"
-        ".mulle-env" -> "optionaltool"
-        ".mulle-env" -> "bin"
-        "bin" ->     "..."
+        "project"    ->  ".mulle-env"
+        ".mulle-env" ->  "share"
+        "share"      -> "environment.sh"
+        "share"      -> "tool"
+        "share"      -> "optionaltool"
+        "share"      -> "bin"
+        "bin"        ->     "..."
         "..." [ shape="none"]
 }

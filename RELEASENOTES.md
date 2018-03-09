@@ -1,3 +1,7 @@
+### 0.11.1
+
+* update documentation a little
+
 ## 0.11.0
 
 * style scheme now uses / as separator for easier bash completion

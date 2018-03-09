@@ -136,24 +136,53 @@ mulle-env
 exit
 ```
 
-## Add more commandline tools
+## Manage tools
 
-It is assumed, that your project is still in `/tmp/a`.
-Edit the `.mulle-env/tools` file. Then re-enter the sub-shell.
-For example like this:
+List all tools
 
 ```
-echo "cc" >> /tmp/a/.mulle-env/etc/tools
-mulle-env /tmp/a
+mulle-env tool list
 ```
 
-## Add environment variables
+Add a tool
 
-During the start of the sub-shell the file `.mulle-env/etc/environment-aux.sh`
-will be sourced. Even if you reinitialize with "mulle-sde init -f", your edits
-are safe.
+```
+mulle-env tool add git
+```
 
-> Hint: Do not forget to `export` your environment variables.
+Remove a tool
+
+```
+mulle-env tool remove git
+```
+
+## Manage environment variables
+
+
+List all environment variables
+
+```
+mulle-env environment list
+```
+
+Get an environment variable
+
+```
+mulle-env environment get FOO
+```
+
+Set an environment variable
+
+```
+mulle-env environment set FOO "whatever"
+```
+
+Remove an environment variable
+
+```
+mulle-env tool set FOO ""
+```
+
 
 
 ## Tips and Tricks
@@ -161,7 +190,7 @@ are safe.
 
 #### Add /bin and /usr/bin to your sub-shell PATH
 
-Use `mulle-env --style none-restrict init` when initalizing your environment.
+Use `mulle-env --style none/restrict init` when initalizing your environment.
 > `mulle-restrict` is the default as it gives access to the **mulle-sde**.
 
 #### Reinitialize an environment
@@ -172,8 +201,8 @@ Use `mulle-env -f init` to overwrite a previous environment.
 #### Specify a global list of tools
 
 Tools that you always require can be specified globally
-`~/.config/mulle-env/tools`. These will be installed in addition to those found
-in `.mulle-env/etc/tools`.
+`~/.config/mulle-env/tool`. These will be installed in addition to those found
+in `.mulle-env/etc/tool`.
 
 #### Specify optionals tools
 
@@ -184,8 +213,8 @@ can be placed into `.mulle-env/etc/optionaltool`.
 
 If you need some tools only on a certain platform, figure out the platform name
 with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
-`~/.config/mulle-env/tools.${MULLE_UNAME}` or
-`.mulle-env/etc/tools.${MULLE_UNAME}`.
+`~/.config/mulle-env/tool.${MULLE_UNAME}` or
+`.mulle-env/etc/tool.${MULLE_UNAME}`.
 
 Platform specific tool configuration files take precedence over the
 cross-platform ones without the extension.
