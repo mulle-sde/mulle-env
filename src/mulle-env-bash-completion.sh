@@ -58,6 +58,12 @@ _mulle_env_complete()
                COMPREPLY=( $( compgen -W "${list}" -- "$cur" ) )
             ;;
 
+            list)
+            ;;
+
+            add)
+            ;;
+
             *)
                COMPREPLY=( $( compgen -W "add remove list}" -- "$cur" ) )
             ;;
@@ -69,6 +75,9 @@ _mulle_env_complete()
             get|set)
                list="`mulle-env -s environment list | sed 's/^\([^=]*\).*/\1/'`"
                COMPREPLY=( $( compgen -W "${list}" -- "$cur" ) )
+            ;;
+
+            list)
             ;;
 
             *)
@@ -88,6 +97,10 @@ none/wild none/inherit none/restrict none/relax none/tight \
 minimal/wild minimal/inherit minimal/restrict minimal/relax minimal/tight \
 developer/wild developer/inherit developer/restrict developer/relax developer/tight \
 mulle/wild mulle/inherit mulle/restrict mulle/relax mulle/tight" -- "$cur" ) )
+            ;;
+
+            -d|--directory)
+               COMPREPLY=( $( compgen -d -- "$cur" ) )
             ;;
 
             *)

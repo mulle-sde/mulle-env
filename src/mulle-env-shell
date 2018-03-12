@@ -53,7 +53,7 @@ emit_initfile()
    fi
    if [ ! -f "${envfile}" ]
    then
-      echo "\"${ENVFILENAME}\" not found, can not continue" >&2
+      echo "\"${envfile}\" not found, can not continue" >&2
       exit 1
    fi
 

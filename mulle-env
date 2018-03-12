@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.1"
+MULLE_ENV_VERSION="0.11.2"
 
 #
 # The default for first time mulle-env
@@ -407,14 +407,15 @@ __get_saved_style_flavor()
    local directory="$1"
    local fallback="$2"
 
+   # make foo:bar foo/bar for backwards compatibility
    style=""
    if [ -f "${directory}/style" ]
    then
-      style="`sed -e '/^#/d' "${directory}/style" `"
+      style="`sed -e '/^#/d' -e 's|:|/|g' "${directory}/style" `"
    else
       if [ -f "${fallback}/style" ]
       then
-         style="`sed -e '/^#/d' "${fallback}/style" `"
+         style="`sed -e '/^#/d' -e 's|:|/|g' "${fallback}/style" `"
       fi
    fi
    if [ -z "${style}" ]
@@ -835,11 +836,11 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    local rundirectory
 
    case "${style}" in
-      *:*)
+      */*)
       ;;
 
-      *) # no : like none
-         style="none:${style}"
+      *) # no / like none
+         style="none/${style}"
       ;;
    esac
 

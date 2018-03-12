@@ -1,3 +1,7 @@
+### 0.11.2
+
+* some fixes for different style with / instead of :
+
 ### 0.11.1
 
 * update documentation a little
