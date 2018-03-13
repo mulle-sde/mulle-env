@@ -1,3 +1,7 @@
+### 0.11.3
+
+* mulle-env gains environment-aux.sh and a cd catcher
+
 ### 0.11.2
 
 * some fixes for different style with / instead of :

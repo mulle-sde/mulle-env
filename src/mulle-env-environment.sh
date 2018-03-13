@@ -255,6 +255,11 @@ _env_environment_set()
    sed_escaped_key="`escaped_sed_pattern "${key}"`"
    sed_escaped_value="`escaped_sed_pattern "${value}"`"
 
+   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
+   then
+      log_info "Use ${C_RESET_BOLD}mulle-env-reload${C_INFO} to update your shell environment"
+   fi
+
    # on request, we comment it out
    if [ "${OPTION_COMMENT_OUT_EMPTY}" = "YES" -a -z "${value}" ]
    then
@@ -383,10 +388,15 @@ env_environment_set_main()
          shopt -u nullglob
       ;;
 
-      share)
+      share|aux)
          local rval
 
-         filename="${MULLE_ENV_DIR}/share/environment-global.sh"
+         if [ "${scope}" = "share" ]
+         then
+            filename="${MULLE_ENV_DIR}/share/environment-global.sh"
+         else
+            filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+         fi
 
          exekutor chmod ug+w "${filename}" 2> /dev/null
          exekutor chmod ug+wX "${MULLE_ENV_DIR}/share" 2> /dev/null
@@ -619,7 +629,6 @@ env_environment_get_main()
          then
             return
          fi
-
          filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"
          if [ ! -f "${filename}" ]
          then
@@ -629,6 +638,13 @@ env_environment_get_main()
          then
             return
          fi
+
+         filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+         if ${getter} "${filename}" "${key}"
+         then
+            return
+         fi
+
          filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
          if [ ! -f "${filename}" ]
          then
@@ -646,6 +662,10 @@ env_environment_get_main()
 
       share)
          ${getter} "${MULLE_ENV_DIR}/share/environment-global.sh" "${key}"
+      ;;
+
+      aux)
+         ${getter} "${MULLE_ENV_DIR}/share/environment-aux.sh" "${key}"
       ;;
 
       *)
@@ -727,6 +747,9 @@ _env_environment_combined_list_main()
       filename="${MULLE_ENV_DIR}/share/environment-global.sh"
       cmdline="`concat "${cmdline}" "'${filename}'"`"
    fi
+
+   filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+   cmdline="`concat "${cmdline}" "'${filename}'"`"
 
    filename="${MULLE_ENV_DIR}/etc/environment-os-${MULLE_UNAME}.sh"
    if [ -f "${filename}" ]
@@ -894,6 +917,9 @@ env_environment_list_main()
          fi
          "${lister}" "${filename}"
 
+         filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+         "${lister}" "${filename}"
+
          filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"
          if [ ! -f "${filename}" ]
          then
@@ -911,6 +937,10 @@ env_environment_list_main()
 
       share)
          "${lister}" "${MULLE_ENV_DIR}/share/environment-default.sh"
+      ;;
+
+      aux)
+         "${lister}" "${MULLE_ENV_DIR}/share/environment-aux.sh"
       ;;
 
       "DEFAULT")
@@ -954,7 +984,7 @@ env_environment_main()
             env_environment_usage
          ;;
 
-         --global|--hostname-*|--user-*|--os-*|--share)
+         --global|--hostname-*|--user-*|--os-*|--share|--aux)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="${1:2}"

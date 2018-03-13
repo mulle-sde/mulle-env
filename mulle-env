@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.2"
+MULLE_ENV_VERSION="0.11.3"
 
 #
 # The default for first time mulle-env
@@ -232,8 +232,8 @@ env_other_tool_files()
       find_tool_file "optionaltool" "${HOME}/.config"
    fi
 
-   get_tool_file tool  "tool" "${MULLE_ENV_DIR}/etc" "${MULLE_ENV_DIR}/share"
-   get_tool_file tool  "optionaltool" "${MULLE_ENV_DIR}/etc" "${MULLE_ENV_DIR}/share"
+   find_tool_file "tool" "${MULLE_ENV_DIR}/etc" "${MULLE_ENV_DIR}/share"
+   find_tool_file "optionaltool" "${MULLE_ENV_DIR}/etc" "${MULLE_ENV_DIR}/share"
 }
 
 
@@ -752,7 +752,7 @@ main()
       *)
          if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
          then
-            usage "Unknown command \"${arg}\""
+            usage "Called from inside a subshell with unknown command \"${arg}\""
          fi
       ;;
    esac

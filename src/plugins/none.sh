@@ -85,6 +85,9 @@ alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment-i
 
 mulle-env-reload
 
+# install cd catcher
+. "`mulle-env libexec-dir`/mulle-env-cd.sh"
+
 EOF
 }
 
@@ -104,6 +107,18 @@ HOSTNAME="\`PATH=/bin:/usr/bin hostname -s\`" # don't export it
 
 MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
+
+
+#
+# The aux file if present is to be set by mulle-sde extensions.
+# The trick here is that mulle-env doesn't clobber this file
+# when doing an init -f, which can be useful. There is no etc
+# equivalent.
+#
+if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh" ]
+then
+   . "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh"
+fi
 
 #
 # Default environment values set by plugins and extensions.
