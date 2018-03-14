@@ -189,7 +189,7 @@ env_init_main()
       rmdir_safer ".mulle-env/bin"
       rmdir_safer ".mulle-env/libexec"
       rmdir_safer ".mulle-env/var"
-      rmdir_safer ".mulle-env/share"
+      # don't throw away share though
    else
       if [ -f "${envfile}" ]
       then
@@ -198,10 +198,11 @@ env_init_main()
       fi
    fi
 
-   # indicate a fresh init by removing a possibly old versionfile
-   remove_file_if_present "${versionfile}"
    mkdir_if_missing "${sharedir}"
    exekutor chmod -R ug+wX "${sharedir}"
+
+   # indicate a fresh init by removing a possibly old versionfile
+   remove_file_if_present "${versionfile}"
 
    local style
    local flavor
@@ -281,7 +282,6 @@ env_init_main()
    # we create this last, if its present than the init ran through
    log_verbose "Creating \"${versionfile}\""
    redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
-
 
    exekutor chmod -R a-w "${sharedir}"
 

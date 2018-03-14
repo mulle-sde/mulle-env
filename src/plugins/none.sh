@@ -86,7 +86,7 @@ alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment-i
 mulle-env-reload
 
 # install cd catcher
-. "`mulle-env libexec-dir`/mulle-env-cd.sh"
+. "\`mulle-env libexec-dir\`/mulle-env-cd.sh"
 
 EOF
 }

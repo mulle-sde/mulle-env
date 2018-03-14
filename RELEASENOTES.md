@@ -1,3 +1,7 @@
+### 0.11.4
+
+* don't clobber share on init -f, gain reinit command
+
 ### 0.11.3
 
 * mulle-env gains environment-aux.sh and a cd catcher
