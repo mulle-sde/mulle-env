@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.5"
+MULLE_ENV_VERSION="0.11.6"
 
 #
 # The default for first time mulle-env
@@ -372,7 +372,8 @@ If yes, check your tool lists."
    fi
 
    #
-   # unprotect
+   # unprotect. Since these dirs are not in .git it should be OK
+   # if the directory is read only
    #
    if [ -d "${bindir}" ]
    then

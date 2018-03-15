@@ -1,3 +1,7 @@
+### 0.11.6
+
+* do not write protect share for the benefit of git checkouts
+
 ### 0.11.5
 
 * make it possible to append to envionement variables

@@ -202,7 +202,7 @@ env_init_main()
    fi
 
    mkdir_if_missing "${sharedir}"
-   exekutor chmod -R ug+wX "${sharedir}"
+   find "${sharedir}" -type f -exec chmod ug+w {} \;
 
    # indicate a fresh init by removing a possibly old versionfile
    remove_file_if_present "${versionfile}"
@@ -286,7 +286,8 @@ env_init_main()
    log_verbose "Creating \"${versionfile}\""
    redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
 
-   exekutor chmod -R a-w "${sharedir}"
+   # chowning the directory is bad for git
+   find "${sharedir}" -type f -exec chmod a-w {} \;
 
    if [ "${OPTION_BLURB}" != "NO" ]
    then
