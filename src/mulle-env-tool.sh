@@ -219,12 +219,12 @@ _mulle_tool_add_file()
    then
       # since it's usually a symlink this won't work
       # but on mingw it's better safe than sorry
-      exekutor chmod ug+w "${dstfile}" 2> /dev/null
+      exekutor chmod -f ug+w "${dstfile}"
    fi
 
    exekutor ln -sf "${executable}" "${bindir}/" || exit 1
 
-   exekutor chmod ugo-w "${dstfile}" 2> /dev/null || : # see above
+   exekutor chmod -f ugo-w "${dstfile}"  || : # see above
    exekutor chmod ugo-w "${bindir}"
 }
 
@@ -444,7 +444,7 @@ env_tool_main()
 
 
    [ -z "${MULLE_ENV_DIR}" ] && internal_fail "MULLE_ENV_DIR is empty"
-   [ ! -d "${MULLE_ENV_DIR}" ] && fail "mulle-env init hasn't run here yet"
+   [ ! -d "${MULLE_ENV_DIR}" ] && fail "mulle-env init hasn't run here yet ($PWD)"
 
    #
    # handle options

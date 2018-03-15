@@ -97,6 +97,7 @@ EOF
    exit 1
 }
 
+
 env_environment_set_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -105,11 +106,8 @@ env_environment_set_usage()
 Usage:
    ${MULLE_USAGE_NAME} environment set [options] <key> [value] [comment]
 
-   Set the value of an environment variable. Specify the scope of your
-   environment variable with the `${MULLE_USAGE_NAME} environment`
-   options.
-
-   Set by default will save into the user scope!
+   Set the value of an environment variable. By default it will save into
+   the user scope. Set the desired scope with environment options.
 
    Use the alias \`mulle-env-reload\` to update your shell environment
    variables after edits.
@@ -118,6 +116,8 @@ Usage:
       ${MULLE_USAGE_NAME} environment --global set FOO "A value"
 
 Options:
+   --append           : append value to existing value
+   --separator <sep>  : use separator for append
 EOF
    exit 1
 }
@@ -216,7 +216,7 @@ env_prepare_for_remove()
 
 
 #
-# Get
+# Set
 #
 escaped_doublequotes()
 {
@@ -317,6 +317,8 @@ env_environment_set_main()
    local scope="$1"; shift
    local OPTION_COMMENT_OUT_EMPTY="NO"
    local OPTION_ADD_EMPTY="NO"
+   local OPTION_APPEND="NO"
+   local OPTION_SEPARATOR=","
 
    while :
    do
@@ -331,6 +333,17 @@ env_environment_set_main()
 
          --add-empty)
             OPTION_ADD_EMPTY="YES"
+         ;;
+
+         -a|--append)
+            OPTION_APPEND="YES"
+         ;;
+
+         -s|--separator)
+            [ "$#" -eq 1 ] &&  env_environment_set_usage "missing argumet to \"$1\""
+            shift
+
+            OPTION_SEPARATOR="$1"
          ;;
 
          -*)
@@ -366,9 +379,21 @@ env_environment_set_main()
       ;;
    esac
 
+   if [ "${OPTION_APPEND}" = "YES" ]
+   then
+      local prev
+
+      prev="`env_environment_get_main "${scope}" "${key}"`"
+      log_debug "Previous value is \"${prev}\""
+
+      value="`concat "${prev}" "${value}" "${OPTION_SEPARATOR}"`"
+   fi
+
    local filename
 
-   log_verbose "Use \`mulle-env-reload\' to get the actual value in your shell"
+#   log_verbose "Use \`mulle-env-reload\` to get the actual value in your shell"
+
+   log_debug "Environment scope \"${scope:-default}\" set $key=\"${value}\""
 
    case "${scope}" in
       "")
@@ -398,14 +423,17 @@ env_environment_set_main()
             filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
          fi
 
-         exekutor chmod ug+w "${filename}" 2> /dev/null
-         exekutor chmod ug+wX "${MULLE_ENV_DIR}/share" 2> /dev/null
+         if [ -f "${filename}" ]
+         then
+            exekutor chmod ug+w "${filename}"
+         fi
+         exekutor chmod ug+wX "${MULLE_ENV_DIR}/share"
 
          _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
          rval="$?"
 
-         exekutor chmod a-w "${filename}" 2> /dev/null
-         exekutor chmod a-w "${MULLE_ENV_DIR}/share" 2> /dev/null
+         exekutor chmod a-w "${filename}"
+         exekutor chmod a-w "${MULLE_ENV_DIR}/share"
 
          return $rval
       ;;
@@ -432,13 +460,51 @@ env_environment_mset_main()
    local key
    local value
    local comment
+   local option
 
    while [ $# -ne 0 ]
    do
-      key="${1%%=*}"
-      value="${1#${key}=}"
-      comment="${value##*##}"
-      value="${value%##*}"
+      case "$1" in
+         *+=\"*\"*)
+            key="${1%%+=*}"
+            value="${1#${key}+=}"
+            option="--append"
+         ;;
+
+         *=*)
+            key="${1%%=*}"
+            value="${1#${key}=}"
+            option=
+         ;;
+
+         *)
+            fail "$1 is missing a '='"
+         ;;
+      esac
+
+      comment=
+
+      #
+      # value is still in double quotes
+      # possible comment trailing with ##
+      #
+      case "${value}" in
+         *\#\#*)
+            comment="${value##*##}"
+            value="${value%##*}"
+         ;;
+      esac
+
+      case "${value}" in
+         \"*\")
+            value="${value:1}"
+            value="${value%?}"
+         ;;
+
+         *)
+            fail "$1: value \"${value}\" is not doublequoted"
+         ;;
+      esac
 
       if [ ! -z "${comment}" ]
       then
@@ -446,7 +512,7 @@ env_environment_mset_main()
          comment="`sed -e 's/^/# /' <<< "${comment}"`"
       fi
 
-      env_environment_set_main "${scope}" "${key}" "${value}" "${comment}"
+      env_environment_set_main "${scope}" ${option} "${key}" "${value}" "${comment}"
 
       shift
    done
@@ -476,6 +542,8 @@ _env_environment_get()
    then
       return 1
    fi
+
+   log_fluff "Found \"${key}\" with value ${value} in \"${filename}\""
 
    case "${value}" in
       \"*\")
@@ -965,7 +1033,7 @@ env_environment_main()
    log_entry "env_environment_main" "$@"
 
    [ -z "${MULLE_ENV_DIR}" ] && internal_fail "MULLE_ENV_DIR is empty"
-   [ ! -d "${MULLE_ENV_DIR}" ] && fail "mulle-env init hasn't run here yet"
+   [ ! -d "${MULLE_ENV_DIR}" ] && fail "mulle-env init hasn't run here yet ($PWD)"
 
    MULLE_ENV_ETC_DIR="${MULLE_ENV_ETC_DIR:-${MULLE_ENV_DIR}/etc}"
 

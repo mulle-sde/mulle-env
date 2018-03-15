@@ -70,7 +70,7 @@ export MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/archives"
 export MULLE_FETCH_SEARCH_PATH="\${MULLE_VIRTUAL_ROOT}/.."
 
 #
-# Prefer symlinks to local git repositories found via MULLE_FETCH_SEARCH_PATH
+# Prefer symlinking to local git repositories found via MULLE_FETCH_SEARCH_PATH
 #
 export MULLE_SYMLINK="YES"
 

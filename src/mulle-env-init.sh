@@ -190,6 +190,9 @@ env_init_main()
       rmdir_safer ".mulle-env/libexec"
       rmdir_safer ".mulle-env/var"
       # don't throw away share though
+
+      # remove some known trouble makers...
+      remove_file_if_present   ".mulle-env/etc/style"
    else
       if [ -f "${envfile}" ]
       then

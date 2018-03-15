@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.4"
+MULLE_ENV_VERSION="0.11.5"
 
 #
 # The default for first time mulle-env
@@ -342,9 +342,12 @@ If yes, check your tool lists."
    then
       log_fluff "Regenerating tools as the host has changed"
 
-      exekutor chmod ug+w "${bindir}" 2> /dev/null
-      remove_file_if_present "${uptodatefile}"
-      exekutor chmod ug-w "${bindir}" 2> /dev/null
+      if [ -f "${uptodatefile}" ]
+      then
+         exekutor chmod ug+w "${bindir}"
+         remove_file_if_present "${uptodatefile}"
+         exekutor chmod ug-w "${bindir}"
+      fi
    fi
 
    IFS="
@@ -371,8 +374,14 @@ If yes, check your tool lists."
    #
    # unprotect
    #
-   exekutor chmod -R ug+w "${bindir}" 2> /dev/null
-   exekutor chmod -R ug+w "${libexecdir}" 2> /dev/null
+   if [ -d "${bindir}" ]
+   then
+      exekutor chmod -R ug+w "${bindir}"
+   fi
+   if [ -d "${libexecdir}" ]
+   then
+      exekutor chmod -R ug+w "${libexecdir}"
+   fi
 
    local callback
 
@@ -395,8 +404,8 @@ If yes, check your tool lists."
    #
    # protect from accidents
    #
-   exekutor chmod -R ugo-w "${libexecdir}" 2> /dev/null
-   exekutor chmod -R ugo-w "${bindir}" 2> /dev/null
+   exekutor chmod -R ugo-w "${libexecdir}"
+   exekutor chmod -R ugo-w "${bindir}"
 }
 
 

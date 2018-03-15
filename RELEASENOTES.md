@@ -1,3 +1,7 @@
+### 0.11.5
+
+* make it possible to append to envionement variables
+
 ### 0.11.4
 
 * don't clobber share on init -f, gain reinit command
