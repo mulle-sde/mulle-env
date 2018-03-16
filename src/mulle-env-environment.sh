@@ -152,8 +152,8 @@ key_values_to_sed()
 
    local key
    local value
-   local sed_escaped_value
-   local sed_escaped_key
+   local escaped_value
+   local escaped_key
 
    IFS="
 "
@@ -169,10 +169,15 @@ key_values_to_sed()
       key="${line%%=*}"
       value="${line#${key}=}"
 
-      sed_escaped_key="`escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"`"
-      sed_escaped_value="`escaped_sed_pattern "${value}"`"
+      escaped_key="`escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"`"
+      escaped_value="`escaped_sed_pattern "${value}"`"
 
-      echo "-e 's/${sed_escaped_key}/${sed_escaped_value}/g'"
+      # escape quotes for "eval line"
+      # i really don't see why i need 6 backquotes here, but...
+      escaped_key="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_key}"`"
+      escaped_value="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_value}"`"
+
+      echo "-e 's/${escaped_key}/${escaped_value}/g'"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -622,6 +627,11 @@ _env_environment_sed_get()
 
    escaped_key="`escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"`"
    escaped_value="`escaped_sed_pattern "${value}"`"
+
+   # escape quotes for "eval line"
+   escaped_key="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_key}"`"
+   escaped_value="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_value}"`"
+
    echo "-e 's/${escaped_key}/${escaped_value}/g'"
 }
 

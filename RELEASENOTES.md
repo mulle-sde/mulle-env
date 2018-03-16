@@ -1,3 +1,7 @@
+### 0.11.7
+
+* fix single quote escapes for sed output
+
 ### 0.11.6
 
 * do not write protect share for the benefit of git checkouts
