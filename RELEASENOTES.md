@@ -1,3 +1,7 @@
+### 0.11.8
+
+* bug fix
+
 ### 0.11.7
 
 * fix single quote escapes for sed output
