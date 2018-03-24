@@ -40,11 +40,9 @@ Usage:
 
    Initialize the working directory for mulle-env.
 
-Flags:
-   --style <tool:path>  : specify environment style
-
 Options:
    -d <dir>             : specify directory
+   --style <tool:path>  : specify environment style
 
 EOF
 
@@ -135,6 +133,12 @@ env_init_main()
             OPTION_SVN="NO"
          ;;
 
+         -s|--style)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            OPTION_STYLE="$1"
+         ;;
 
          -t|--tool)
             [ $# -eq 1 ] && fail "missing argument to $1"
@@ -214,7 +218,7 @@ env_init_main()
    __load_flavor_plugin "${flavor}"
 
    case "${style}" in
-      */wild|*-inherit|*/restrict|*/tight)
+      */inherit|*/relax|*/restrict|*/tight|*/wild)
       ;;
 
       *)

@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.8"
+MULLE_ENV_VERSION="0.11.9"
 
 #
 # The default for first time mulle-env
@@ -39,6 +39,21 @@ MULLE_ENV_VERSION="0.11.8"
 MULLE_ENV_DEFAULT_STYLE="${MULLE_ENV_DEFAULT_STYLE:-none/relax}"
 ENVFILENAME="environment.sh"
 
+
+emit_options()
+{
+   cat <<EOF
+   -ef <file>       : use a different environment file (${ENVFILENAME})
+   -c <cmd>         : shell command to execute instead of interactive subshell
+   -d <dir>         : specify directory
+   -s <tool/env>    : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
+EOF
+
+   if [ ! -z "${MULLE_TRACE}" ]
+   then
+      options_technical_flags_usage "            : "
+   fi
+}
 
 usage()
 {
@@ -48,36 +63,40 @@ usage()
 Usage:
    ${MULLE_USAGE_NAME} [options] [commands] [path-or-url]
 
-   Creates a virtual environment for your project as a subshell.
-
-   mulle-env manages environment variables and tools (executables) for you.
-   Only environment variables defined via mull-env are available in the
-   subshell. mulle-env also suppresses the reading of any profile or rc files.
-   mulle-env restricts your PATH to only a user-defined subset of tools.
-   Use the style none/wild for no PATH and environment restrictions. aliases
-   and shell settings will still be suppressed though.
+   Creates a virtual environment with a custom set of environment variables
+   and tools as a subshell.
 
    If the directory at "path-or-url" does not exist and the path looks like
    an URL, then ${MULLE_USAGE_NAME} will attempt to "git clone" that URL.
 
-Commands:
-   environment      : manage environment variables
-   init             : set up the subshell for the first time
-   tool             : manage tools
-   uname            : return the ${MULLE_USAGE_NAME} specfic uname
-   version          : return the ${MULLE_USAGE_NAME} version
-   --               : enter the subshell. Can be useful if path/url has
-                      the name of a mulle-env command or option
-Options:
-   -ef <file>       : use a different environment file (${ENVFILENAME})
-   -c <cmd>         : shell command to execute instead of interactive shell
-   -d <dir>         : specify directory
-   -s <tool/env>    : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
+EOF
+
+   if [ ! -z "${MULLE_TRACE}" ]
+   then
+      cat <<EOF >&2
+
+   Use style "none/wild" for no PATH and environment restrictions. Aliases
+   and shell settings will still be suppressed.
 
 EOF
-   options_technical_flags_usage "           : "
+   fi
 
    cat <<EOF >&2
+Commands:
+   environment      : manage subshell environment variables
+   init             : set up the subshell for the first time
+   tool             : manage subshell tools
+   uname            : return the ${MULLE_USAGE_NAME} specfic uname
+   version          : return the ${MULLE_USAGE_NAME} version
+   --               : enter the subshell
+
+Options:
+EOF
+   emit_options | sort >&2
+
+   if [ ! -z "${MULLE_TRACE}" ]
+   then
+      cat <<EOF >&2
 
 Tool-style:
    none             : no additions
@@ -91,8 +110,11 @@ Env-style:
    restrict         : relax + all /bin and /usr/bin tools (default)
    inherit          : restrict + all PATH tools
    wild             : no restrictions
-EOF
 
+EOF
+   else
+      echo "      (use -v help to see more usage text)"
+   fi
 
   exit 1
 }
@@ -164,14 +186,12 @@ env_link_other_tools()
    log_entry "env_link_other_tools" "$@"
 
    local toolnames="$1"
-   local directory="$2"
+   local bindir="$2"
    local isrequired="$3"
 
    local toolname
 
    local bindir
-
-   bindir="${directory}/bin"
 
    mkdir_if_missing "${bindir}"
 
@@ -242,7 +262,7 @@ env_setup_other_tools()
    log_entry "env_setup_other_tools" "$@"
 
    local toolfiles="$1"
-   local directory="$2"
+   local bindir="$2"
 
    local tools
    local toolfile
@@ -257,11 +277,11 @@ env_setup_other_tools()
       then
          case "${toolfile}" in
             optional-*|*/optional-*)
-               env_link_other_tools "${tools}" "${directory}" "NO"
+               env_link_other_tools "${tools}" "${bindir}" "NO"
             ;;
 
             *)
-               env_link_other_tools "${tools}" "${directory}" "YES"
+               env_link_other_tools "${tools}" "${bindir}" "YES"
             ;;
          esac
       fi
@@ -276,11 +296,13 @@ env_setup_if_needed()
 {
    log_entry "env_setup_if_needed" "$@"
 
-   local directory="$1"
-   local style="$2"
-   local flavor="$3"
-   local oldstyle="$4"
-   local oldflavor="$5"
+   local cachedir="$1"
+   local bindir="$2"
+   local libexecdir="$3"
+   local style="$4"
+   local flavor="$5"
+   local oldstyle="$6"
+   local oldflavor="$7"
 
    local needs_flavor_update
    local needs_bin_update
@@ -289,13 +311,19 @@ env_setup_if_needed()
    needs_flavor_update=
    needs_bin_update=
 
-   local bindir
-   local libexecdir
-   local cachedir
 
-   cachedir="${directory}/var/cache"
-   bindir="${directory}/bin"
-   libexecdir="${directory}/libexecdir"
+   #
+   # unprotect. Since these dirs are not in .git it should be OK
+   # if the directory is read only
+   #
+   if [ -d "${bindir}" ]
+   then
+      exekutor chmod -R ug+w "${bindir}"
+   fi
+   if [ -d "${libexecdir}" ]
+   then
+      exekutor chmod -R ug+w "${libexecdir}"
+   fi
 
    local callback
 
@@ -336,7 +364,6 @@ If yes, check your tool lists."
    uptodatefile="${cachedir}/tools-updated"
 
    oldhost="`cat "${uptodatefile}" 2> /dev/null`"
-   myhost="`hostname -s`"
 
    if [ ! -z "${oldhost}" -a "${oldhost}" != "${myhost}" ]
    then
@@ -344,9 +371,7 @@ If yes, check your tool lists."
 
       if [ -f "${uptodatefile}" ]
       then
-         exekutor chmod ug+w "${bindir}"
          remove_file_if_present "${uptodatefile}"
-         exekutor chmod ug-w "${bindir}"
       fi
    fi
 
@@ -365,53 +390,47 @@ If yes, check your tool lists."
    done
    IFS="${DEFAULT_IFS}"
 
-   if [ -z "${needs_bin_update}" -a -z "${needs_flavor_update}" ]
-   then
-      log_verbose "Nothing needs to be updated"
-      return
-   fi
-
-   #
-   # unprotect. Since these dirs are not in .git it should be OK
-   # if the directory is read only
-   #
-   if [ -d "${bindir}" ]
-   then
-      exekutor chmod -R ug+w "${bindir}"
-   fi
-   if [ -d "${libexecdir}" ]
-   then
-      exekutor chmod -R ug+w "${libexecdir}"
-   fi
-
    local rval
 
-   (
-      local callback
+   if [ ! -z "${needs_bin_update}" -o ! -z "${needs_flavor_update}" ]
+   then
+      (
+         local callback
 
-      callback="env_setup_${flavor}_tools"
-      if [ "`type -t "${callback}"`" = "function" ]
-      then
-         ${callback} "${directory}"
-      fi
+         callback="env_setup_${flavor}_tools"
+         if [ "`type -t "${callback}"`" = "function" ]
+         then
+            ${callback} "${bindir}" "${libexecdir}" || exit 1
+         fi
 
-      if [ ! -z "${needs_bin_update}" ]
-      then
-         env_setup_other_tools "${needs_bin_update}" "${directory}"
+         if [ ! -z "${needs_bin_update}" ]
+         then
+            env_setup_other_tools "${needs_bin_update}" "${bindir}"
 
-         log_fluff "Writing \"${uptodatefile}\""
+            log_fluff "Writing \"${uptodatefile}\""
 
-         mkdir_if_missing "${cachedir}"
-         redirect_exekutor "${uptodatefile}" echo "${myhost}"
-      fi
-   )
-   rval=$1
+            mkdir_if_missing "${cachedir}" &&
+            redirect_exekutor "${uptodatefile}" date
+         fi
+      )
+      rval=$?
+   else
+      log_verbose "Nothing needs to be updated"
+      rval=0
+   fi
 
    #
    # protect from accidents
    #
-   exekutor chmod -R ugo-w "${libexecdir}"
-   exekutor chmod -R ugo-w "${bindir}"
+   if [ -d "${libexecdir}" ]
+   then
+      exekutor chmod -R ugo-w "${libexecdir}"
+   fi
+
+   if [ -d "${bindir}" ]
+   then
+      exekutor chmod -R ugo-w "${bindir}"
+   fi
 
    [ "$rval" -eq 0 ] || exit 1
 }
@@ -497,10 +516,10 @@ find_best_environment()
       # use globbing
       if [ -f "${directory}/".mulle-env/share/environment.sh ]
       then
-         log_info "Found and using a superior mulle-env environment at \
-${C_RESET_BOLD}${directory}/.mulle-env${C_INFO}.
+         log_info "Using the superior mulle-env environment at \
+${C_RESET_BOLD}${directory}${C_INFO}.
 Suppress this behaviour with:
-   ${C_RESET_BOLD}mulle-env --no-search"
+   ${C_RESET_BOLD}${MULLE_CALLED_EXECUTABLE_NAME:-${MULLE_EXECUTABLE_NAME}} --no-search"
          best="${directory}"
       fi
    done
@@ -594,7 +613,6 @@ main()
    log_entry "main" "$@"
 
    local OPTION_DIRECTORY
-   local OPTION_BOOTSTRAP="NO"
    local OPTION_SHELL_COMMAND
    local OPTION_KEEP_TMP="NO"
    local OPTION_MAGNUM_FORCE=
@@ -665,14 +683,6 @@ main()
 
          -ns|--no-search)
             OPTION_SEARCH="NO"
-         ;;
-
-         --bootstrap)
-            OPTION_BOOTSTRAP="YES"
-         ;;
-
-         -nb|--no-bootstrap)
-            OPTION_BOOTSTRAP="NO"
          ;;
 
          --keep-tmp)
@@ -839,9 +849,11 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 
    local etcdir
    local sharedir
+   local vardir
 
    etcdir="${MULLE_ENV_DIR}/etc"
    sharedir="${MULLE_ENV_DIR}/share"
+   vardir="${MULLE_ENV_DIR}/var"
 
    local style
    local flavor
@@ -859,7 +871,6 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       __get_user_style_flavor "${OPTION_STYLE}"
    fi
 
-   local run_shell_args
    local inherit_path
    local runpath
    local rundirectory
@@ -895,33 +906,43 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
 
       */restrict)
-         env_setup_if_needed "${MULLE_ENV_DIR}" \
-                              "${style}" \
-                              "${flavor}" \
-                              "${oldstyle}" \
-                              "${oldflavor}"
-
          inherit_path="`censored_path "${PATH}"`"
-         runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
-
-         s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
       ;;
 
       */tight|*/relax)
          inherit_path=""
-         env_setup_if_needed "${MULLE_ENV_DIR}" \
+      ;;
+
+      *)
+         fail "unknown style \"${style}\""
+      ;;
+   esac
+
+   case "${style}" in
+      */restrict|*/tight|*/relax)
+         local bindir
+         local libexecdir
+         local cachedir
+         local sanehostname
+
+         sanehostname="`hostname -s`"
+         sanehostname="`printf "%s" "${sanehostname}" | tr -c 'a-zA-Z0-9._-' '_'`"
+
+         cachedir="${vardir}/${sanehostname}/cache"
+         bindir="${vardir}/${sanehostname}/bin"
+         libexecdir="${vardir}/${sanehostname}/libexec"
+
+         env_setup_if_needed "${cachedir}" \
+                              "${bindir}" \
+                              "${libexecdir}" \
                               "${style}" \
                               "${flavor}" \
                               "${oldstyle}" \
                               "${oldflavor}"
 
-         runpath="`colon_concat "${runpath}" "${MULLE_ENV_DIR}/bin" `"
+         runpath="`colon_concat "${runpath}" "${bindir}" `"
 
          s="`concat "${s}" "MULLE_OLDPATH='${PATH}'"`"
-      ;;
-
-      *)
-         fail "unknown style \"${style}\""
       ;;
    esac
 
@@ -940,11 +961,14 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    #
    #
    #
-   log_fluff "Run shell in \"${rundirectory}\"..."
+   local mode
+
+   mode="INTERACTIVE"
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
-      run_shell_args="-c '${OPTION_SHELL_COMMAND}"
+      log_fluff "Run shell command \"${OPTION_SHELL_COMMAND}\" in \"${rundirectory}\"..."
+      mode="SCRIPT"
    fi
 
    case "${style}" in
@@ -983,11 +1007,11 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
             "'${MULLE_UNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
             "'${runpath}'" \
-            "'INTERACTIVE'" \
+            "'${mode}'" \
             "'${style}'" \
             "'${ENVFILENAME}'" \
             "'${TRACE}'" \
-            "${run_shell_args}"
+            "${OPTION_SHELL_COMMAND}"
    return $?
 }
 

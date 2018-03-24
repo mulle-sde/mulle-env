@@ -151,16 +151,19 @@ run_shell()
    done
    shift
 
+   MULLE_ENV_LIBEXEC_DIR="`dirname -- "$0"`"
+
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
+        "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
         "TRACE='${TRACE}'" \
         "PATH='${RUNPATH}'" \
+        "COMMAND='${args}'" \
         "${prompt_string}" \
         "${cmd_env}" \
             "'${cmd_string}'" \
-               "${cmd_options}" \
-               "${args}"
+               "${cmd_options}"
 
   if [ "${OPTION_KEEP_TMP}" = "NO" ] && [ -f "${initfile}" ]
   then

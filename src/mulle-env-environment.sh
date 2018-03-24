@@ -432,13 +432,11 @@ env_environment_set_main()
          then
             exekutor chmod ug+w "${filename}"
          fi
-         exekutor chmod ug+wX "${MULLE_ENV_DIR}/share"
 
          _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
          rval="$?"
 
          exekutor chmod a-w "${filename}"
-         exekutor chmod a-w "${MULLE_ENV_DIR}/share"
 
          return $rval
       ;;
@@ -1101,7 +1099,7 @@ env_environment_main()
    local cmd="$1"
    [ $# -ne 0 ] && shift
 
-   case "${cmd}" in
+   case "${cmd:-list}" in
       hostname)
          hostname
       ;;

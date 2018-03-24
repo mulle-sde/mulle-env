@@ -1,3 +1,7 @@
+### 0.11.9
+
+* fix -c execution, make bin/libexec dependent on hostname
+
 ### 0.11.8
 
 * bug fix

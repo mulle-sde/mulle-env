@@ -40,8 +40,8 @@ print_mulle_environment_os_darwin_sh()
 #
 # Git mirror and Zip/TGZ cache to conserve bandwidth
 #
-export MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/git-mirrors"
-export MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/archives"
+export MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/git-mirror"
+export MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/Library/Caches/mulle-fetch/archive"
 EOF
 }
 
@@ -57,12 +57,12 @@ print_mulle_environment_global_sh()
 # Git mirror and Zip/TGZ cache to conserve bandwidth
 # Memo: override in os-specific env file
 #
-export MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/git-mirrors"
+export MULLE_FETCH_MIRROR_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/git-mirror"
 
 #
 # Git mirror and Zip/TGZ cache to conserve bandwidth
 #
-export MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/archives"
+export MULLE_FETCH_ARCHIVE_DIR="\${HOME:-/tmp}/.cache/mulle-fetch/archive"
 
 #
 # PATH to search for git repositories locally
@@ -77,7 +77,7 @@ export MULLE_SYMLINK="YES"
 #
 # Use common folder for sharable projects
 #
-export MULLE_SOURCETREE_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/stashes"
+export MULLE_SOURCETREE_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/stash"
 
 #
 # Use common build directory
@@ -85,14 +85,14 @@ export MULLE_SOURCETREE_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/stashes"
 export BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
 
 #
-# Share dependencies directory (absolute for ease of use)
+# Share dependency directory (absolute for ease of use)
 #
-export DEPENDENCIES_DIR="\${MULLE_VIRTUAL_ROOT}/dependencies"
+export DEPENDENCY_DIR="\${MULLE_VIRTUAL_ROOT}/dependency"
 
 #
-# Share addictions directory (absolute for ease of use)
+# Share addiction directory (absolute for ease of use)
 #
-export ADDICTIONS_DIR="\${MULLE_VIRTUAL_ROOT}/addictions"
+export ADDICTION_DIR="\${MULLE_VIRTUAL_ROOT}/addiction"
 
 EOF
 }
@@ -117,8 +117,9 @@ env_copy_mulle_tool()
    log_entry "env_copy_mulle_tool" "$@"
 
    local toolname="$1"
-   local directory="$2"
-   local copystyle="${3:-tool}"
+   local dstbindir="$2"
+   local dstlibexecdir="$3"
+   local copystyle="${4:-tool}"
 
    #
    # these dependencies should be there, but just check
@@ -141,17 +142,13 @@ env_copy_mulle_tool()
    srclibexecdir="`dirname -- "${srclibdir}" `"
    srclibname="`basename -- "${srclibdir}" `"
 
-   local dstlibexecdir
    local dstbindir
    local dstexefile
    local dstlibname
 
    dstlibname="${toolname}"
-   dstbindir="${directory}/bin"
    dstexefile="${dstbindir}/${toolname}"
    mkdir_if_missing "${dstbindir}"
-
-   dstlibexecdir="${directory}/libexec"
 
    if [ "${copystyle}" = "library" ]
    then
@@ -161,7 +158,7 @@ env_copy_mulle_tool()
       dstlibname="`sed 's/-env$//' <<< "${toolname}" `"
       dstlibdir="${dstlibexecdir}/${dstlibname}/${version}"
    else
-      dstlibdir="${directory}/libexec/${dstlibname}"
+      dstlibdir="${dstlibexecdir}/${dstlibname}"
    fi
 
    # remove previous symlinks or files
@@ -262,7 +259,8 @@ env_setup_mulle_tools()
 {
    log_entry "env_setup_mulle_tools" "$@"
 
-   local directory="$1"
+   local bindir="$1"
+   local libexecdir="$1"
 
    [ -z "${directory}" ] && internal_fail "directory is empty"
 
@@ -273,15 +271,15 @@ env_setup_mulle_tools()
    # checked yet)
    #
    (
-      env_copy_mulle_tool "mulle-bashfunctions-env" "${directory}" "library" &&
-      env_copy_mulle_tool "mulle-craft"      "${directory}" &&
-      env_copy_mulle_tool "mulle-dispense"   "${directory}" &&
-      env_copy_mulle_tool "mulle-env"        "${directory}" &&
-      env_copy_mulle_tool "mulle-fetch"      "${directory}" &&
-      env_copy_mulle_tool "mulle-make"       "${directory}" &&
-      env_copy_mulle_tool "mulle-monitor"    "${directory}" &&
-      env_copy_mulle_tool "mulle-sde"        "${directory}" &&
-      env_copy_mulle_tool "mulle-sourcetree" "${directory}"
+      env_copy_mulle_tool "mulle-bashfunctions-env" "${bindir}" "${libexecdir}" "library" &&
+      env_copy_mulle_tool "mulle-craft"      "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-dispense"   "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-env"        "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-fetch"      "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-make"       "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-monitor"    "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-sde"        "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-sourcetree" "${bindir}" "${libexecdir}"
    ) || return 1
 }
 
@@ -295,8 +293,8 @@ env_mulle_add_runpath()
    local runpath="$2"
 
    # prepend in reverse order, so dependencies is first
-   runpath="`colon_concat "${runpath}" "${directory}/addictions/bin" "${runpath}"`"
-   colon_concat  "${directory}/dependencies/bin" "${runpath}"
+   runpath="`colon_concat "${runpath}" "${directory}/addiction/bin" "${runpath}"`"
+   colon_concat  "${directory}/dependency/bin" "${runpath}"
 }
 
 

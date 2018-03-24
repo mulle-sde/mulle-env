@@ -62,12 +62,14 @@ function _env_escapes_environment()
 
 function cd()
 {
+   local directory="$*"
+
    while [ "$#" -ne 0 ]
    do
       case "$1" in
          -f)
             shift
-            builtin cd "$@"
+            builtin cd "${directory}"
             return $?
          ;;
       esac
@@ -92,9 +94,16 @@ function cd()
    C_RED="\033[0;31m"
    C_BOLD="\033[1m"
 
-   printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"$*\" is outside of the \
+   if [ -d "${directory}/.mulle-env" ]
+   then
+      # may want to warn if style changes
+      printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Switching environment to \"${directory}\""
+      MULLE_VIRTUAL_ROOT="" exec mulle-env "${directory}"
+   fi
+
+   printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" is outside of the \
 virtual environment. Leave the shell or override with:
-   ${C_RESET}${C_BOLD}cd -f $*"
+   ${C_RESET}${C_BOLD}cd -f $1"
    return 1
 }
 
