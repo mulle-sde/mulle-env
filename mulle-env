@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.9"
+MULLE_ENV_VERSION="0.11.10"
 
 #
 # The default for first time mulle-env
@@ -772,9 +772,13 @@ main()
       style)
          local style
          local flavor
+         local directory="$1"
 
-         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/etc" \
-                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/share"
+         directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
+         directory="${directory:-.}"
+
+         __get_saved_style_flavor "${directory}/.mulle-env/etc" \
+                                  "${directory}/.mulle-env/share"
          echo "${style}"
          return 0
       ;;

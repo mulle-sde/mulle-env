@@ -1,3 +1,7 @@
+### 0.11.10
+
+* fix problems when cding out of the wilderness
+
 ### 0.11.9
 
 * fix -c execution, make bin/libexec dependent on hostname

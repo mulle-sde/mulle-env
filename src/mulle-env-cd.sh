@@ -94,16 +94,37 @@ function cd()
    C_RED="\033[0;31m"
    C_BOLD="\033[1m"
 
-   if [ -d "${directory}/.mulle-env" ]
+   if [ ! -d "${directory}/.mulle-env" ]
    then
-      # may want to warn if style changes
-      printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Switching environment to \"${directory}\""
-      MULLE_VIRTUAL_ROOT="" exec mulle-env "${directory}"
+      printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" is \
+outside of the virtual environment. Leave the shell or override with:
+   ${C_RESET}${C_BOLD}cd -f $1"
+      return 1
    fi
 
-   printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" is outside of the \
-virtual environment. Leave the shell or override with:
-   ${C_RESET}${C_BOLD}cd -f $1"
-   return 1
+   #
+   # We inherit environment variables from our environment if the destination
+   # style is "wild",which can be catastrophic.
+   #
+   local nextstyle
+
+   nextstyle="`mulle-env style "${directory}"`"
+   case "${nextstyle}" in
+      "")
+         printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Can not figure out
+the environment style of \"${directory}\". Chickening out."
+         return 1
+      ;;
+
+      */wild)
+         printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" \
+is a \"${nextstyle}\" environment. Can't switch to wild ones safely."
+         return 1
+      ;;
+   esac
+
+   printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Switching environment to \"${directory}\""
+
+   MULLE_VIRTUAL_ROOT="" exec mulle-env "${directory}"
 }
 

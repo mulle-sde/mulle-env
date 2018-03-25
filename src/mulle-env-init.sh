@@ -190,8 +190,6 @@ env_init_main()
 
    if [ "${OPTION_MAGNUM_FORCE}" = "YES" ]
    then
-      rmdir_safer ".mulle-env/bin"
-      rmdir_safer ".mulle-env/libexec"
       rmdir_safer ".mulle-env/var"
       # don't throw away share though
 
