@@ -62,19 +62,20 @@ function _env_escapes_environment()
 
 function cd()
 {
-   local directory="$*"
 
    while [ "$#" -ne 0 ]
    do
       case "$1" in
          -f)
             shift
-            builtin cd "${directory}"
+            builtin cd "$@"
             return $?
          ;;
       esac
       break
    done
+
+   local directory="$1"
 
    #
    # warn once when stepping out

@@ -759,18 +759,26 @@ env_environment_get_main()
 # List
 #
 
+# diz not pretty, close eyes
+# https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
 merge_environment_text()
 {
+   log_entry "merge_environment_text" "$@"
+
    rexekutor sed -n 's/^ *export *//p' <<< "${1}" | \
-   rexekutor awk -F '=' '{ value[ $1] = $2 };END{for(i in value) print i "=" value[i]}' | \
+   rexekutor awk -F '=' '{ value[ $1] = $2 };END{for(i in value) \
+print i "='"'"'" substr(value[ i], 2, length(value[ i]) - 2) "'"'"'" }' | \
    rexekutor sort
 }
 
 
 merge_environment_file()
 {
+   log_entry "merge_environment_file" "$@"
+
    rexekutor sed -n 's/^ *export *//p' "${1}" | \
-   rexekutor awk -F '=' '{ value[ $1] = $2 };END{for(i in value) print i "=" value[i]}' | \
+   rexekutor awk -F '=' '{ value[ $1] = $2 };END{for(i in value) \
+print i "='"'"'" substr(value[ i], 2, length(value[ i]) - 2) "'"'"'" }' | \
    rexekutor sort
 }
 

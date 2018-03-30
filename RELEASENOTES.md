@@ -1,3 +1,7 @@
+### 0.11.11
+
+* list as single quoted environment variables
+
 ### 0.11.10
 
 * fix problems when cding out of the wilderness

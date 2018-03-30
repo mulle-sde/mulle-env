@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.10"
+MULLE_ENV_VERSION="0.11.11"
 
 #
 # The default for first time mulle-env
@@ -619,11 +619,11 @@ main()
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCH="DEFAULT"
 
+   local MULLE_TRACE
    local MULLE_FLAG_EXEKUTOR_DRY_RUN
    local MULLE_FLAG_LOG_DEBUG
    local MULLE_FLAG_LOG_EXEKUTOR
    local MULLE_FLAG_LOG_TERSE
-   local MULLE_TRACE
 
    local RESTRICTED_PATH
 
