@@ -116,7 +116,7 @@ Usage:
       ${MULLE_USAGE_NAME} environment --global set FOO "A value"
 
 Options:
-   --append           : append value to existing value
+   --add              : add value to existing values
    --separator <sep>  : use separator for append
 EOF
    exit 1
@@ -322,8 +322,8 @@ env_environment_set_main()
    local scope="$1"; shift
    local OPTION_COMMENT_OUT_EMPTY="NO"
    local OPTION_ADD_EMPTY="NO"
-   local OPTION_APPEND="NO"
-   local OPTION_SEPARATOR=","
+   local OPTION_ADD="NO"
+   local OPTION_SEPARATOR=":"  # convenient for PATH like behaviour
 
    while :
    do
@@ -332,16 +332,16 @@ env_environment_set_main()
             env_environment_set_usage
          ;;
 
-         --comment-out-empty)
-            OPTION_COMMENT_OUT_EMPTY="YES"
-         ;;
-
          --add-empty)
             OPTION_ADD_EMPTY="YES"
          ;;
 
-         -a|--append)
-            OPTION_APPEND="YES"
+         -a|--add)
+            OPTION_ADD="YES"
+         ;;
+
+         -c|--comment-out-empty)
+            OPTION_COMMENT_OUT_EMPTY="YES"
          ;;
 
          -s|--separator)
@@ -384,12 +384,25 @@ env_environment_set_main()
       ;;
    esac
 
-   if [ "${OPTION_APPEND}" = "YES" ]
+   if [ "${OPTION_ADD}" = "YES" ]
    then
       local prev
+      local oldvalue
 
       prev="`env_environment_get_main "${scope}" "${key}"`"
       log_debug "Previous value is \"${prev}\""
+
+      IFS="${OPTION_SEPARATOR}"
+      for oldvalue in ${prev}
+      do
+         IFS="${DEFAULT_IFS}"
+         if [ "${oldvalue}" = "${value}" ]
+         then
+            log_fluff "\"${value}\" already set"
+            return
+         fi
+      done
+      IFS="${DEFAULT_IFS}"
 
       value="`concat "${prev}" "${value}" "${OPTION_SEPARATOR}"`"
    fi
@@ -471,7 +484,7 @@ env_environment_mset_main()
          *+=\"*\"*)
             key="${1%%+=*}"
             value="${1#${key}+=}"
-            option="--append"
+            option="--add"
          ;;
 
          *=*)

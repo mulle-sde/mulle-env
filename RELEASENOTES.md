@@ -1,3 +1,7 @@
+### 0.11.12
+
+* use : as += value delimiter, allow addition
+
 ### 0.11.11
 
 * list as single quoted environment variables
