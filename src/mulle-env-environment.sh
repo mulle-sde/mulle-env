@@ -299,7 +299,7 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
    #
    # If that fails append to end, except if empty
    #
-   if [  -z "${value}" -a "${OPTION_ADD_EMPTY}" = "NO"  ]
+   if [ -z "${value}" -a "${OPTION_ADD_EMPTY}" = "NO"  ]
    then
       return
    fi
@@ -449,7 +449,10 @@ env_environment_set_main()
          _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
          rval="$?"
 
-         exekutor chmod a-w "${filename}"
+         if [ -f "${filename}" ]
+         then
+            exekutor chmod a-w "${filename}"
+         fi
 
          return $rval
       ;;

@@ -85,10 +85,10 @@ Notice the absence of most environment variables and see how restricted the
 
 A directory must be "init"ed, before you can use **mulle-env** with it.
 Let's try an example with a `project` directory. We want a minimal portable set
-of commandline tools, so we specify the style as "none/tight".
+of commandline tools, so we specify the style as "minimal/tight".
 
 ```
-mulle-env init -d project --style none/tight
+mulle-env init -d project --style minimal/tight
 ```
 
 And this is what happens:

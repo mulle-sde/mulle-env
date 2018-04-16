@@ -4,7 +4,7 @@ digraph G {
     node[shape=note];
     edge[arrowhead=none];
 
-        "mulle-env init" [ label="mulle-env init -d project --style none:tight",
+        "mulle-env init" [ label="mulle-env init -d project --style minimal/tight",
                            fontname="monospace",
                            fontcolor="blue",
                            shape="none" ]

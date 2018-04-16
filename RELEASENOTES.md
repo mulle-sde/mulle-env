@@ -1,3 +1,7 @@
+### 0.11.13
+
+* fix dox, fix an ugly
+
 ### 0.11.12
 
 * use : as += value delimiter, allow addition
