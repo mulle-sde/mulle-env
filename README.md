@@ -24,11 +24,13 @@ other       | ./install.sh  (Requires: [mulle-bashfunctions](https://github.com/
 
 ## What mulle-env does in a nutshell
 
-mulle-env uses `env` to restrict the environment of the subshell to a minimal
+
+mulle-env uses `env -i` to restrict the environment of the subshell to a minimal
 set of values. The PATH is modified, so that only a definable subset of tools
 is available.
 
-As an example here is my environment when running normally:
+As an example here is my environment when running in a macos Terminal.app
+session:
 
 ```
 Apple_PubSub_Socket_Render=/private/tmp/com.apple.launchd.yxJqn34O3N/Render
@@ -119,7 +121,32 @@ And we leave the subshell with
 
 ```
 $ exit
-```
+``
+## Styles
+
+A style is mix of a tool-style and an environment style of the form
+`<tool>/<env>`.
+
+The env style determines the filtering of the environment variables.
+
+The tool style determines the change of the PATH variables,
+in the environment styles `tight`, `relax`, `inherit`.
+
+Tool Style  | Descripton
+------------|--------------------------
+`none`      | No default commands available.
+`minimal`   | PATH with a minimal `/bin` like set of tools like `ls` or `chmod`
+`developer` | PATH with a a set of common unix tools like `awk` or `man` in addition to `minimal`
+`mulle`     | developer + support mulle-sde (default)
+
+
+Environment Style | Description
+------------------|--------------------------
+`tight`           | All environment variables must be defined via `mulle-env`
+`relax`           | Inherit some environment environment variables (e.g. SSH_TTY)
+`restrict`        | In addition to `relax`  + all /bin and /usr/bin tools (default)
+`inherit`         | The environment is restricted but tool style is ignored and the original PATH is unchanged.
+`wild`            | The environment unchanged and the tool style is ignored.
 
 ## Tasks
 
