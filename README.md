@@ -121,7 +121,8 @@ And we leave the subshell with
 
 ```
 $ exit
-``
+```
+
 ## Styles
 
 A style is mix of a tool-style and an environment style of the form
