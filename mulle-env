@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.15"
+MULLE_ENV_VERSION="0.11.16"
 
 #
 # The default for first time mulle-env
@@ -43,15 +43,15 @@ ENVFILENAME="environment.sh"
 emit_options()
 {
    cat <<EOF
-   -ef <file>       : use a different environment file (${ENVFILENAME})
-   -c <cmd>         : shell command to execute instead of interactive subshell
-   -d <dir>         : specify directory
-   -s <tool/env>    : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
+   -ef <file>    : use a different environment file (${ENVFILENAME})
+   -c <cmd>      : shell command to execute instead of interactive subshell
+   -d <dir>      : specify directory
+   -s <tool/env> : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
 EOF
 
    if [ ! -z "${MULLE_TRACE}" ]
    then
-      options_technical_flags_usage "            : "
+      options_technical_flags_usage "         : "
    fi
 }
 
@@ -74,7 +74,6 @@ EOF
    if [ ! -z "${MULLE_TRACE}" ]
    then
       cat <<EOF >&2
-
    Use style "none/wild" for no PATH and environment restrictions. Aliases
    and shell settings will still be suppressed.
 
@@ -83,12 +82,12 @@ EOF
 
    cat <<EOF >&2
 Commands:
-   environment      : manage subshell environment variables
-   init             : set up the subshell for the first time
-   tool             : manage subshell tools
-   uname            : return the ${MULLE_USAGE_NAME} specfic uname
-   version          : return the ${MULLE_USAGE_NAME} version
-   --               : enter the subshell
+   environment   : manage subshell environment variables
+   init          : set up the subshell for the first time
+   tool          : manage subshell tools
+   uname         : return the ${MULLE_USAGE_NAME} specfic uname
+   version       : return the ${MULLE_USAGE_NAME} version
+   --            : enter the subshell
 
 Options:
 EOF
@@ -99,17 +98,17 @@ EOF
       cat <<EOF >&2
 
 Tool-style:
-   none             : no additions
-   minimal          : none + a minimal set of tools like ls or chmod
-   developer        : minimal + a less minimal set of tools like awk or man
-   mulle            : developer + support mulle-sde (default)
+   none          : no additions
+   minimal       : a minimal set of tools (like cd, ls)
+   developer     : a common set of tools (like cd, ls, awk, man)
+   mulle         : extended set of tools to support mulle-sde (default)
 
 Env-style:
-   tight            : all environment variables are user defined
-   relax            : none + inherit some environment (e.g. SSH_TTY)
-   restrict         : relax + all /bin and /usr/bin tools (default)
-   inherit          : restrict + all PATH tools
-   wild             : no restrictions
+   tight         : all environment variables are user defined
+   relax         : none + inherit some environment (e.g. SSH_TTY)
+   restrict      : relax + all /bin and /usr/bin tools (default)
+   inherit       : restrict + all PATH tools
+   wild          : no restrictions
 
 EOF
    else
@@ -310,7 +309,6 @@ env_setup_if_needed()
 
    needs_flavor_update=
    needs_bin_update=
-
 
    #
    # unprotect. Since these dirs are not in .git it should be OK
@@ -580,6 +578,7 @@ _setup_environment()
 
    physicaldir="`physicalpath "${directory}" `"
    [ ! -d "${physicaldir}" ] && internal_fail "physicalpath failed"
+   [ "${physicaldir}" = "/" ] && fail "Running in / which is not supported"
 
    MULLE_VIRTUAL_ROOT="${physicaldir}"
 
@@ -610,8 +609,6 @@ _default_setup_environment()
 
 main()
 {
-   log_entry "main" "$@"
-
    local OPTION_DIRECTORY
    local OPTION_SHELL_COMMAND
    local OPTION_KEEP_TMP="NO"
@@ -735,11 +732,6 @@ main()
          [ $# -ne 0 ] && shift
       ;;
 
-      uname)
-         echo "${MULLE_UNAME}"
-         return 0
-      ;;
-
       init)
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
@@ -790,6 +782,27 @@ main()
          _default_setup_environment "${PWD}"
          env_tool_main "$@"
          return $?
+      ;;
+
+      toolstyles)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         env_all_plugin_names
+         return 0
+      ;;
+
+      envstyles)
+         echo "inherit
+relax
+restrict
+tight
+wild"
+         return 0
+      ;;
+
+      uname)
+         echo "${MULLE_UNAME}"
+         return 0
       ;;
 
       *)
@@ -845,7 +858,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 
          directory="`basename -- "${url}" .git`"
          log_verbose "Cloning from URL \"${arg}\" into \"${directory}\"..."
-         git clone "${url}" "${directory}" || return 1
+         exekutor git clone "${url}" "${directory}" || return 1
       fi
    fi
 
@@ -927,14 +940,12 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
          local bindir
          local libexecdir
          local cachedir
-         local sanehostname
 
-         sanehostname="`hostname -s`"
-         sanehostname="`printf "%s" "${sanehostname}" | tr -c 'a-zA-Z0-9._-' '_'`"
+         [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME undefined (old mulle-bashfunctions)"
 
-         cachedir="${vardir}/${sanehostname}/cache"
-         bindir="${vardir}/${sanehostname}/bin"
-         libexecdir="${vardir}/${sanehostname}/libexec"
+         cachedir="${vardir}/${MULLE_HOSTNAME}/cache"
+         bindir="${vardir}/${MULLE_HOSTNAME}/bin"
+         libexecdir="${vardir}/${MULLE_HOSTNAME}/libexec"
 
          env_setup_if_needed "${cachedir}" \
                               "${bindir}" \
@@ -1004,6 +1015,8 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    # home is needed for git
    # otherwise provide a minimal environment, for better reproducability
    #
+   log_verbose "Starting subshell ${env_flag}"
+
    cd "${rundirectory}" &&
    eval env ${env_flag} \
           "${s}" \

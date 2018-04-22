@@ -139,8 +139,8 @@ env_copy_mulle_tool()
    local srclibname
 
    srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
-   srclibexecdir="`dirname -- "${srclibdir}" `"
-   srclibname="`basename -- "${srclibdir}" `"
+   srclibexecdir="`fast_dirname "${srclibdir}" `"
+   srclibname="`fast_basename "${srclibdir}" `"
 
    local dstbindir
    local dstexefile
@@ -260,7 +260,7 @@ env_setup_mulle_tools()
    log_entry "env_setup_mulle_tools" "$@"
 
    local bindir="$1"
-   local libexecdir="$1"
+   local libexecdir="$2"
 
    [ -z "${directory}" ] && internal_fail "directory is empty"
 
@@ -272,14 +272,15 @@ env_setup_mulle_tools()
    #
    (
       env_copy_mulle_tool "mulle-bashfunctions-env" "${bindir}" "${libexecdir}" "library" &&
-      env_copy_mulle_tool "mulle-craft"      "${bindir}" "${libexecdir}" &&
-      env_copy_mulle_tool "mulle-dispense"   "${bindir}" "${libexecdir}" &&
-      env_copy_mulle_tool "mulle-env"        "${bindir}" "${libexecdir}" &&
-      env_copy_mulle_tool "mulle-fetch"      "${bindir}" "${libexecdir}" &&
-      env_copy_mulle_tool "mulle-make"       "${bindir}" "${libexecdir}" &&
-      env_copy_mulle_tool "mulle-monitor"    "${bindir}" "${libexecdir}" &&
-      env_copy_mulle_tool "mulle-sde"        "${bindir}" "${libexecdir}" &&
-      env_copy_mulle_tool "mulle-sourcetree" "${bindir}" "${libexecdir}"
+      env_copy_mulle_tool "mulle-craft"             "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-dispense"          "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-env"               "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-fetch"             "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-make"              "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-match"             "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-monitor"           "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-sde"               "${bindir}" "${libexecdir}" &&
+      env_copy_mulle_tool "mulle-sourcetree"        "${bindir}" "${libexecdir}"
    ) || return 1
 }
 

@@ -1,3 +1,7 @@
+### 0.11.16
+
+* add toolstyls and envstyles command for completion
+
 ### 0.11.15
 
 * fix README
