@@ -111,7 +111,7 @@ print_none_include_sh()
    echo "Your script needs to setup MULLE_VIRTUAL_ROOT \\
 and MULLE_UNAME properly" >&2  && exit 1
 
-HOSTNAME="\`PATH=/bin:/usr/bin hostname -s\`" # don't export it
+MULLE_HOSTNAME="\`PATH=/bin:/usr/bin hostname -s\`" # don't export it
 
 MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
@@ -161,9 +161,9 @@ fi
 # And more managable for mulle-env environment
 #
 
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-host-\${HOSTNAME}.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-host-\${MULLE_HOSTNAME}.sh" ]
 then
-   . "\${MULLE_ENV_ETC_DIR}/environment-host-\${HOSTNAME}.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-host-\${MULLE_HOSTNAME}.sh"
 fi
 
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-user-\${USER}.sh" ]
@@ -181,7 +181,7 @@ fi
 
 unset MULLE_ENV_ETC_DIR
 unset MULLE_ENV_SHARE_DIR
-unset HOSTNAME
+unset MULLE_HOSTNAME
 
 EOF
 }

@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.16"
+MULLE_ENV_VERSION="0.11.17"
 
 #
 # The default for first time mulle-env
@@ -128,22 +128,23 @@ censored_path()
    local i
    local j
 
-   IFS=":"
+   set -f ; IFS=":"
    for i in $*
    do
-      IFS=":"
       for j in ${RESTRICTED_PATH}
       do
-         IFS="${DEFAULT_IFS}"
+         set +f ; IFS="${DEFAULT_IFS}"
 
          if [ "$i" = "$j" ]
          then
             result="`colon_concat "${result}" "${i}"`"
          fi
+
+         set -f ; IFS=":"
       done
    done
 
-   IFS="${DEFAULT_IFS}"
+   set +f ; IFS="${DEFAULT_IFS}"
 
    if [ ! -z "${result}" ]
    then
@@ -194,11 +195,11 @@ env_link_other_tools()
 
    mkdir_if_missing "${bindir}"
 
-   IFS="
+   set -f ; IFS="
 "
    for toolname in ${toolnames}
    do
-      IFS="${DEFAULT_IFS}"
+      set +f ; IFS="${DEFAULT_IFS}"
 
       if [ -z "${toolname}" ]
       then
@@ -208,7 +209,7 @@ env_link_other_tools()
       env_link_other_tool "${toolname}" "${bindir}" "${isrequired}"
    done
 
-   IFS="${DEFAULT_IFS}"
+   set +f ; IFS="${DEFAULT_IFS}"
 
    rmdir_if_empty "${bindir}"
 }
@@ -266,11 +267,11 @@ env_setup_other_tools()
    local tools
    local toolfile
 
-   IFS="
+   set -f ; IFS="
 "
    for toolfile in ${toolfiles}
    do
-      IFS="${DEFAULT_IFS}"
+      set +f ; IFS="${DEFAULT_IFS}"
 
       if tools="`cat "${toolfile}" `"
       then
@@ -285,7 +286,7 @@ env_setup_other_tools()
          esac
       fi
    done
-   IFS="${DEFAULT_IFS}"
+   set +f ; IFS="${DEFAULT_IFS}"
 
    return 0
 }
@@ -808,7 +809,7 @@ wild"
       *)
          if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
          then
-            usage "Called from inside a subshell with unknown command \"${arg}\""
+            fail "Called from inside a subshell"
          fi
       ;;
    esac

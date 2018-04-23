@@ -1,3 +1,7 @@
+### 0.11.17
+
+* fix bug in list, add experimental --output-command
+
 ### 0.11.16
 
 * add toolstyls and envstyles command for completion

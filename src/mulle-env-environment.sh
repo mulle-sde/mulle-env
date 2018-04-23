@@ -139,10 +139,41 @@ Usage:
 
 
 Options:
-   --separate    : list all files where environment variables are defined
-   --output-eval : resolve values
+   --separate       : list all files where environment variables are defined
+   --output-eval    : resolve values
+   --output-command : emit as mulle-env commands
 EOF
    exit 1
+}
+
+
+key_values_to_command()
+{
+   local line
+
+   local key
+   local value
+   local escaped_value
+   local escaped_key
+
+   IFS="
+"
+   while read -r line
+   do
+      IFS="${DEFAULT_IFS}"
+
+      if [ -z "${line}" ]
+      then
+         continue
+      fi
+
+      key="${line%%=*}"
+      value="${line#${key}=}"
+
+      # scope is a cheat!!
+      echo "${MULLE_USAGE_NAME} environment set ${key} '${value}'"
+   done
+   IFS="${DEFAULT_IFS}"
 }
 
 
@@ -392,17 +423,19 @@ env_environment_set_main()
       prev="`env_environment_get_main "${scope}" "${key}"`"
       log_debug "Previous value is \"${prev}\""
 
-      IFS="${OPTION_SEPARATOR}"
+      set -f; IFS="${OPTION_SEPARATOR}"
+
       for oldvalue in ${prev}
       do
-         IFS="${DEFAULT_IFS}"
+         set +f; IFS="${DEFAULT_IFS}"
          if [ "${oldvalue}" = "${value}" ]
          then
             log_fluff "\"${value}\" already set"
             return
          fi
       done
-      IFS="${DEFAULT_IFS}"
+
+      set +f; IFS="${DEFAULT_IFS}"
 
       value="`concat "${prev}" "${value}" "${OPTION_SEPARATOR}"`"
    fi
@@ -905,7 +938,10 @@ _env_environment_eval_list()
    [ -z "${MULLE_UNAME}" ] && internal_fail "MULLE_UNAME not set up"
 
    cmdline="env -i MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\" \
-MULLE_UNAME=\"${MULLE_UNAME}\" bash -c '"
+MULLE_UNAME=\"${MULLE_UNAME}\" \
+MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\" \
+USER=\"${USER}\" \
+bash -c '"
 
    while [ "$#" -ne 0 ]
    do
@@ -926,13 +962,13 @@ MULLE_UNAME=\"${MULLE_UNAME}\" bash -c '"
    # Properly: do `env -i bash -c env` and then remove
    # those lines
    #
-    \
-   MULLE_UNAME="${MULLE_UNAME}" \
-      reval_exekutor "${cmdline}" | rexekutor sed -e '/^PWD=/d' \
-                                                  -e '/^_=/d' \
-                                                  -e '/^SHLVL=/d' \
-                                                  -e '/MULLE_UNAME=/d' \
-                                                  -e '/MULLE_VIRTUAL_ROOT=/d'
+   reval_exekutor "${cmdline}" | rexekutor sed -e '/^PWD=/d' \
+                                               -e '/^_=/d' \
+                                               -e '/^SHLVL=/d' \
+                                               -e '/^MULLE_UNAME=/d' \
+                                               -e '/^MULLE_HOSTNAME=/d' \
+                                               -e '/^USER=/d' \
+                                               -e '/^MULLE_VIRTUAL_ROOT=/d'
 }
 
 _env_environment_sed_list()
@@ -940,6 +976,14 @@ _env_environment_sed_list()
    log_entry "_env_environment_sed_list" "$@"
 
    _env_environment_eval_list "$@" | key_values_to_sed
+}
+
+
+_env_environment_command_list()
+{
+   log_entry "_env_environment_command_list" "$@"
+
+   _env_environment_eval_list "$@" | key_values_to_command
 }
 
 
@@ -970,6 +1014,14 @@ env_environment_list_main()
 
          --output-sed)
             lister="_env_environment_sed_list"
+            if [ "${scope}" = "DEFAULT" ]
+            then
+               scope="include"
+            fi
+         ;;
+
+         --output-command)
+            lister="_env_environment_command_list"
             if [ "${scope}" = "DEFAULT" ]
             then
                scope="include"
