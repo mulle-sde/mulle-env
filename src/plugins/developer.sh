@@ -46,11 +46,11 @@ print_developer_include_sh()
 }
 
 
-print_developer_environment_global_sh()
+print_developer_environment_share_sh()
 {
-   log_entry "print_developer_environment_global_sh" "$@"
+   log_entry "print_developer_environment_share_sh" "$@"
 
-   print_minimal_environment_global_sh "$@"
+   print_minimal_environment_share_sh "$@"
 }
 
 

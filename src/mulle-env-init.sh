@@ -175,10 +175,10 @@ env_init_main()
    sharedir="${MULLE_ENV_DIR}/share"
 
    envfile="${sharedir}/environment.sh"
-   envincludefile="${sharedir}/environment-include.sh"
+   envincludefile="${sharedir}/include-environment.sh"
 
-   # user editable stuff in etc
-   auxfile="${sharedir}/environment-global.sh"
+   # user editable stuff goes into in etc
+   auxfile="${sharedir}/environment-share.sh"
    darwinauxfile="${sharedir}/environment-os-darwin.sh"
    completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
 
@@ -244,7 +244,7 @@ env_init_main()
    redirect_exekutor "${envincludefile}" echo "${text}"
 
    log_verbose "Creating \"${auxfile}\""
-   if ! text="`print_${flavor}_environment_global_sh "${style}" `"
+   if ! text="`print_${flavor}_environment_share_sh "${style}" `"
    then
       return 1
    fi

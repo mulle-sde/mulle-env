@@ -59,7 +59,7 @@ Usage:
 Options:
    -h                : show this usage
    --global          : scope for general environments variables
-   --hostname        : narrow scope to this host only (`hostname`)
+   --hostname        : narrow scope to this host only ($MULLE_HOSTNAME)
    --user            : narrow scope to this user only ($USER)
    --os              : narrow scope to this operating system only ($MULLE_UNAME)
 
@@ -133,13 +133,11 @@ Usage:
 
    List environment variables. If you specified no scope, you will get
    a combined listing of all scopes. Specify the scope using the
-   environment options.
+   environment options. (see \`${MULLE_USAGE_NAME} environment -h\`)
 
       ${MULLE_USAGE_NAME} environment --global list
 
-
 Options:
-   --separate       : list all files where environment variables are defined
    --output-eval    : resolve values
    --output-command : emit as mulle-env commands
 EOF
@@ -423,6 +421,13 @@ env_environment_set_main()
       prev="`env_environment_get_main "${scope}" "${key}"`"
       log_debug "Previous value is \"${prev}\""
 
+
+      case "${value}" in
+         *:*)
+            fail "${value} contains :, which is not possible for addition (can not be escaped either)"
+         ;;
+      esac
+
       set -f; IFS="${OPTION_SEPARATOR}"
 
       for oldvalue in ${prev}
@@ -464,16 +469,10 @@ env_environment_set_main()
          shopt -u nullglob
       ;;
 
-      share|aux)
+      share)
          local rval
 
-         if [ "${scope}" = "share" ]
-         then
-            filename="${MULLE_ENV_DIR}/share/environment-global.sh"
-         else
-            filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
-         fi
-
+         filename="${MULLE_ENV_DIR}/share/environment-share.sh"
          if [ -f "${filename}" ]
          then
             exekutor chmod ug+w "${filename}"
@@ -749,7 +748,7 @@ env_environment_get_main()
          then
             return
          fi
-         filename="${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh"
+         filename="${MULLE_ENV_ETC_DIR}/environment-host-${MULLE_HOSTNAME}.sh"
          if ${getter} "${filename}" "${key}"
          then
             return
@@ -764,17 +763,13 @@ env_environment_get_main()
             return
          fi
 
-         filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
          if ${getter} "${filename}" "${key}"
          then
             return
          fi
 
-         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
-         if [ ! -f "${filename}" ]
-         then
-            filename="${MULLE_ENV_DIR}/share/environment-global.sh"
-         fi
+         filename="${MULLE_ENV_DIR}/share/environment-share.sh"
          if ${getter} "${filename}" "${key}"
          then
             return
@@ -782,15 +777,7 @@ env_environment_get_main()
       ;;
 
       include)
-         ${getter} "${MULLE_ENV_DIR}/share/environment-include.sh" "${key}"
-      ;;
-
-      share)
-         ${getter} "${MULLE_ENV_DIR}/share/environment-global.sh" "${key}"
-      ;;
-
-      aux)
-         ${getter} "${MULLE_ENV_DIR}/share/environment-aux.sh" "${key}"
+         ${getter} "${MULLE_ENV_DIR}/share/include-environment.sh" "${key}"
       ;;
 
       *)
@@ -872,28 +859,21 @@ _env_environment_combined_list_main()
    local filename
 
    cmdline="_env_environment_combined_list '${text_lister}'"
-   filename="${MULLE_ENV_DIR}/etc/environment-global.sh"
-   if [ -f "${filename}" ]
-   then
-      cmdline="`concat "${cmdline}" "'${filename}'"`"
-   else
-      filename="${MULLE_ENV_DIR}/share/environment-global.sh"
-      cmdline="`concat "${cmdline}" "'${filename}'"`"
-   fi
 
-   filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+   filename="${MULLE_ENV_DIR}/share/environment-share.sh"
+   cmdline="`concat "${cmdline}" "'${filename}'"`"
+
+   filename="${MULLE_ENV_DIR}/share/environment-global.sh"
    cmdline="`concat "${cmdline}" "'${filename}'"`"
 
    filename="${MULLE_ENV_DIR}/etc/environment-os-${MULLE_UNAME}.sh"
-   if [ -f "${filename}" ]
+   if [ ! -f "${filename}" ]
    then
-      cmdline="`concat "${cmdline}" "'${filename}'"`"
-   else
       filename="${MULLE_ENV_DIR}/share/environment-os-${MULLE_UNAME}.sh"
-      cmdline="`concat "${cmdline}" "'${filename}'"`"
    fi
+   cmdline="`concat "${cmdline}" "'${filename}'"`"
 
-   filename="'${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh'"
+   filename="'${MULLE_ENV_ETC_DIR}/environment-host-${MULLE_HOSTNAME}.sh'"
    cmdline="`concat "${cmdline}" "${filename}" `"
 
    filename="'${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh'"
@@ -1062,14 +1042,10 @@ env_environment_list_main()
 
    case "${scope}" in
       "separate")
-         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
-         if [ ! -f "${filename}" ]
-         then
-            filename="${MULLE_ENV_DIR}/share/environment-global.sh"
-         fi
+         filename="${MULLE_ENV_DIR}/share/environment-share.sh"
          "${lister}" "${filename}"
 
-         filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
          "${lister}" "${filename}"
 
          filename="${MULLE_ENV_ETC_DIR}/environment-os-${MULLE_UNAME}.sh"
@@ -1079,35 +1055,136 @@ env_environment_list_main()
          fi
          "${lister}" "${filename}"
 
-         "${lister}" "${MULLE_ENV_ETC_DIR}/environment-host-`hostname`.sh"
+         "${lister}" "${MULLE_ENV_ETC_DIR}/environment-host-${MULLE_HOSTNAME}.sh"
          "${lister}" "${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
-      ;;
-
-      include)
-         "${lister}" "${MULLE_ENV_DIR}/share/environment-include.sh"
-      ;;
-
-      share)
-         "${lister}" "${MULLE_ENV_DIR}/share/environment-default.sh"
-      ;;
-
-      aux)
-         "${lister}" "${MULLE_ENV_DIR}/share/environment-aux.sh"
       ;;
 
       "DEFAULT")
          _env_environment_combined_list_main "merge_environment_text" "$@"
       ;;
 
-      *)
+      share)
+         "${lister}" "${MULLE_ENV_DIR}/share/environment-${scope}.sh"
+      ;;
+
+      os-*)
          filename="${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"
          if [ ! -f "${filename}" ]
          then
             filename="${MULLE_ENV_DIR}/share/environment-${scope}.sh"
          fi
+         "${lister}" "${filename}"
+      ;;
+
+      *)
+         "${lister}" "${MULLE_ENV_ETC_DIR}/environment-${scope}.sh"
       ;;
    esac
 }
+
+#
+# scopes
+#
+
+env_environment_scopes_main()
+{
+   log_entry "env_environment_scopes_main" "$@"
+
+   local OPTION_DIRECTORY="NO"
+   local OPTION_EXISTING="NO"
+   local OPTION_SHARE="NO"
+
+   while :
+   do
+      case "$1" in
+         -h|--help|help)
+            env_environment_get_usage
+         ;;
+
+         --directory)
+            OPTION_DIRECTORY="YES"
+         ;;
+
+         --no-directory)
+            OPTION_DIRECTORY="NO"
+         ;;
+
+         --share)
+            OPTION_SHARE="YES"
+         ;;
+
+         --no-share)
+            OPTION_SHARE="NO"
+         ;;
+
+         --existing)
+            OPTION_EXISTING="YES"
+         ;;
+
+         -*)
+            env_environment_scopes_usage "unknown option \"$1\""
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ "$#" -ne 0 ]  && env_environment_scopes_usage "superflous arguments \"$*\""
+
+   if [ "${OPTION_EXISTING}" = "YES" ]
+   then
+      (
+         shopt -s nullglob
+
+         rexekutor ls -1 "${MULLE_ENV_DIR}/share"/environment-*.sh \
+                         "${MULLE_ENV_ETC_DIR}"/environment-*.sh \
+            | sed '-e s|^.*/environment-\(.*\)\.sh$|\1|'
+      ) | sort -u | sed -e '/^include/d'
+
+      return 0
+   fi
+
+   local scope
+   local fscope
+   local directory
+
+   set -f
+   for scope in global share os-${MULLE_UNAME} host-${MULLE_HOSTNAME} user-${USER}
+   do
+      directory=
+      if [ "${OPTION_SHARE}" = "NO" -a "${scope}" = "share" ]
+      then
+         continue
+      fi
+
+      if [ "${OPTION_DIRECTORY}" = "YES" ]
+      then
+         fscope="${scope}"
+         case "${fscope}" in
+            share)
+               fscope="default"
+            ;;
+         esac
+
+         if [ -f "${MULLE_ENV_DIR}/share/environment-${fscope}.sh" ]
+         then
+            directory="(share)"
+         fi
+
+         if [ -f "${MULLE_ENV_ETC_DIR}/environment-${fscope}.sh" ]
+         then
+            directory="(etc)"
+         fi
+      fi
+      echo "${scope}" "${directory}"
+   done
+   set +f
+}
+
 
 ###
 ### parameters and environment variables
@@ -1136,7 +1213,7 @@ env_environment_main()
             env_environment_usage
          ;;
 
-         --global|--hostname-*|--user-*|--os-*|--share|--aux)
+         --global|--hostname-*|--user-*|--os-*|--share)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="${1:2}"
@@ -1145,7 +1222,7 @@ env_environment_main()
          --hostname)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
-            OPTION_SCOPE="host-`hostname`"
+            OPTION_SCOPE="host-${MULLE_HOSTNAME}"
          ;;
 
          --user)
@@ -1158,6 +1235,14 @@ env_environment_main()
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="os-${MULLE_UNAME}"
+         ;;
+
+         --scope)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
+            OPTION_SCOPE="$1"
          ;;
 
          -*)
@@ -1200,6 +1285,14 @@ env_environment_main()
          env_environment_list_main "${OPTION_SCOPE}" "$@"
       ;;
 
+      mset)
+         if [ "${OPTION_SCOPE}" = "DEFAULT" ]
+         then
+            OPTION_SCOPE="all"      # mset to be used by init only
+         fi
+         env_environment_mset_main "${OPTION_SCOPE}" "$@"
+      ;;
+
       set)
          if [ "${OPTION_SCOPE}" = "DEFAULT" ]
          then
@@ -1208,12 +1301,8 @@ env_environment_main()
          env_environment_set_main "${OPTION_SCOPE}" "$@"
       ;;
 
-      mset)
-         if [ "${OPTION_SCOPE}" = "DEFAULT" ]
-         then
-            OPTION_SCOPE="all"      # mset to be used by init only
-         fi
-         env_environment_mset_main "${OPTION_SCOPE}" "$@"
+      scopes)
+         env_environment_scopes_main "$@"
       ;;
 
       "")

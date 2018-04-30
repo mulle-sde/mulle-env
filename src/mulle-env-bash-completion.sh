@@ -106,10 +106,27 @@ _mulle_env_complete()
             list)
             ;;
 
+            --scope)
+               list="`mulle-env -s environment scopes`"
+               COMPREPLY=( $( compgen -W "${list}" -- "$cur" ) )
+            ;;
+
             *)
-               COMPREPLY=( $( compgen -W "get list set" -- "$cur" ) )
+               case "${cur}" in
+                  -*)
+                     COMPREPLY=( $( compgen -W "--global --hostname --os --scope --user" -- "$cur" ) )
+                  ;;
+
+                  *)
+                     COMPREPLY=( $( compgen -W "get list set scopes" -- "$cur" ) )
+                  ;;
+               esac
             ;;
          esac
+      ;;
+
+      subenv)
+         COMPREPLY=( $( compgen -d -- "$cur" ) )
       ;;
 
       *)
@@ -133,7 +150,7 @@ _mulle_env_complete()
                      then
                         COMPREPLY=( $( compgen -d -- "$cur" ) )
                      else
-                        COMPREPLY=( $( compgen -W "environment init tool" -- $cur ) )
+                        COMPREPLY=( $( compgen -W "environment init subenv tool" -- $cur ) )
                      fi
                   ;;
                esac

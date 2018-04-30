@@ -46,9 +46,12 @@ EOF
 }
 
 
-print_mulle_environment_global_sh()
+#
+# TODO: this stuff should move to mulle-sde
+#
+print_mulle_environment_share_sh()
 {
-   log_entry "print_mulle_environment_global_sh" "$@"
+   log_entry "print_mulle_environment_share_sh" "$@"
 
    # dont inherit, just clobber
 
@@ -80,11 +83,6 @@ export MULLE_SYMLINK="YES"
 export MULLE_SOURCETREE_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/stash"
 
 #
-# Use common build directory
-#
-export BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
-
-#
 # Share dependency directory (absolute for ease of use)
 #
 export DEPENDENCY_DIR="\${MULLE_VIRTUAL_ROOT}/dependency"
@@ -93,6 +91,12 @@ export DEPENDENCY_DIR="\${MULLE_VIRTUAL_ROOT}/dependency"
 # Share addiction directory (absolute for ease of use)
 #
 export ADDICTION_DIR="\${MULLE_VIRTUAL_ROOT}/addiction"
+
+#
+# Use common build directory
+#
+export BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
+
 
 EOF
 }
@@ -223,33 +227,39 @@ print_mulle_startup_sh()
 # Source in bash completion if available
 # Assumed is, that they are not user modifiable
 #
-if [ "\${MULLE_SHELL_MODE}" = "INTERACTIVE" ]
-then
-   DEFAULT_IFS="\${IFS}"
-   shopt -s nullglob; IFS="
+case "\${MULLE_SHELL_MODE}" in
+   *INTERACTIVE*)
+      DEFAULT_IFS="\${IFS}"
+      shopt -s nullglob; IFS="
 "
-   for FILENAME in "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/libexec"/*-bash-completion.sh
-   do
-      . "\${FILENAME}"
-   done
-   shopt -u nullglob; IFS="\${DEFAULT_IFS}"
+      for FILENAME in "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/libexec"/*-bash-completion.sh
+      do
+         . "\${FILENAME}"
+      done
+      shopt -u nullglob; IFS="\${DEFAULT_IFS}"
 
-   unset FILENAME
-   unset DEFAULT_IFS
-fi
+      unset FILENAME
+      unset DEFAULT_IFS
+   ;;
+esac
 
 #
 #
 # show motd, if any
 #
-if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd" ]
+if [ -z "${NO_MOTD}"]
 then
-   cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd"
-else
-   if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd" ]
+   if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd" ]
    then
-      cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd"
+      cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd"
+   else
+      if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd" ]
+      then
+         cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd"
+      fi
    fi
+else
+   unset NO_MOTD
 fi
 EOF
 }

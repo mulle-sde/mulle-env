@@ -59,42 +59,44 @@ then
 your convenience" >&2
 fi
 
-alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/environment-include.sh"'
+alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/include-environment.sh"'
 
+case "\${MULLE_SHELL_MODE}" in
+   *INTERACTIVE*)
+      #
+      # Set PS1 so that we can see, that we are in a mulle-env
+      #
+      envname="\`PATH=/bin:/usr/bin basename -- "\${MULLE_VIRTUAL_ROOT}"\`"
 
-if [ "\${MULLE_SHELL_MODE}" = "INTERACTIVE" ]
-then
-   #
-   # Set PS1 so that we can see, that we are in a mulle-env
-   #
-   envname="\`PATH=/bin:/usr/bin basename -- "\${MULLE_VIRTUAL_ROOT}"\`"
+      case "\${PS1}" in
+         *\\\\h\\[*)
+         ;;
 
-   case "\${PS1}" in
-      *\\\\h\\[*)
-      ;;
+         *\\\\h*)
+            PS1="\$(sed 's/\\\\h/\\\\h\\['\${envname}'\\]/' <<< '\${PS1}' )"
+         ;;
 
-      *\\\\h*)
-         PS1="\$(sed 's/\\\\h/\\\\h\\['\${envname}'\\]/' <<< '\${PS1}' )"
-      ;;
+         *)
+            PS1='\\u@\\h['\${envname}'] \\W\$ '
+         ;;
+      esac
+      export PS1
 
-      *)
-         PS1='\\u@\\h['\${envname}'] \\W\$ '
-      ;;
-   esac
-   export PS1
+      unset envname
 
-   unset envname
+      # install cd catcher
+      . "\${MULLE_ENV_LIBEXEC_DIR}/mulle-env-cd.sh"
+      unset MULLE_ENV_LIBEXEC_DIR
 
-   # install cd catcher
-   . "\${MULLE_ENV_LIBEXEC_DIR}/mulle-env-cd.sh"
-   unset MULLE_ENV_LIBEXEC_DIR
+      mulle-env-reload
+   ;;
 
-   mulle-env-reload
-else
-   set -a ; mulle-env-reload     # export all definitions for command
-   \${COMMAND}
-   exit \$?
-fi
+   *)
+      set -a ; mulle-env-reload     # export all definitions for command
+      \${COMMAND}
+      exit \$?
+   ;;
+esac
 
 EOF
 }
@@ -117,32 +119,39 @@ MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 
 
+# Top/down order of inclusion.
+# Left overrides right if present.
 #
-# The aux file if present is to be set by mulle-sde extensions.
-# The trick here is that mulle-env doesn't clobber this file
-# when doing an init -f, which can be useful. There is no etc
-# equivalent.
+# .mulle-env/etc                        | .mulle-env/share
+# --------------------------------------|--------------------
+#                                       | environment-share.sh
+# environment-global.sh                 |
+# environment-os-\${MULLE_UNAME}.sh      | environment-os-\${MULLE_UNAME}.sh
+# environment-host-\${MULLE_HOSTNAME}.sh |
+# environment-user-\${USER}.sh           |
+# custom-environment.sh                 |
 #
-if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh" ]
-then
-   . "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh"
-fi
 
 #
-# Default environment values set by plugins and extensions.
-# The user should never edit them. He can override settings
-# in etc.
+# The share file if present is to be set by mulle-sde extensions.
 #
+# A trick here is that mulle-env doesn't clobber this file
+# when doing an init -f, which can be useful.
+#
+if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-share.sh" ]
+then
+   . "\${MULLE_ENV_SHARE_DIR}/environment-share.sh"
+fi
+
+
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-global.sh" ]
 then
    . "\${MULLE_ENV_ETC_DIR}/environment-global.sh"
-else
-   if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-global.sh" ]
-   then
-      . "\${MULLE_ENV_SHARE_DIR}/environment-global.sh"
-   fi
 fi
 
+#
+# "os-" can be written by extensions also
+#
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
 then
    . "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh"
@@ -174,9 +183,9 @@ fi
 #
 # For more complex edits, that don't work with the cmdline tool
 #
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-aux.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/custom-environment.sh" ]
 then
-   . "\${MULLE_ENV_ETC_DIR}/environment-aux.sh"
+   . "\${MULLE_ENV_ETC_DIR}/custom-environment.sh"
 fi
 
 unset MULLE_ENV_ETC_DIR
@@ -187,7 +196,7 @@ EOF
 }
 
 
-print_none_environment_global_sh()
+print_none_environment_share_sh()
 {
    cat <<EOF
 # add your stuff here

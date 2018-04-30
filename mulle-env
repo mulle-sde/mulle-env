@@ -608,114 +608,58 @@ _default_setup_environment()
 }
 
 
-main()
+#
+# run shell or command in an inferior mulle-env environment
+# This is "wild" style. We don't manipulate the PATH and we
+# don't clean the environment. But we augment it with the
+# variables set in the inferior ENVFILENAME
+#
+_run_subenv()
 {
-   local OPTION_DIRECTORY
-   local OPTION_SHELL_COMMAND
-   local OPTION_KEEP_TMP="NO"
-   local OPTION_MAGNUM_FORCE=
-   local OPTION_STYLE="DEFAULT"
-   local OPTION_SEARCH="DEFAULT"
+   log_entry "_run_subenv" "$@"
 
-   local MULLE_TRACE
-   local MULLE_FLAG_EXEKUTOR_DRY_RUN
-   local MULLE_FLAG_LOG_DEBUG
-   local MULLE_FLAG_LOG_EXEKUTOR
-   local MULLE_FLAG_LOG_TERSE
+   local directory="$1"
 
-   local RESTRICTED_PATH
+   [ ! -d "${directory}/.mulle-env" ] && fail "No mulle-env found in \"${directory}\""
 
-   # mingw needs different values here
-
-   case "${MULLE_UNAME}" in
-      "")
-         internal_fail "MULLE_UNAME not set"
-      ;;
-
-      *)
-         RESTRICTED_PATH="/usr/bin:/bin"
+   # might need to be smarter here
+   case "${directory}" in
+      ../*|*/..|*/../*|./*|*/.|*/./*|~/*|*/~|*/~/*)
+         fail "${directory} must not have relative components"
       ;;
    esac
 
-   while [ $# -ne 0 ]
-   do
-      if options_technical_flags "$1"
-      then
-         shift
-         continue
-      fi
+   log_verbose "Starting subshell ${env_flag}"
 
-      case "$1" in
-         -h*|--help|help)
-            usage
-         ;;
+   MULLE_VIRTUAL_ROOT="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${directory}"`"
 
-         -c)
-            [ $# -eq 1 ] && usage "Missing argument to $1"
-            shift
+   local mode
 
-            OPTION_SHELL_COMMAND="$1"
-         ;;
+   mode="SUBENV:INTERACTIVE"
+   if [ ! -z "${OPTION_SHELL_COMMAND}" ]
+   then
+      log_fluff "Run shell command \"${OPTION_SHELL_COMMAND}\" in \"${directory}\"..."
+      mode="SUBENV:SCRIPT"
+   fi
 
-         -f|--force)
-            OPTION_MAGNUM_FORCE="YES"
-         ;;
+   cd "${directory}" &&
+   eval env \
+      NO_MOTD="YES" \
+      "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
+      "'${MULLE_UNAME}'" \
+      "'${MULLE_VIRTUAL_ROOT}'" \
+      "'${PATH}'" \
+      "'${mode}'" \
+      "'none/wild'" \
+      "'${ENVFILENAME}'" \
+      "'${TRACE}'" \
+      "${OPTION_SHELL_COMMAND}"
+}
 
-         -d|--directory)
-            [ $# -eq 1 ] && usage "Missing argument to $1"
-            shift
 
-            OPTION_DIRECTORY="$1"
-         ;;
-
-         -ef|--environment-file)
-            [ $# -eq 1 ] && usage "Missing argument to $1"
-            shift
-
-            ENVFILENAME="$1"
-         ;;
-
-         --search)
-            OPTION_SEARCH="YES"
-         ;;
-
-         -ns|--no-search)
-            OPTION_SEARCH="NO"
-         ;;
-
-         --keep-tmp)
-            OPTION_KEEP_TMP="YES"
-         ;;
-
-         -s|--style)
-            [ $# -eq 1 ] && fail "Missing argument to $1"
-            shift
-
-            OPTION_STYLE="$1"
-         ;;
-
-         --)
-            break
-         ;;
-
-         # argument gitflags
-         -*)
-            fail "Unknown flag \"$1\""
-         ;;
-
-         *)
-            break
-         ;;
-      esac
-
-      shift
-   done
-
-   options_setup_trace "${MULLE_TRACE}"
-   export MULLE_TRACE
-
-   local arg
-   local url
+_run_subshell()
+{
+   log_entry "_run_subshell" "$@"
 
    # callerdirectory is where we are called from
    local callerdirectory
@@ -723,105 +667,6 @@ main()
    local directory
 
    callerdirectory="`pwd -P`"
-
-   arg="$1"
-   [ $# -ne 0 ] && shift
-
-   case "${arg}" in
-      --)
-         arg="$1"
-         [ $# -ne 0 ] && shift
-      ;;
-
-      init)
-         # shellcheck source=src/mulle-env-init.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
-
-         env_init_main "$@"
-         return $?
-      ;;
-
-      environment)
-         # shellcheck source=src/mulle-env-environment.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
-
-         _default_setup_environment "${PWD}"
-         env_environment_main "$@"
-         return $?
-      ;;
-
-      reinit)
-         local style
-         local flavor
-
-         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/etc" \
-                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/share"
-
-         log_info "Re-init commandline"
-         echo "mulle-env -f --style ${style} init"
-         return 0
-      ;;
-
-      style)
-         local style
-         local flavor
-         local directory="$1"
-
-         directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
-         directory="${directory:-.}"
-
-         __get_saved_style_flavor "${directory}/.mulle-env/etc" \
-                                  "${directory}/.mulle-env/share"
-         echo "${style}"
-         return 0
-      ;;
-
-      tool)
-         # shellcheck source=src/mulle-env-tool.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
-
-         _default_setup_environment "${PWD}"
-         env_tool_main "$@"
-         return $?
-      ;;
-
-      toolstyles)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
-
-         env_all_plugin_names
-         return 0
-      ;;
-
-      envstyles)
-         echo "inherit
-relax
-restrict
-tight
-wild"
-         return 0
-      ;;
-
-      uname)
-         echo "${MULLE_UNAME}"
-         return 0
-      ;;
-
-      *)
-         if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
-         then
-            fail "Called from inside a subshell"
-         fi
-      ;;
-   esac
-
-   #
-   # lets do this for now
-   #
-   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
-   then
-      fail "You are already in the virtual \
-environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
-   fi
 
    if [ ! -z "${OPTION_DIRECTORY}" ]
    then
@@ -902,7 +747,6 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
       ;;
    esac
 
-
    __load_flavor_plugin "${flavor}"
 
    local s
@@ -980,7 +824,6 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    local mode
 
    mode="INTERACTIVE"
-
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
       log_fluff "Run shell command \"${OPTION_SHELL_COMMAND}\" in \"${rundirectory}\"..."
@@ -1018,20 +861,253 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    #
    log_verbose "Starting subshell ${env_flag}"
 
+   local rval
+
    cd "${rundirectory}" &&
    eval env ${env_flag} \
           "${s}" \
           "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
             "'${MULLE_UNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
-            "'${runpath}'" \
+            "'${PATH}'" \
             "'${mode}'" \
             "'${style}'" \
             "'${ENVFILENAME}'" \
             "'${TRACE}'" \
             "${OPTION_SHELL_COMMAND}"
-   return $?
+
+   rval=$?
+
+   log_debug "Subshell exited with $?"
+   return $rval
 }
+
+
+main()
+{
+   local OPTION_DIRECTORY
+   local OPTION_SHELL_COMMAND
+   local OPTION_KEEP_TMP="NO"
+   local OPTION_MAGNUM_FORCE=
+   local OPTION_STYLE="DEFAULT"
+   local OPTION_SEARCH="DEFAULT"
+
+   local MULLE_TRACE
+   local MULLE_FLAG_EXEKUTOR_DRY_RUN
+   local MULLE_FLAG_LOG_DEBUG
+   local MULLE_FLAG_LOG_EXEKUTOR
+   local MULLE_FLAG_LOG_TERSE
+
+   local RESTRICTED_PATH
+
+   # mingw needs different values here
+
+   case "${MULLE_UNAME}" in
+      "")
+         internal_fail "MULLE_UNAME not set"
+      ;;
+
+      *)
+         RESTRICTED_PATH="/usr/bin:/bin"
+      ;;
+   esac
+
+   while [ $# -ne 0 ]
+   do
+      if options_technical_flags "$1"
+      then
+         shift
+         continue
+      fi
+
+      case "$1" in
+         -h*|--help|help)
+            usage
+         ;;
+
+         -c)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            OPTION_SHELL_COMMAND="$1"
+         ;;
+
+         -f|--force)
+            OPTION_MAGNUM_FORCE="YES"
+         ;;
+
+         -d|--directory)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            OPTION_DIRECTORY="$1"
+         ;;
+
+         -ef|--environment-file)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            ENVFILENAME="$1"
+         ;;
+
+         --search)
+            OPTION_SEARCH="YES"
+         ;;
+
+         -ns|--no-search)
+            OPTION_SEARCH="NO"
+         ;;
+
+         --keep-tmp)
+            OPTION_KEEP_TMP="YES"
+         ;;
+
+         -s|--style)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            OPTION_STYLE="$1"
+         ;;
+
+         --)
+            break
+         ;;
+
+         # argument gitflags
+         -*)
+            usage "Unknown flag \"$1\""
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   options_setup_trace "${MULLE_TRACE}"
+   export MULLE_TRACE
+
+   local arg
+   local url
+
+   arg="$1"
+   [ $# -ne 0 ] && shift
+
+   case "${arg}" in
+      --)
+         arg="$1"
+         [ $# -ne 0 ] && shift
+      ;;
+
+      init)
+         # shellcheck source=src/mulle-env-init.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
+
+         env_init_main "$@"
+         return $?
+      ;;
+
+      environment)
+         # shellcheck source=src/mulle-env-environment.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
+
+         _default_setup_environment "${PWD}"
+         env_environment_main "$@"
+         return $?
+      ;;
+
+      envstyles)
+         echo "inherit
+relax
+restrict
+tight
+wild"
+         return 0
+      ;;
+
+      reinit)
+         local style
+         local flavor
+
+         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/etc" \
+                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/share"
+
+         log_info "Re-init commandline"
+         echo "mulle-env -f --style ${style} init"
+         return 0
+      ;;
+
+      style)
+         local style
+         local flavor
+         local directory="$1"
+
+         directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
+         directory="${directory:-.}"
+
+         __get_saved_style_flavor "${directory}/.mulle-env/etc" \
+                                  "${directory}/.mulle-env/share"
+         echo "${style}"
+         return 0
+      ;;
+
+      subenv)
+         if [ -z "${MULLE_VIRTUAL_ROOT}" ]
+         then
+            fail "\"subenv\" must be called from inside a subshell"
+         fi
+
+         [ $# -eq 0 ] && usage "Missing argument to \"$1\""
+         [ $# -ne 1 ] && usage "Superflous arguments to \"$1\""
+
+         _run_subenv "$1"
+         return $?
+      ;;
+
+      tool)
+         # shellcheck source=src/mulle-env-tool.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
+
+         _default_setup_environment "${PWD}"
+         env_tool_main "$@"
+         return $?
+      ;;
+
+      toolstyles)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         env_all_plugin_names
+         return 0
+      ;;
+
+      uname)
+         echo "${MULLE_UNAME}"
+         return 0
+      ;;
+
+      *)
+         if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
+         then
+            fail "Called from inside a subshell"
+         fi
+      ;;
+   esac
+
+   #
+   # lets do this for now
+   #
+   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
+   then
+      fail "You are already in the virtual \
+environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
+   fi
+
+   # inherits all options ....
+   _run_subshell
+}
+
 
 
 

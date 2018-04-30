@@ -65,7 +65,7 @@ env_tool_remove_usage()
 Usage:
    ${MULLE_USAGE_NAME} tool remove <tool>
 
-   Remove a tool regardless of scope.
+   Remove a tool.
 
 EOF
    exit 1
@@ -81,8 +81,10 @@ Usage:
 
    Add a tool to the list of tools available to the subshell.
    This doesn't install the tool, but merely symlinks it if
-   the current environment style needs it. You can change the
-   scope of a tool, by readding it with the desired scope.
+   the current environment style needs it.
+
+   You can change the optionality of a tool, by re-adding it
+   with the desired optionality.
 
    Example:
       ${MULLE_USAGE_NAME} tool --optional add ninja
@@ -100,10 +102,6 @@ Usage:
    ${MULLE_USAGE_NAME} tool list [options]
 
    List tools.
-
-Options:
-   --separate    : list all files where environment variables are defined
-   --output-eval : resolve values
 EOF
    exit 1
 }
@@ -148,11 +146,38 @@ prepare_for_remove()
 }
 
 
+chmod_share_files()
+{
+   local mode="$1"
+
+   if [ -f "${MULLE_ENV_DIR}/share/optionaltool" ]
+   then
+      exekutor chmod "${mode}" "${MULLE_ENV_DIR}/share/optionaltool"
+   fi
+   if [ -f "${MULLE_ENV_DIR}/share/tool" ]
+   then
+      exekutor chmod "${mode}" "${MULLE_ENV_DIR}/share/tool"
+   fi
+}
+
+
+share_protect()
+{
+   chmod_share_files ug-w
+}
+
+
+share_unprotect()
+{
+   chmod_share_files ug+w
+}
+
+
 _mulle_tool_add_file()
 {
    log_entry "_mulle_tool_add_file" "$@"
 
-   local scope="$1"
+   local optionality="$1"
    local tool="$2"
    local toolsfile="$3"
    local fallbacktoolsfile="$4"
@@ -172,7 +197,7 @@ _mulle_tool_add_file()
       then
          fail "\"mudo\" is not present ??? Try again outside of the environment."
       else
-         case "${scope}" in
+         case "${optionality}" in
             "optional")
                log_verbose "Optional tool \"${tool}\" not found"
                return
@@ -229,7 +254,6 @@ _mulle_tool_add_file()
 }
 
 
-
 _mulle_tool_remove_file()
 {
    log_entry "_mulle_tool_remove_file" "$@"
@@ -261,7 +285,6 @@ _mulle_tool_remove_file()
 }
 
 
-
 mulle_tool_add()
 {
    log_entry "mulle_tool_add" "$@"
@@ -269,17 +292,18 @@ mulle_tool_add()
    [ -z "${MULLE_ENV_DIR}" ]   && internal_fail "MULLE_ENV_DIR not defined"
    [ ! -d "${MULLE_ENV_DIR}" ] && fail "Need to \"mulle-env init\" first before adding tools"
 
+   local optionality="$1" ; shift
    local scope="$1" ; shift
 
    while :
    do
       case "$1" in
          -h*|--help|help)
-            env_tool_remove_usage
+            env_tool_add_usage
          ;;
 
          -*)
-            env_tool_remove_usage "unknown option \"$1\""
+            env_tool_add_usage "unknown option \"$1\""
          ;;
 
          *)
@@ -290,7 +314,7 @@ mulle_tool_add()
       shift
    done
 
-   [ $# -eq 0 ] && env_tool_usage "missing tool name"
+   [ $# -eq 0 ] && env_tool_add_usage "missing tool name"
 
    local tool
 
@@ -299,23 +323,47 @@ mulle_tool_add()
       tool="$1"
       shift
 
-      [ -z "${tool}" ] && fail "tool must not be empty"
+      case "${scope}" in
+         share)
+            share_unprotect
 
-      _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optionaltool"
-      _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/tool"
+            _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/share/optionaltool"
+            _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/share/tool"
 
-      if [ "${scope}" = "optional" ]
-      then
-         _mulle_tool_add_file "${scope}" \
-                              "${tool}" \
-                              "${MULLE_ENV_DIR}/etc/optionaltool" \
-                              "${MULLE_ENV_DIR}/share/optionaltool"
-      else
-         _mulle_tool_add_file "${scope}" \
-                              "${tool}" \
-                              "${MULLE_ENV_DIR}/etc/tool" \
-                              "${MULLE_ENV_DIR}/share/tool"
-      fi
+            if [ "${optionality}" = "optional" ]
+            then
+               _mulle_tool_add_file "${optionality}" \
+                                    "${tool}" \
+                                    "${MULLE_ENV_DIR}/share/optionaltool"
+            else
+               _mulle_tool_add_file "${optionality}" \
+                                    "${tool}" \
+                                    "${MULLE_ENV_DIR}/share/tool"
+            fi
+
+            share_protect
+         ;;
+
+         *)
+            [ -z "${tool}" ] && fail "tool must not be empty"
+
+            _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optionaltool"
+            _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/tool"
+
+            if [ "${optionality}" = "optional" ]
+            then
+               _mulle_tool_add_file "${optionality}" \
+                                    "${tool}" \
+                                    "${MULLE_ENV_DIR}/etc/optionaltool" \
+                                    "${MULLE_ENV_DIR}/share/optionaltool"
+            else
+               _mulle_tool_add_file "${optionality}" \
+                                    "${tool}" \
+                                    "${MULLE_ENV_DIR}/etc/tool" \
+                                    "${MULLE_ENV_DIR}/share/tool"
+            fi
+         ;;
+      esac
    done
 }
 
@@ -330,6 +378,7 @@ mulle_tool_remove()
 
    [ -z "${MULLE_ENV_DIR}" ] && internal_fail "MULLE_ENV_DIR not defined"
 
+   local optionality="$1" ; shift
    local scope="$1" ; shift
 
    while :
@@ -360,14 +409,33 @@ mulle_tool_remove()
       tool="$1"
       shift
 
-      if [ "${scope}" != "optional" ]
-      then
-         _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/tool" "${MULLE_ENV_DIR}/share/tool"
-      fi
-      if [ "${scope}" != "required" ]
-      then
-         _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optionaltool" "${MULLE_ENV_DIR}/share/optionaltool"
-      fi
+      case "${scope}" in
+         share)
+            share_unprotect
+
+            if [ "${optionality}" != "optional" ]
+            then
+               _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/share/tool"
+            fi
+            if [ "${optionality}" != "required" ]
+            then
+               _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/share/optionaltool"
+            fi
+
+            share_protect
+         ;;
+
+         *)
+            if [ "${optionality}" != "optional" ]
+            then
+               _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/tool" "${MULLE_ENV_DIR}/share/tool"
+            fi
+            if [ "${optionality}" != "required" ]
+            then
+               _mulle_tool_remove_file "${tool}" "${MULLE_ENV_DIR}/etc/optionaltool" "${MULLE_ENV_DIR}/share/optionaltool"
+            fi
+         ;;
+      esac
    done
 }
 
@@ -403,6 +471,7 @@ mulle_tool_list()
 {
    log_entry "mulle_tool_list" "$@"
 
+   local optionality="$1" ; shift
    local scope="$1" ; shift
 
    while :
@@ -424,14 +493,35 @@ mulle_tool_list()
       shift
    done
 
-   if [ "${scope}" != "optional" ]
-   then
-      _mulle_tool_list_file "Required Tools" "${MULLE_ENV_DIR}/etc/tool" "${MULLE_ENV_DIR}/share/tool"
-   fi
-   if [ "${scope}" != "required" ]
-   then
-      _mulle_tool_list_file "Optional Tools" "${MULLE_ENV_DIR}/etc/optionaltool" "${MULLE_ENV_DIR}/share/optionaltool"
-   fi
+   case "${scope}" in
+      share)
+         if [ "${optionality}" != "optional" ]
+         then
+            _mulle_tool_list_file "Required Tools" \
+                                  "${MULLE_ENV_DIR}/share/tool"
+         fi
+         if [ "${optionality}" != "required" ]
+         then
+            _mulle_tool_list_file "Optional Tools" \
+                                  "${MULLE_ENV_DIR}/share/optionaltool"
+         fi
+      ;;
+
+      *)
+         if [ "${optionality}" != "optional" ]
+         then
+            _mulle_tool_list_file "Required Tools" \
+                                  "${MULLE_ENV_DIR}/etc/tool" \
+                                  "${MULLE_ENV_DIR}/share/tool"
+         fi
+         if [ "${optionality}" != "required" ]
+         then
+            _mulle_tool_list_file "Optional Tools" \
+                                  "${MULLE_ENV_DIR}/etc/optionaltool" \
+                                  "${MULLE_ENV_DIR}/share/optionaltool"
+         fi
+      ;;
+   esac
 }
 
 
@@ -449,9 +539,8 @@ env_tool_main()
    #
    # handle options
    #
-   local OPTION_SCOPE
-
-   OPTION_SCOPE="DEFAULT"
+   local OPTION_OPTIONALITY="DEFAULT"
+   local OPTION_SCOPE="DEFAULT"
 
    while :
    do
@@ -461,11 +550,15 @@ env_tool_main()
          ;;
 
          -o|--optional|--no-required)
-            OPTION_SCOPE="optional"
+            OPTION_OPTIONALITY="optional"
          ;;
 
          -r|--required|--no-optional)
-            OPTION_SCOPE="required"
+            OPTION_OPTIONALITY="required"
+         ;;
+
+         --share)
+            OPTION_SCOPE="share"
          ;;
 
          -*)
@@ -485,7 +578,7 @@ env_tool_main()
    case "${cmd}" in
       add|list|remove)
          shift
-         "mulle_tool_${cmd}" "${OPTION_SCOPE}" "$@"
+         "mulle_tool_${cmd}" "${OPTION_OPTIONALITY}" "${OPTION_SCOPE}" "$@"
       ;;
 
       "")

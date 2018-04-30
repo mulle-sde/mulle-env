@@ -255,10 +255,11 @@ everytime you enter the **mulle-env** subshell, you can add this to your
 
 ```
 $ cat <<EOF >> .mulle-env/etc/environment-${USER}-user.sh
-if [ "${MULLE_ENV_SHELL}" = "INTERACTIVE" ]
-then
-   exec /bin/zsh
-fi
+case "${MULLE_SHELL_MODE}" in
+   *INTERACTIVE*)
+      exec /bin/zsh
+   ;;
+esac
 EOF
 ```
 
