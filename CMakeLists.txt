@@ -16,18 +16,14 @@ set( SCRIPTS
 mulle-env
 )
 
-set( LIBRARY_SCRIPTS
-src/mulle-env-shell
-src/mulle-env-environment.sh
-src/mulle-env-init.sh
-src/mulle-env-plugins.sh
-src/mulle-env-tool.sh
+
+file( GLOB LIBRARY_SCRIPTS
+   "src/*.sh"
 )
 
 
-set( PLUGIN_SCRIPTS
-src/plugins/mulle.sh
-src/plugins/none.sh
+file( GLOB PLUGIN_SCRIPTS
+   "src/plugins/*.sh"
 )
 
 

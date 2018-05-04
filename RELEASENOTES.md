@@ -1,3 +1,8 @@
+### 0.11.18
+
+* simplified CMakeLists.txt
+* add subenv command to eventually support subprojects
+
 ### 0.11.17
 
 * fix bug in list, add experimental --output-command

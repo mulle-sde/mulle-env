@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.17"
+MULLE_ENV_VERSION="0.11.18"
 
 #
 # The default for first time mulle-env
@@ -482,6 +482,7 @@ __load_flavor_plugin()
 
    local flavor="$1"
 
+   # shellcheck source=src/mulle-env-plugins.sh
    . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
 
    env_load_plugin "${flavor}"
