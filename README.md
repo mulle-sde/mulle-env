@@ -15,11 +15,20 @@ Executable          | Description
 
 ## Install
 
+Install the pre-requisite [mulle-bashfunctions](https://github.com/mulle-nat/mulle-bashfunctions).
+
+Install into `/usr` with sudo:
+
+```
+curl -L 'https://github.com/mulle-sde/mulle-env/archive/latest.tar.gz' \
+ | tar xfz - && cd 'mulle-env-latest' && sudo ./install /usr
+```
+
+### Packages
 
 OS          | Command
 ------------|------------------------------------
 macos       | `brew install mulle-kybernetik/software/mulle-env`
-other       | ./install.sh  (Requires: [mulle-bashfunctions](https://github.com/mulle-nat/mulle-bashfunctions))
 
 
 ## What mulle-env does in a nutshell

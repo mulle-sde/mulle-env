@@ -1,3 +1,7 @@
+### 0.11.19
+
+* rename install.sh to install
+
 ### 0.11.18
 
 * simplified CMakeLists.txt

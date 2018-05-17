@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.18"
+MULLE_ENV_VERSION="0.11.19"
 
 #
 # The default for first time mulle-env
@@ -519,7 +519,7 @@ find_best_environment()
          log_info "Using the superior mulle-env environment at \
 ${C_RESET_BOLD}${directory}${C_INFO}.
 Suppress this behaviour with:
-   ${C_RESET_BOLD}${MULLE_CALLED_EXECUTABLE_NAME:-${MULLE_EXECUTABLE_NAME}} --no-search"
+   ${C_RESET_BOLD}--no-search"
          best="${directory}"
       fi
    done
