@@ -1,3 +1,8 @@
+## 0.12.0
+
+* Separate environment-project.sh file for mulle-sde
+
+
 ### 0.11.19
 
 * rename install.sh to install

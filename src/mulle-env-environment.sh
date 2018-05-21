@@ -60,8 +60,9 @@ Options:
    -h                : show this usage
    --global          : scope for general environments variables
    --hostname        : narrow scope to this host only ($MULLE_HOSTNAME)
-   --user            : narrow scope to this user only ($USER)
    --os              : narrow scope to this operating system only ($MULLE_UNAME)
+   --project         : scope for project variables
+   --user            : narrow scope to this user only ($USER)
 
 Commands:
 EOF
@@ -133,9 +134,10 @@ Usage:
 
    List environment variables. If you specified no scope, you will get
    a combined listing of all scopes. Specify the scope using the
-   environment options. (see \`${MULLE_USAGE_NAME} environment -h\`)
+   environment options. (See \`${MULLE_USAGE_NAME} environment -h\` for
+   a list of scopes:
 
-      ${MULLE_USAGE_NAME} environment --global list
+      mulle-env environment --scope separate list
 
 Options:
    --output-eval    : resolve values
@@ -469,10 +471,10 @@ env_environment_set_main()
          shopt -u nullglob
       ;;
 
-      share)
+      share|project)
          local rval
 
-         filename="${MULLE_ENV_DIR}/share/environment-share.sh"
+         filename="${MULLE_ENV_DIR}/share/environment-${scope}.sh"
          if [ -f "${filename}" ]
          then
             exekutor chmod ug+w "${filename}"
@@ -774,6 +776,12 @@ env_environment_get_main()
          then
             return
          fi
+
+         filename="${MULLE_ENV_DIR}/share/environment-project.sh"
+         if ${getter} "${filename}" "${key}"
+         then
+            return
+         fi
       ;;
 
       include)
@@ -860,6 +868,9 @@ _env_environment_combined_list_main()
 
    cmdline="_env_environment_combined_list '${text_lister}'"
 
+   filename="${MULLE_ENV_DIR}/share/environment-project.sh"
+   cmdline="`concat "${cmdline}" "'${filename}'"`"
+
    filename="${MULLE_ENV_DIR}/share/environment-share.sh"
    cmdline="`concat "${cmdline}" "'${filename}'"`"
 
@@ -923,18 +934,30 @@ MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\" \
 USER=\"${USER}\" \
 bash -c '"
 
+   [ "$#" -eq 0 ] && internal_fail "No environment files specified"
+
+   local files
+
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
       then
          log_info "${C_RESET_BOLD}`fast_basename "$1"`:"
 
-         cmdline="`concat "${cmdline}" ". \"$1\" ; "`"
+         files="`concat "${files}" ". \"$1\" ; "`"
       else
          log_fluff "\"$1\" does not exist"
       fi
       shift
    done
+
+   if [ -z "${files}" ]
+   then
+      log_warning "No environment files exist yet"
+      return 0
+   fi
+
+   cmdline="`concat "${cmdline}" "${files}"`"
    cmdline="`concat "${cmdline}" "env | sort '"`"
 
    #
@@ -1040,8 +1063,13 @@ env_environment_list_main()
 
    local filename
 
+   log_debug "scope: \"${scope}\""
+
    case "${scope}" in
       "separate")
+         filename="${MULLE_ENV_DIR}/share/environment-project.sh"
+         "${lister}" "${filename}"
+
          filename="${MULLE_ENV_DIR}/share/environment-share.sh"
          "${lister}" "${filename}"
 
@@ -1061,6 +1089,10 @@ env_environment_list_main()
 
       "DEFAULT")
          _env_environment_combined_list_main "merge_environment_text" "$@"
+      ;;
+
+      include)
+         "${lister}" "${MULLE_ENV_DIR}/share/include-environment.sh"
       ;;
 
       share)
@@ -1093,6 +1125,7 @@ env_environment_scopes_main()
    local OPTION_DIRECTORY="NO"
    local OPTION_EXISTING="NO"
    local OPTION_SHARE="NO"
+   local OPTION_PROJECT="NO"
 
    while :
    do
@@ -1115,6 +1148,14 @@ env_environment_scopes_main()
 
          --no-share)
             OPTION_SHARE="NO"
+         ;;
+
+         --project)
+            OPTION_PROJECT="YES"
+         ;;
+
+         --no-project)
+            OPTION_PROJECT="NO"
          ;;
 
          --existing)
@@ -1153,10 +1194,15 @@ env_environment_scopes_main()
    local directory
 
    set -f
-   for scope in global share os-${MULLE_UNAME} host-${MULLE_HOSTNAME} user-${USER}
+   for scope in global project share os-${MULLE_UNAME} host-${MULLE_HOSTNAME} user-${USER}
    do
       directory=
       if [ "${OPTION_SHARE}" = "NO" -a "${scope}" = "share" ]
+      then
+         continue
+      fi
+
+      if [ "${OPTION_PROJECT}" = "NO" -a "${scope}" = "project" ]
       then
          continue
       fi
@@ -1213,7 +1259,7 @@ env_environment_main()
             env_environment_usage
          ;;
 
-         --global|--hostname-*|--user-*|--os-*|--share)
+         --global|--hostname-*|--project|--os-*|--share|--user-*)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="${1:2}"

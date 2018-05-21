@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.11.19"
+MULLE_ENV_VERSION="0.12.0"
 
 #
 # The default for first time mulle-env
@@ -1060,8 +1060,8 @@ wild"
             fail "\"subenv\" must be called from inside a subshell"
          fi
 
-         [ $# -eq 0 ] && usage "Missing argument to \"$1\""
-         [ $# -ne 1 ] && usage "Superflous arguments to \"$1\""
+         [ $# -eq 0 ] && usage "Missing argument to \"${arg}\""
+         [ $# -ne 1 ] && usage "Superflous arguments to \"${arg}\""
 
          _run_subenv "$1"
          return $?

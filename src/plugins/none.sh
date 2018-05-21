@@ -124,6 +124,7 @@ MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 #
 # .mulle-env/etc                        | .mulle-env/share
 # --------------------------------------|--------------------
+#                                       | environment-project.sh
 #                                       | environment-share.sh
 # environment-global.sh                 |
 # environment-os-\${MULLE_UNAME}.sh      | environment-os-\${MULLE_UNAME}.sh
@@ -133,7 +134,16 @@ MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 #
 
 #
-# The share file if present is to be set by mulle-sde extensions.
+# The project file, if present is to be set by mulle-sde init itself
+# w/o extensions
+#
+if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-project.sh" ]
+then
+   . "\${MULLE_ENV_SHARE_DIR}/environment-project.sh"
+fi
+
+#
+# The share file, if present is to be set by mulle-sde extensions.
 #
 # A trick here is that mulle-env doesn't clobber this file
 # when doing an init -f, which can be useful.

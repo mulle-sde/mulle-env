@@ -70,7 +70,7 @@ _mulle_env_complete()
    for i in "${COMP_WORDS[@]}"
    do
       case "$i" in
-         tool|environment|init)
+         environment|init|style|subenv|tool)
             context="$i"
          ;;
       esac
@@ -129,6 +129,10 @@ _mulle_env_complete()
          COMPREPLY=( $( compgen -d -- "$cur" ) )
       ;;
 
+      style)
+         _mulle_env_style_complete
+      ;;
+
       *)
          case "$prev" in
             -s|--style)
@@ -150,7 +154,7 @@ _mulle_env_complete()
                      then
                         COMPREPLY=( $( compgen -d -- "$cur" ) )
                      else
-                        COMPREPLY=( $( compgen -W "environment init subenv tool" -- $cur ) )
+                        COMPREPLY=( $( compgen -W "environment init subenv style tool" -- $cur ) )
                      fi
                   ;;
                esac
