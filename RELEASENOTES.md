@@ -1,3 +1,7 @@
+### 0.12.1
+
+* rename install to installer, because of name conflict
+
 ## 0.12.0
 
 * Separate environment-project.sh file for mulle-sde
