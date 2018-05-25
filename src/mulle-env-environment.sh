@@ -745,10 +745,13 @@ env_environment_get_main()
 
    case "${scope}" in
       "")
-         filename="${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
-         if ${getter} "${filename}" "${key}"
+         if [ ! -z "${USER}" ]
          then
-            return
+            filename="${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
+            if ${getter} "${filename}" "${key}"
+            then
+               return
+            fi
          fi
          filename="${MULLE_ENV_ETC_DIR}/environment-host-${MULLE_HOSTNAME}.sh"
          if ${getter} "${filename}" "${key}"
@@ -1084,7 +1087,10 @@ env_environment_list_main()
          "${lister}" "${filename}"
 
          "${lister}" "${MULLE_ENV_ETC_DIR}/environment-host-${MULLE_HOSTNAME}.sh"
-         "${lister}" "${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
+         if [ ! -z "${USER}" ]
+         then
+            "${lister}" "${MULLE_ENV_ETC_DIR}/environment-user-${USER}.sh"
+         fi
       ;;
 
       "DEFAULT")
@@ -1207,6 +1213,11 @@ env_environment_scopes_main()
          continue
       fi
 
+      if [ "${scope}" = "user-" ]
+      then
+         continue
+      fi
+
       if [ "${OPTION_DIRECTORY}" = "YES" ]
       then
          fscope="${scope}"
@@ -1273,6 +1284,8 @@ env_environment_main()
 
          --user)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
+
+            [ -z "${USER}" ] && fail "USER environment variable not set"
 
             OPTION_SCOPE="user-${USER}"
          ;;
@@ -1342,7 +1355,15 @@ env_environment_main()
       set)
          if [ "${OPTION_SCOPE}" = "DEFAULT" ]
          then
-            OPTION_SCOPE="${MULLE_ENV_DEFAULT_SET_SCOPE:-user-${USER}}"
+            OPTION_SCOPE="${MULLE_ENV_DEFAULT_SET_SCOPE}"
+            if [ -z "${OPTION_SCOPE}" ]
+            then
+               if [ -z "${USET}" ]
+               then
+                  fail "No USER environment variable set"
+               fi
+               OPTION_SCOPE="user-${USER}}"
+            fi
          fi
          env_environment_set_main "${OPTION_SCOPE}" "$@"
       ;;

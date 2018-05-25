@@ -1,3 +1,7 @@
+### 0.12.6
+
+* deal better with absence of USER env var
+
 ### 0.12.5
 
 * add missing file to distribution
