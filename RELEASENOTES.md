@@ -1,3 +1,7 @@
+### 0.13.3
+
+* dont attempt terminal title sets in script
+
 ### 0.13.2
 
 * delete empty value for real now, because empty values mess up overrides

@@ -65,8 +65,13 @@ emit_initfile()
    else
      echo ". \"${envfile}\""
    fi
-   # try to set terminal title
-   echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
+
+   case "${MODE}" in
+      *INTERACTIVE*)
+         # try to set terminal title
+         echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
+      ;;
+   esac
 
    if [ "${TRACE}" = "YES" ]
    then
@@ -174,13 +179,17 @@ run_shell()
             "'${cmd_string}'" \
                "${cmd_options}"
 
-  if [ "${OPTION_KEEP_TMP}" = "NO" ] && [ -f "${initfile}" ]
-  then
+   if [ "${OPTION_KEEP_TMP}" = "NO" ] && [ -f "${initfile}" ]
+   then
       rm "${initfile}"
-  fi
+   fi
 
-  # try to reset
-  printf '\033]0;%s\007' ""
+  case "${MODE}" in
+      *INTERACTIVE*)
+         # try to reset
+         printf '\033]0;%s\007' ""
+      ;;
+   esac
 }
 
 
