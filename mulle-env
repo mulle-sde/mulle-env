@@ -933,8 +933,6 @@ main()
 
             # escape properly for later eval
             printf -v OPTION_SHELL_COMMAND "%q" "$1"
-
-            log_info "OPTION_SHELL_COMMAND=${OPTION_SHELL_COMMAND}"
          ;;
 
          -f|--force)
