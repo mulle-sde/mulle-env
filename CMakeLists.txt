@@ -19,6 +19,7 @@ mulle-env
 
 file( GLOB LIBRARY_SCRIPTS
    "src/*.sh"
+   "src/mulle-env-shell"
 )
 
 

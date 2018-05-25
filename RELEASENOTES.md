@@ -1,3 +1,7 @@
+### 0.12.5
+
+* add missing file to distribution
+
 ### 0.12.4
 
 * fix package dependencies more
