@@ -212,7 +212,7 @@ main()
       shift
    done
 
-   [ $# -ne 8 ] && echo "API mismatch ($# args: $*)" >&2 && exit 1
+   [ $# -lt 7 -o $# -gt 8 ] && echo "API mismatch ($# args: $*)" >&2 && exit 1
 
    local MULLE_UNAME
 

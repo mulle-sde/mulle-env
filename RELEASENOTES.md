@@ -1,3 +1,7 @@
+### 0.13.1
+
+* add -C option for passing in command lines
+
 ## 0.13.0
 
 * mulle-env -c behaves now like sh -c with respect to variable expansion etc (need to reinit\!)

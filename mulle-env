@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.13.0"
+MULLE_ENV_VERSION="0.13.1"
 
 #
 # The default for first time mulle-env
@@ -45,6 +45,7 @@ emit_options()
    cat <<EOF
    -ef <file>    : use a different environment file (${ENVFILENAME})
    -c <cmd>      : shell command to execute instead of interactive subshell
+   -C <cmd>      : like -c, but command and each argument are separated by LF
    -d <dir>      : specify directory
    -s <tool/env> : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
 EOF
@@ -933,6 +934,33 @@ main()
 
             # escape properly for later eval
             printf -v OPTION_SHELL_COMMAND "%q" "$1"
+         ;;
+
+         -C)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            OPTION_SHELL_COMMAND=
+
+            local arg
+
+            shopt -s nullglob; IFS="
+"
+            for arg in $1
+            do
+               if [ ! -z "${arg}" ]
+               then
+                  if [ -z "${OPTION_SHELL_COMMAND}" ]
+                  then
+                     OPTION_SHELL_COMMAND="'${arg}'"
+                  else
+                     OPTION_SHELL_COMMAND="${OPTION_SHELL_COMMAND} '${arg}'"
+                  fi
+               fi
+            done
+            IFS="${DEFAULT_IFS}"; shopt -u nullglob
+
+            printf -v OPTION_SHELL_COMMAND "%q" "${OPTION_SHELL_COMMAND}"
          ;;
 
          -f|--force)
