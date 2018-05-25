@@ -1,3 +1,7 @@
+### 0.13.2
+
+* delete empty value for real now, because empty values mess up overrides
+
 ### 0.13.1
 
 * add -C option for passing in command lines

@@ -297,14 +297,22 @@ _env_environment_set()
    fi
 
    # on request, we comment it out
-   if [ "${OPTION_COMMENT_OUT_EMPTY}" = "YES" -a -z "${value}" ]
+   if [ -z "${value}" ]
    then
-      if [ -f "${filename}" ]
+      if [ ! -f "${filename}" ]
+      then
+         log_fluff "${filename} does not exist"
+      fi
+
+      if [ "${OPTION_COMMENT_OUT_EMPTY}" = "YES" ]
       then
          inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
+         return $?
       fi
-      return
+
+      inplace_sed -e "/^\\( *export *${sed_escaped_key}=.*\\)/d" "${filename}"
+      return $?
    fi
 
    #
@@ -1358,11 +1366,11 @@ env_environment_main()
             OPTION_SCOPE="${MULLE_ENV_DEFAULT_SET_SCOPE}"
             if [ -z "${OPTION_SCOPE}" ]
             then
-               if [ -z "${USET}" ]
+               if [ -z "${USER}" ]
                then
                   fail "No USER environment variable set"
                fi
-               OPTION_SCOPE="user-${USER}}"
+               OPTION_SCOPE="user-${USER}"
             fi
          fi
          env_environment_set_main "${OPTION_SCOPE}" "$@"
