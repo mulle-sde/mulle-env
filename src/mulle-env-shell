@@ -31,6 +31,7 @@
 #
 [ "${7}" = "YES" ] && set -x && : "mulle-env-shell" "$@"
 
+#set -x && : "mulle-env-shell" "$@"
 
 #
 # A separate file to that env can call it. there is no error checking or
@@ -95,11 +96,8 @@ run_shell()
    if [ -z "${cmd_string}" ]
    then
       echo "failed to locate bash" >&2
-      exit 1
+      exit 255
    fi
-
-   local prompt_string
-   local initfile
 
    #
    # Because some environment strings like
@@ -110,9 +108,19 @@ run_shell()
    #
    mkdir -p ".mulle-env/var/tmp" 2> /dev/null
 
-   initfile=".mulle-env/var/tmp/`uuidgen`" || exit 1
+   local initfile
 
-   emit_initfile > "${initfile}" || exit 1
+   if ! initfile=".mulle-env/var/tmp/`uuidgen`"
+   then
+      echo "uuidgen failed" >&2
+      exit 255
+   fi
+
+   if ! emit_initfile > "${initfile}"
+   then
+      echo "Could not write \"${initfile}\"" >&2
+      exit 13
+   fi
 
    #
    # The only way to avoid SYS_BASHRC is to go posix.
@@ -141,15 +149,17 @@ run_shell()
 
    local args
 
-   args="$1"
+   #
+   # the proper way to escape strings for eval
+   #
+   printf -v args "%q" "$1"
+   [ $# -ne 0 ] && shift
 
-   while [ $# -gt 1 ]
-   do
-      shift
-
-      args="${args} '$1'"
-   done
-   shift
+   if [ $# -ne 0 ]
+   then
+      echo "Superflous arguments \"$*\""
+      exit 12 # can't deal with that
+   fi
 
    MULLE_ENV_LIBEXEC_DIR="`dirname -- "$0"`"
 
@@ -159,8 +169,7 @@ run_shell()
         "MULLE_UNAME='${MULLE_UNAME}'" \
         "TRACE='${TRACE}'" \
         "PATH='${RUNPATH}'" \
-        "COMMAND='${args}'" \
-        "${prompt_string}" \
+        "COMMAND=${args}" \
         "${cmd_env}" \
             "'${cmd_string}'" \
                "${cmd_options}"
@@ -203,6 +212,8 @@ main()
       shift
    done
 
+   [ $# -ne 8 ] && echo "API mismatch ($# args: $*)" >&2 && exit 1
+
    local MULLE_UNAME
 
    MULLE_UNAME="$1"
@@ -244,6 +255,7 @@ main()
    TRACE="$1"
    shift
 
+   # remainder is "command"
    run_shell "$@"
 }
 

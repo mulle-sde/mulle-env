@@ -1,3 +1,8 @@
+## 0.13.0
+
+* mulle-env -c behaves now like sh -c with respect to variable expansion etc (need to reinit\!)
+
+
 ### 0.12.6
 
 * deal better with absence of USER env var

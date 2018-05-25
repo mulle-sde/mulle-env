@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.12.6"
+MULLE_ENV_VERSION="0.13.0"
 
 #
 # The default for first time mulle-env
@@ -630,31 +630,32 @@ _run_subenv()
       ;;
    esac
 
-   log_verbose "Starting subshell ${env_flag}"
 
    MULLE_VIRTUAL_ROOT="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${directory}"`"
 
    local mode
 
-   mode="SUBENV:INTERACTIVE"
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
-      log_fluff "Run shell command \"${OPTION_SHELL_COMMAND}\" in \"${directory}\"..."
+      log_verbose "Run subenv shell command \"${OPTION_SHELL_COMMAND}\" ($MULLE_VIRTUAL_ROOT})"
       mode="SUBENV:SCRIPT"
+   else
+      log_verbose "Starting subenv shell ${env_flag} ($MULLE_VIRTUAL_ROOT})"
+      mode="SUBENV:INTERACTIVE"
    fi
 
    cd "${directory}" &&
    eval env \
       NO_MOTD="YES" \
       "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
-      "'${MULLE_UNAME}'" \
-      "'${MULLE_VIRTUAL_ROOT}'" \
-      "'${PATH}'" \
-      "'${mode}'" \
-      "'none/wild'" \
-      "'${ENVFILENAME}'" \
-      "'${TRACE}'" \
-      "${OPTION_SHELL_COMMAND}"
+        "'${MULLE_UNAME}'" \
+        "'${MULLE_VIRTUAL_ROOT}'" \
+        "'${PATH}'" \
+        "'${mode}'" \
+        "'none/wild'" \
+        "'${ENVFILENAME}'" \
+        "'${TRACE}'" \
+        "${OPTION_SHELL_COMMAND}"  # already escaped!
 }
 
 
@@ -824,11 +825,13 @@ _run_subshell()
    #
    local mode
 
-   mode="INTERACTIVE"
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
-      log_fluff "Run shell command \"${OPTION_SHELL_COMMAND}\" in \"${rundirectory}\"..."
+      log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" ($MULLE_VIRTUAL_ROOT})"
       mode="SCRIPT"
+   else
+      log_verbose "Starting shell ${env_flag} ($MULLE_VIRTUAL_ROOT})"
+      mode="INTERACTIVE"
    fi
 
    case "${style}" in
@@ -860,8 +863,6 @@ _run_subshell()
    # home is needed for git
    # otherwise provide a minimal environment, for better reproducability
    #
-   log_verbose "Starting subshell ${env_flag}"
-
    local rval
 
    cd "${rundirectory}" &&
@@ -875,11 +876,11 @@ _run_subshell()
             "'${style}'" \
             "'${ENVFILENAME}'" \
             "'${TRACE}'" \
-            "${OPTION_SHELL_COMMAND}"
+            "${OPTION_SHELL_COMMAND}" # already escaped!
 
    rval=$?
 
-   log_debug "Subshell exited with $?"
+   log_debug "Subshell exited with $rval"
    return $rval
 }
 
@@ -930,7 +931,10 @@ main()
             [ $# -eq 1 ] && usage "Missing argument to $1"
             shift
 
-            OPTION_SHELL_COMMAND="$1"
+            # escape properly for later eval
+            printf -v OPTION_SHELL_COMMAND "%q" "$1"
+
+            log_info "OPTION_SHELL_COMMAND=${OPTION_SHELL_COMMAND}"
          ;;
 
          -f|--force)
@@ -1108,8 +1112,6 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
    # inherits all options ....
    _run_subshell
 }
-
-
 
 
 ########
