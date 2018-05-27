@@ -14,6 +14,7 @@ set( PROJECT_VERSION "${MULLE_ENV_VERSION}")
 
 set( SCRIPTS
 mulle-env
+mudo
 )
 
 
