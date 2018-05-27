@@ -135,9 +135,11 @@ Usage:
    List environment variables. If you specified no scope, you will get
    a combined listing of all scopes. Specify the scope using the
    environment options. (See \`${MULLE_USAGE_NAME} environment -h\` for
-   a list of scopes:
+   a list of scopes).
 
-      mulle-env environment --scope separate list
+   Example_
+
+      mulle-env environment --scope merged list
 
 Options:
    --output-eval    : resolve values
@@ -1077,7 +1079,7 @@ env_environment_list_main()
    log_debug "scope: \"${scope}\""
 
    case "${scope}" in
-      "separate")
+      "DEFAULT")
          filename="${MULLE_ENV_DIR}/share/environment-project.sh"
          "${lister}" "${filename}"
 
@@ -1101,7 +1103,7 @@ env_environment_list_main()
          fi
       ;;
 
-      "DEFAULT")
+      "merged")
          _env_environment_combined_list_main "merge_environment_text" "$@"
       ;;
 

@@ -1,3 +1,7 @@
+### 0.13.4
+
+* separate is now default, and default is merged for environment list
+
 ### 0.13.3
 
 * dont attempt terminal title sets in script
