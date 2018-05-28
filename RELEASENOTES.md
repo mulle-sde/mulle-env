@@ -1,3 +1,11 @@
+### 0.13.8
+
+* Various small improvements
+
+### 0.13.7
+
+* simplify README
+
 ### 0.13.6
 
 * improved brew formula defintion
