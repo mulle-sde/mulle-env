@@ -1,3 +1,7 @@
+### 0.13.6
+
+* improved brew formula defintion
+
 ### 0.13.5
 
 * add mudo to CMakeLists.txt
