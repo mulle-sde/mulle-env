@@ -168,6 +168,9 @@ run_shell()
 
    MULLE_ENV_LIBEXEC_DIR="`dirname -- "$0"`"
 
+   local rval
+
+
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
@@ -178,18 +181,20 @@ run_shell()
         "${cmd_env}" \
             "'${cmd_string}'" \
                "${cmd_options}"
+   rval=$?
 
    if [ "${OPTION_KEEP_TMP}" = "NO" ] && [ -f "${initfile}" ]
    then
       rm "${initfile}"
    fi
 
-  case "${MODE}" in
+   case "${MODE}" in
       *INTERACTIVE*)
          # try to reset
          printf '\033]0;%s\007' ""
       ;;
    esac
+   return ${rval}
 }
 
 

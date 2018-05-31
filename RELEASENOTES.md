@@ -1,3 +1,7 @@
+### 0.13.10
+
+* return status from -c command properly
+
 ### 0.13.9
 
 * use scope host instead of hostname
