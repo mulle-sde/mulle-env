@@ -93,7 +93,7 @@ case "\${MULLE_SHELL_MODE}" in
 
    *)
       set -a ; mulle-env-reload     # export all definitions for command
-      eval \${COMMAND}  # must eval this so ls -1 ${MULLE_VIRTUAL_ROOT} works
+      eval \${COMMAND}  # must eval this so ls -1 \${MULLE_VIRTUAL_ROOT} works
       exit \$?
    ;;
 esac

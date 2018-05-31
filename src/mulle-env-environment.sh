@@ -43,8 +43,8 @@ SHOWN_COMMANDS="\
 "
 
 HIDDEN_COMMANDS="\
-   hostname          : show current hostname value
-   user              : show current username value
+   host              : show current host value
+   user              : show current user value
    uname             : show current operating system value
 "
     cat <<EOF >&2
@@ -59,7 +59,7 @@ Usage:
 Options:
    -h                : show this usage
    --global          : scope for general environments variables
-   --hostname        : narrow scope to this host only ($MULLE_HOSTNAME)
+   --host            : narrow scope to this host only ($MULLE_HOSTNAME)
    --os              : narrow scope to this operating system only ($MULLE_UNAME)
    --project         : scope for project variables
    --user            : narrow scope to this user only ($USER)
@@ -73,7 +73,7 @@ EOF
       then
          echo "${HIDDEN_COMMANDS}"
       fi
-   ) | sed '/^$/d' | sort >&2
+   ) | sed '/^$/d' | LC_ALL=C sort >&2
 
    cat <<EOF >&2
          (use -v for more commands)
@@ -825,7 +825,7 @@ merge_environment_text()
    rexekutor sed -n 's/^ *export *//p' <<< "${1}" | \
    rexekutor awk -F '=' '{ value[ $1] = $2 };END{for(i in value) \
 print i "='"'"'" substr(value[ i], 2, length(value[ i]) - 2) "'"'"'" }' | \
-   rexekutor sort
+   LC_ALL=C rexekutor sort
 }
 
 
@@ -836,7 +836,7 @@ merge_environment_file()
    rexekutor sed -n 's/^ *export *//p' "${1}" | \
    rexekutor awk -F '=' '{ value[ $1] = $2 };END{for(i in value) \
 print i "='"'"'" substr(value[ i], 2, length(value[ i]) - 2) "'"'"'" }' | \
-   rexekutor sort
+   LC_ALL=C rexekutor sort
 }
 
 
@@ -971,7 +971,7 @@ bash -c '"
    fi
 
    cmdline="`concat "${cmdline}" "${files}"`"
-   cmdline="`concat "${cmdline}" "env | sort '"`"
+   cmdline="`concat "${cmdline}" "env | LC_ALL=C sort '"`"
 
    #
    # remove a couple of builtins clumsily.
@@ -1200,7 +1200,7 @@ env_environment_scopes_main()
          rexekutor ls -1 "${MULLE_ENV_DIR}/share"/environment-*.sh \
                          "${MULLE_ENV_ETC_DIR}"/environment-*.sh \
             | sed '-e s|^.*/environment-\(.*\)\.sh$|\1|'
-      ) | sort -u | sed -e '/^include/d'
+      ) | LC_ALL=C sort -u | sed -e '/^include/d'
 
       return 0
    fi
@@ -1280,13 +1280,17 @@ env_environment_main()
             env_environment_usage
          ;;
 
-         --global|--hostname-*|--project|--os-*|--share|--user-*)
+         --global|--host-*|--project|--os-*|--share|--user-*)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="${1:2}"
          ;;
 
-         --hostname)
+         --hostname-*)
+            OPTION_SCOPE="host-${1:11}"
+         ;;
+
+         --hostname|--host)
             [ "${OPTION_SCOPE}" = "DEFAULT" ] || log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 
             OPTION_SCOPE="host-${MULLE_HOSTNAME}"
@@ -1330,7 +1334,7 @@ env_environment_main()
    [ $# -ne 0 ] && shift
 
    case "${cmd:-list}" in
-      hostname)
+      host|hostname)
          hostname
       ;;
 

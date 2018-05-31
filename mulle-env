@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.13.8"
+MULLE_ENV_VERSION="0.13.9"
 
 #
 # The default for first time mulle-env
@@ -92,7 +92,7 @@ Commands:
 
 Options:
 EOF
-   emit_options | sort >&2
+   emit_options | LC_ALL=C sort >&2
 
    if [ ! -z "${MULLE_TRACE}" ]
    then

@@ -1,3 +1,7 @@
+### 0.13.9
+
+* use scope host instead of hostname
+
 ### 0.13.8
 
 * Various small improvements

@@ -463,7 +463,7 @@ _mulle_tool_list_file()
 
    log_info "${title}"
 
-   LC_ALL=C egrep -v '^#' "${toolsfile}" | sed '/^[ ]*$/d' | sort
+   LC_ALL=C egrep -v '^#' "${toolsfile}" | sed '/^[ ]*$/d' | LC_ALL=C sort
 }
 
 
