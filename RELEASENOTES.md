@@ -1,3 +1,7 @@
+### 0.13.11
+
+* mulle-plugin modifies PATH for dependency/bin ...
+
 ### 0.13.10
 
 * return status from -c command properly

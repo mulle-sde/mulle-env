@@ -31,6 +31,10 @@
 #
 MULLE_ENV_MULLE_PLUGIN_SH="included"
 
+####
+# TODO: MOVE ALL THE ENVIRONMENT STUFF TO MULLE-SDE INIT THERE IS NO GOOD
+# REASON ANYMORE WHY THIS IS HERE.
+####
 
 print_mulle_environment_os_darwin_sh()
 {
@@ -97,6 +101,11 @@ export ADDICTION_DIR="\${MULLE_VIRTUAL_ROOT}/addiction"
 #
 export BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
 
+#
+# Modify path so that dependency and addictions executables are found and
+# preferred.
+#
+PATH="\${DEPENDENCY_DIR}/bin:\${ADDICTION_DIR}/bin:$PATH"
 
 EOF
 }
