@@ -176,6 +176,7 @@ run_shell()
         "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
         "TRACE='${TRACE}'" \
+        "NO_MOTD='${NO_MOTD}'" \
         "PATH='${RUNPATH}'" \
         "COMMAND=${args}" \
         "${cmd_env}" \
@@ -226,7 +227,7 @@ main()
       shift
    done
 
-   [ $# -lt 7 -o $# -gt 8 ] && echo "API mismatch ($# args: $*)" >&2 && exit 1
+   [ $# -lt 8 -o $# -gt 9 ] && echo "API mismatch ($# args: $*)" >&2 && exit 1
 
    local MULLE_UNAME
 
@@ -267,6 +268,11 @@ main()
    local TRACE  # either YES or usually empty
 
    TRACE="$1"
+   shift
+
+   local NO_MOTD  # either YES or usually empty
+
+   NO_MOTD="$1"
    shift
 
    # remainder is "command"

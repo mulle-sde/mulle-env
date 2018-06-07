@@ -52,9 +52,10 @@ Usage:
    ${MULLE_USAGE_NAME} environment [options] [command]*
 
    Manage environment variables as set by mulle-env when entering an
-   environment. You general settings will be in scope "global". There
-   other scopes based on the login user, the current host and the
-   current platform (os).
+   environment. You general settings will be in scope "global". There are
+   other scopes based on the login user, the current host and the current
+   platform (os). See \`${MULLE_USAGE_NAME} environment help\` for more
+   information about scopes.
 
 Options:
    -h                : show this usage
@@ -134,16 +135,45 @@ Usage:
 
    List environment variables. If you specified no scope, you will get
    a combined listing of all scopes. Specify the scope using the
-   environment options. (See \`${MULLE_USAGE_NAME} environment -h\` for
-   a list of scopes).
+   environment options. See \`${MULLE_USAGE_NAME} environment help\` for
+   more information about scopes.
 
-   Example_
+   Example:
 
       mulle-env environment --scope merged list
 
 Options:
    --output-eval    : resolve values
    --output-command : emit as mulle-env commands
+EOF
+   exit 1
+}
+
+
+env_environment_scopes_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} environment scopes [options]
+
+   List scopes applicable to this session. The scopes vary by platform, host
+   and user. Use \`${MULLE_USAGE_NAME} environment list\` to see the
+   contents of all existing environment scopes.
+
+   Scopes:
+      aux             : only used by mulle-env
+      project         : set by mulle-sde on init
+      share           : set by mulle-sde extensions
+      global          : global user defined settings
+      os-<platform>   : platform specific user defined settings
+      host-<hostname> : host specific user defined settings
+      user-<username> : user specific and user defined settings
+
+Options:
+   --all              : show also aux, project and share scopes
+   --filename         : emit filename of the scope file
 EOF
    exit 1
 }
@@ -304,6 +334,7 @@ _env_environment_set()
       if [ ! -f "${filename}" ]
       then
          log_fluff "${filename} does not exist"
+         return
       fi
 
       if [ "${OPTION_COMMENT_OUT_EMPTY}" = "YES" ]
@@ -1080,6 +1111,9 @@ env_environment_list_main()
 
    case "${scope}" in
       "DEFAULT")
+         filename="${MULLE_ENV_DIR}/share/environment-aux.sh"
+         "${lister}" "${filename}"
+
          filename="${MULLE_ENV_DIR}/share/environment-project.sh"
          "${lister}" "${filename}"
 
@@ -1138,24 +1172,39 @@ env_environment_scopes_main()
 {
    log_entry "env_environment_scopes_main" "$@"
 
-   local OPTION_DIRECTORY="NO"
+   local OPTION_FILENAME="NO"
    local OPTION_EXISTING="NO"
    local OPTION_SHARE="NO"
    local OPTION_PROJECT="NO"
+   local OPTION_AUX="NO"
 
    while :
    do
       case "$1" in
          -h|--help|help)
-            env_environment_get_usage
+            env_environment_scopes_usage
          ;;
 
-         --directory)
-            OPTION_DIRECTORY="YES"
+         --all)
+            OPTION_SHARE="YES"
+            OPTION_PROJECT="YES"
+            OPTION_AUX="YES"
+         ;;
+
+         --filename)
+            OPTION_FILENAME="YES"
          ;;
 
          --no-directory)
-            OPTION_DIRECTORY="NO"
+            OPTION_FILENAME="NO"
+         ;;
+
+         --aux)
+            OPTION_AUX="YES"
+         ;;
+
+         --no-aux)
+            OPTION_AUX="NO"
          ;;
 
          --share)
@@ -1206,13 +1255,19 @@ env_environment_scopes_main()
    fi
 
    local scope
-   local fscope
-   local directory
+   local filename
+
+   log_info "Session Scopes"
 
    set -f
-   for scope in global project share os-${MULLE_UNAME} host-${MULLE_HOSTNAME} user-${USER}
+   for scope in aux project share global os-${MULLE_UNAME} host-${MULLE_HOSTNAME} user-${USER}
    do
-      directory=
+      filename=
+      if [ "${OPTION_AUX}" = "NO" -a "${scope}" = "aux" ]
+      then
+         continue
+      fi
+
       if [ "${OPTION_SHARE}" = "NO" -a "${scope}" = "share" ]
       then
          continue
@@ -1228,26 +1283,22 @@ env_environment_scopes_main()
          continue
       fi
 
-      if [ "${OPTION_DIRECTORY}" = "YES" ]
+      if [ "${OPTION_FILENAME}" = "YES" ]
       then
-         fscope="${scope}"
-         case "${fscope}" in
-            share)
-               fscope="default"
-            ;;
-         esac
+         local prefix
 
-         if [ -f "${MULLE_ENV_DIR}/share/environment-${fscope}.sh" ]
+         prefix="${MULLE_ENV_DIR#${PWD}/}"
+         if [ -f "${MULLE_ENV_DIR}/share/environment-${scope}.sh" ]
          then
-            directory="(share)"
+            filename="(${prefix}/share/environment-${scope}.sh)"
          fi
 
-         if [ -f "${MULLE_ENV_ETC_DIR}/environment-${fscope}.sh" ]
+         if [ -f "${MULLE_ENV_ETC_DIR}/environment-${scope}.sh" ]
          then
-            directory="(etc)"
+            filename="(${prefix}/environment-${scope}.sh)"
          fi
       fi
-      echo "${scope}" "${directory}"
+      echo "${scope}" "${filename}"
    done
    set +f
 }
@@ -1384,6 +1435,18 @@ env_environment_main()
 
       scopes)
          env_environment_scopes_main "$@"
+      ;;
+
+      upgrade)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
+
+         local style
+         local flavor
+
+         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/etc" \
+                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/share"
+
+         env_init_main --upgrade --style "${style}"
       ;;
 
       "")

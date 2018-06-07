@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.13.11"
+MULLE_ENV_VERSION="0.14.0"
 
 #
 # The default for first time mulle-env
@@ -520,8 +520,7 @@ find_best_environment()
       then
          log_info "Using the superior mulle-env environment at \
 ${C_RESET_BOLD}${directory}${C_INFO}.
-Suppress this behaviour with:
-   ${C_RESET_BOLD}--no-search"
+Suppress this behaviour with the flag \"--no-search\"."
          best="${directory}"
       fi
    done
@@ -623,17 +622,19 @@ _run_subenv()
 
    local directory="$1"
 
+   directory="`simplified_absolutepath "${directory:-${PWD}}"`"
+
    [ ! -d "${directory}/.mulle-env" ] && fail "No mulle-env found in \"${directory}\""
 
    # might need to be smarter here
    case "${directory}" in
-      ../*|*/..|*/../*|./*|*/.|*/./*|~/*|*/~|*/~/*)
+      "../"*|*"/.."|*"/../"*|"./"*|*"/."|*"/./"*|"~/"*|*"/~"|*"/~/"*)
          fail "${directory} must not have relative components"
       ;;
    esac
 
 
-   MULLE_VIRTUAL_ROOT="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${directory}"`"
+   MULLE_VIRTUAL_ROOT="${directory}"
 
    local mode
 
@@ -642,13 +643,12 @@ _run_subenv()
       log_verbose "Run subenv shell command \"${OPTION_SHELL_COMMAND}\" ($MULLE_VIRTUAL_ROOT})"
       mode="SUBENV:SCRIPT"
    else
-      log_verbose "Starting subenv shell ${env_flag} ($MULLE_VIRTUAL_ROOT})"
+      log_info "Starting subenv shell in ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
       mode="SUBENV:INTERACTIVE"
    fi
 
    cd "${directory}" &&
    eval env \
-      NO_MOTD="YES" \
       "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
         "'${MULLE_UNAME}'" \
         "'${MULLE_VIRTUAL_ROOT}'" \
@@ -657,6 +657,7 @@ _run_subenv()
         "'none/wild'" \
         "'${ENVFILENAME}'" \
         "'${TRACE}'" \
+        "'YES'" \
         "${OPTION_SHELL_COMMAND}"  # already escaped!
 }
 
@@ -878,6 +879,7 @@ _run_subshell()
             "'${style}'" \
             "'${ENVFILENAME}'" \
             "'${TRACE}'" \
+            "'${NO_MOTD}'" \
             "${OPTION_SHELL_COMMAND}" # already escaped!
 
    rval=$?
@@ -945,7 +947,7 @@ main()
 
             local arg
 
-            shopt -s nullglob; IFS="
+            set -o noglob; IFS="
 "
             for arg in $1
             do
@@ -959,7 +961,7 @@ main()
                   fi
                fi
             done
-            IFS="${DEFAULT_IFS}"; shopt -u nullglob
+            IFS="${DEFAULT_IFS}"; set +o noglob
 
             printf -v OPTION_SHELL_COMMAND "%q" "${OPTION_SHELL_COMMAND}"
          ;;
@@ -984,6 +986,10 @@ main()
 
          --search)
             OPTION_SEARCH="YES"
+         ;;
+
+         --no-motd)
+            NO_MOTD="YES"
          ;;
 
          -ns|--no-search)
@@ -1111,7 +1117,7 @@ wild"
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
 
          env_all_plugin_names
-         return 0
+         return $?
       ;;
 
       uname)

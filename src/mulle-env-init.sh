@@ -147,6 +147,10 @@ env_init_main()
             OPTION_OTHER_TOOLS="`add_line "${OPTION_OTHER_TOOLS}" "$1" `"
          ;;
 
+         --upgrade)
+            OPTION_UPGRADE="YES"
+         ;;
+
          -*)
             fail "Unknown option \"$1\""
          ;;
@@ -178,8 +182,7 @@ env_init_main()
    envincludefile="${sharedir}/include-environment.sh"
 
    # user editable stuff goes into in etc
-   auxfile="${sharedir}/environment-share.sh"
-   darwinauxfile="${sharedir}/environment-os-darwin.sh"
+   auxfile="${sharedir}/environment-aux.sh"
    completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
 
    toolsfile="${sharedir}/tool"
@@ -194,9 +197,9 @@ env_init_main()
       # don't throw away share though
 
       # remove some known trouble makers...
-      remove_file_if_present   ".mulle-env/etc/style"
+      remove_file_if_present ".mulle-env/etc/style"
    else
-      if [ -f "${envfile}" ]
+      if [ "${OPTION_UPGRADE}" != "YES" -a -f "${envfile}" ]
       then
          log_warning "\"${envfile}\" already exists"
          return 2
@@ -244,42 +247,49 @@ env_init_main()
    redirect_exekutor "${envincludefile}" echo "${text}"
 
    log_verbose "Creating \"${auxfile}\""
-   if ! text="`print_${flavor}_environment_share_sh "${style}" `"
+   if ! text="`print_${flavor}_environment_aux_sh "${style}" `"
    then
       return 1
    fi
    redirect_exekutor "${auxfile}" echo "${text}"
 
    # add more os flavors later
-   callback="print_${flavor}_environment_os_darwin_sh"
-   if [ "`type -t "${callback}"`" = "function" ]
+   for os in darwin freebsd linux mingw
+   do
+      callback="print_${flavor}_environment_os_${os}_sh"
+      if [ "`type -t "${callback}"`" = "function" ]
+      then
+         darwinauxfile="${sharedir}/environment-os-${os}.sh"
+         log_verbose "Creating \"${darwinauxfile}\""
+         if ! text="`${callback} "${style}" `"
+         then
+            return 1
+         fi
+         redirect_exekutor "${darwinauxfile}" echo "${text}"
+      fi
+   done
+
+   if [ "${OPTION_UPGRADE}" != "YES" ]
    then
-      log_verbose "Creating \"${darwinauxfile}\""
-      if ! text="`${callback} "${style}" `"
+      log_verbose "Creating \"${toolsfile}\""
+      if ! text="`print_${flavor}_tools_sh "${style}" `"
       then
          return 1
       fi
-      redirect_exekutor "${darwinauxfile}" echo "${text}"
-   fi
+      redirect_exekutor "${toolsfile}" echo "${text}"
 
-   log_verbose "Creating \"${toolsfile}\""
-   if ! text="`print_${flavor}_tools_sh "${style}" `"
-   then
-      return 1
-   fi
-   redirect_exekutor "${toolsfile}" echo "${text}"
+      log_verbose "Creating \"${optional_toolsfile}\""
+      if ! text="`print_${flavor}_optional_tools_sh "${style}" `"
+      then
+         return 1
+      fi
+      redirect_exekutor "${optional_toolsfile}" echo "${text}"
 
-   log_verbose "Creating \"${optional_toolsfile}\""
-   if ! text="`print_${flavor}_optional_tools_sh "${style}" `"
-   then
-      return 1
+      mkdir_if_missing "${sharedir}/libexec"
+      log_verbose "Installing \"${completionfile}\""
+      exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
+             ${completionfile}
    fi
-   redirect_exekutor "${optional_toolsfile}" echo "${text}"
-
-   mkdir_if_missing "${sharedir}/libexec"
-   log_verbose "Installing \"${completionfile}\""
-   exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
-          ${completionfile}
 
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
@@ -291,7 +301,7 @@ env_init_main()
    # chowning the directory is bad for git
    find "${sharedir}" -type f -exec chmod a-w {} \;
 
-   if [ "${OPTION_BLURB}" != "NO" ]
+   if [ "${OPTION_UPGRADE}" != "YES" -a "${OPTION_BLURB}" != "NO" ]
    then
       log_info "Enter the environment:
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory}\"${C_INFO}"

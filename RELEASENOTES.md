@@ -1,3 +1,8 @@
+## 0.14.0
+
+* reintroduction of environment-aux fot plugin env values, improved usage info
+
+
 ### 0.13.11
 
 * mulle-plugin modifies PATH for dependency/bin ...

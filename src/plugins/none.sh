@@ -124,6 +124,7 @@ MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 #
 # .mulle-env/etc                        | .mulle-env/share
 # --------------------------------------|--------------------
+#                                       | environment-aux.sh
 #                                       | environment-project.sh
 #                                       | environment-share.sh
 # environment-global.sh                 |
@@ -132,6 +133,15 @@ MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 # environment-user-\${USER}.sh           |
 # custom-environment.sh                 |
 #
+
+#
+# The aux file, if present is to be set by a mulle-env plugin
+#
+if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh" ]
+then
+   . "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh"
+fi
+
 
 #
 # The project file, if present is to be set by mulle-sde init itself
@@ -144,9 +154,6 @@ fi
 
 #
 # The share file, if present is to be set by mulle-sde extensions.
-#
-# A trick here is that mulle-env doesn't clobber this file
-# when doing an init -f, which can be useful.
 #
 if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-share.sh" ]
 then
@@ -173,7 +180,7 @@ else
 fi
 
 #
-# Load in some modifications depending on  hostname, username. These
+# Load in some modifications depending on hostname, username. These
 # won't be provided by extensions or plugins.
 #
 # These settings could be "cased" in a single file, but it seems convenient.
@@ -206,7 +213,7 @@ EOF
 }
 
 
-print_none_environment_share_sh()
+print_none_environment_aux_sh()
 {
    cat <<EOF
 # add your stuff here

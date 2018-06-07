@@ -53,9 +53,9 @@ EOF
 #
 # TODO: this stuff should move to mulle-sde
 #
-print_mulle_environment_share_sh()
+print_mulle_environment_aux_sh()
 {
-   log_entry "print_mulle_environment_share_sh" "$@"
+   log_entry "print_mulle_environment_aux_sh" "$@"
 
    # dont inherit, just clobber
 
@@ -105,7 +105,7 @@ export BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
 # Modify path so that dependency and addictions executables are found and
 # preferred.
 #
-PATH="\${DEPENDENCY_DIR}/bin:\${ADDICTION_DIR}/bin:$PATH"
+PATH="\${DEPENDENCY_DIR}/bin:\${ADDICTION_DIR}/bin:\$PATH"
 
 EOF
 }
@@ -256,7 +256,7 @@ esac
 #
 # show motd, if any
 #
-if [ -z "${NO_MOTD}"]
+if [ -z "\${NO_MOTD}" ]
 then
    if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd" ]
    then
