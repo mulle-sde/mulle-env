@@ -1145,7 +1145,7 @@ env_environment_list_main()
          "${lister}" "${MULLE_ENV_DIR}/share/include-environment.sh"
       ;;
 
-      share)
+      aux|share)
          "${lister}" "${MULLE_ENV_DIR}/share/environment-${scope}.sh"
       ;;
 

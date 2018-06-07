@@ -105,7 +105,7 @@ export BUILD_DIR="\${MULLE_VIRTUAL_ROOT}/build"
 # Modify path so that dependency and addictions executables are found and
 # preferred.
 #
-PATH="\${DEPENDENCY_DIR}/bin:\${ADDICTION_DIR}/bin:\$PATH"
+export PATH="\${DEPENDENCY_DIR}/bin:\${ADDICTION_DIR}/bin:\$PATH"
 
 EOF
 }

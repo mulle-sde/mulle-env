@@ -1,3 +1,7 @@
+### 0.14.1
+
+* fix aux list, export PATH propely for mulle plugin
+
 ## 0.14.0
 
 * reintroduction of environment-aux fot plugin env values, improved usage info
