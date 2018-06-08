@@ -1,3 +1,8 @@
+## 0.15.0
+
+* add -D option to define environment variables on the fly
+
+
 ### 0.14.1
 
 * fix aux list, export PATH propely for mulle plugin

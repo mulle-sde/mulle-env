@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.14.1"
+MULLE_ENV_VERSION="0.15.0"
 
 #
 # The default for first time mulle-env
@@ -624,7 +624,11 @@ _run_subenv()
 
    directory="`simplified_absolutepath "${directory:-${PWD}}"`"
 
-   [ ! -d "${directory}/.mulle-env" ] && fail "No mulle-env found in \"${directory}\""
+   if [ ! -d "${directory}/.mulle-env" ]
+   then
+      [ -d "${directory}" ] || fail "\"${directory}\" not found"
+      fail "No mulle-env found in \"${directory}\""
+   fi
 
    # might need to be smarter here
    case "${directory}" in
@@ -647,8 +651,13 @@ _run_subenv()
       mode="SUBENV:INTERACTIVE"
    fi
 
-   cd "${directory}" &&
-   eval env \
+   if [ "${PWD}" != "${directory}" ]
+   then
+      exekutor cd "${directory}" || exit 1
+   fi
+
+   eval_exekutor env \
+      "${CUSTOM_ENVIRONMENT}" \
       "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
         "'${MULLE_UNAME}'" \
         "'${MULLE_VIRTUAL_ROOT}'" \
@@ -657,7 +666,7 @@ _run_subenv()
         "'none/wild'" \
         "'${ENVFILENAME}'" \
         "'${TRACE}'" \
-        "'YES'" \
+        "'${NO_MOTD}'" \
         "${OPTION_SHELL_COMMAND}"  # already escaped!
 }
 
@@ -868,9 +877,14 @@ _run_subshell()
    #
    local rval
 
-   cd "${rundirectory}" &&
-   eval env ${env_flag} \
+   if [ "${PWD}" != "${rundirectory}" ]
+   then
+      exekutor cd "${rundirectory}" || exit 1
+   fi
+
+   eval_exekutor env ${env_flag} \
           "${s}" \
+          "${CUSTOM_ENVIRONMENT}" \
           "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
             "'${MULLE_UNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
@@ -889,6 +903,37 @@ _run_subshell()
 }
 
 
+define_custom_environment()
+{
+   log_entry "define_custom_environment" "$@"
+
+   local keyvalue="$1"
+
+   if [ -z "${keyvalue}" ]
+   then
+      fail "Missing key, directly after -D"
+   fi
+
+   local key
+   local value
+
+   key="${keyvalue%%=*}"
+
+   if [ -z "${key}" ]
+   then
+      key="${keyvalue}"
+   else
+      value="${keyvalue#*=}"
+   fi
+
+   if [ "${key}" != "`printf "%q" "${key}"`" ]
+   then
+      fail "Invalid Environment key \"${key}\""
+   fi
+
+   CUSTOM_ENVIRONMENT="`concat "${CUSTOM_ENVIRONMENT}" "${key}='${value}'" `"
+}
+
 main()
 {
    local OPTION_DIRECTORY
@@ -903,6 +948,7 @@ main()
    local MULLE_FLAG_LOG_DEBUG
    local MULLE_FLAG_LOG_EXEKUTOR
    local MULLE_FLAG_LOG_TERSE
+   local CUSTOM_ENVIRONMENT
 
    local RESTRICTED_PATH
 
@@ -975,6 +1021,18 @@ main()
             shift
 
             OPTION_DIRECTORY="$1"
+         ;;
+
+         -D*)
+            local keyvalue
+
+            local argument
+
+            argument="`LC_ALL=C sed -e s'/^-D[ ]*//' <<< "$1" `"
+            if ! define_custom_environment "${argument}"
+            then
+               exit 1
+            fi
          ;;
 
          -ef|--environment-file)
