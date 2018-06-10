@@ -210,7 +210,7 @@ _mulle_tool_add_file()
       fi
    fi
 
-   if fgrep -q -s -x "${tool}" "${toolsfile}"
+   if fgrep -q -s -x -e "${tool}" "${toolsfile}"
    then
       log_warning "\"${tool}\" is already in the list of tools, will relink"
    else

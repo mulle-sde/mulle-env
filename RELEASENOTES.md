@@ -1,3 +1,7 @@
+### 0.15.1
+
+* cd w/o parameter now goes to `MULLE_VIRTUAL_ROOT`
+
 ## 0.15.0
 
 * add -D option to define environment variables on the fly

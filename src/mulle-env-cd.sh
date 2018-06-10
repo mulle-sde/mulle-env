@@ -62,7 +62,6 @@ function _env_escapes_environment()
 
 function cd()
 {
-
    while [ "$#" -ne 0 ]
    do
       case "$1" in
@@ -75,17 +74,18 @@ function cd()
       break
    done
 
-   local directory="$1"
+   local directory="${1:-${MULLE_VIRTUAL_ROOT}}"
 
    #
    # warn once when stepping out
    #
-   if ! _env_escapes_environment "$@" ||
+   if ! _env_escapes_environment "${directory}" ||
         _env_escapes_environment "${PWD}"
    then
-      builtin cd "$@"
+      builtin cd "${directory}"
       return $?
    fi
+
 
    local C_RESET
    local C_RED
