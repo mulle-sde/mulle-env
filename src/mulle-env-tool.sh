@@ -303,7 +303,7 @@ mulle_tool_add()
          ;;
 
          -*)
-            env_tool_add_usage "unknown option \"$1\""
+            env_tool_add_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -389,7 +389,7 @@ mulle_tool_remove()
          ;;
 
          -*)
-            env_tool_remove_usage "unknown option \"$1\""
+            env_tool_remove_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -482,7 +482,7 @@ mulle_tool_list()
          ;;
 
          -*)
-            env_tool_list_usage "unknown option \"$1\""
+            env_tool_list_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -562,7 +562,7 @@ env_tool_main()
          ;;
 
          -*)
-            env_tool_usage "unknown option \"$1\""
+            env_tool_usage "Unknown option \"$1\""
          ;;
 
          *)

@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.15.1"
+MULLE_ENV_VERSION="0.15.2"
 
 #
 # The default for first time mulle-env
@@ -457,7 +457,12 @@ __get_saved_style_flavor()
    if [ -z "${style}" ]
    then
       log_fluff "No style found"
-      fail "No mulle-env environment found in \"${directory}\"."
+      if [ "${directory}" != "${MULLE_USER_PWD}" ]
+      then
+         fail "No properly setup environment found in candidate project directory \"${directory}\"."
+      else
+         fail "No properly setup environment found in \"${directory}\"."
+      fi
    fi
    flavor="${style%%/*}"
 }
@@ -677,10 +682,11 @@ _run_subshell()
 
    # callerdirectory is where we are called from
    local callerdirectory
+
    # directory is where we are supposed to execute
    local directory
 
-   callerdirectory="`pwd -P`"
+   callerdirectory="${MULLE_EXECUTABLE_PWD}"
 
    if [ ! -z "${OPTION_DIRECTORY}" ]
    then

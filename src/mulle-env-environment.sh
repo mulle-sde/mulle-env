@@ -424,7 +424,7 @@ env_environment_set_main()
          ;;
 
          -*)
-            env_environment_set_usage "unknown option \"$1\""
+            env_environment_set_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -766,7 +766,7 @@ env_environment_get_main()
          ;;
 
          -*)
-            env_environment_get_usage "unknown option \"$1\""
+            env_environment_get_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1090,7 +1090,7 @@ env_environment_list_main()
          ;;
 
          -*)
-            env_environment_list_usage "unknown option \"$1\""
+            env_environment_list_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1228,7 +1228,7 @@ env_environment_scopes_main()
          ;;
 
          -*)
-            env_environment_scopes_usage "unknown option \"$1\""
+            env_environment_scopes_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1370,7 +1370,7 @@ env_environment_main()
          ;;
 
          -*)
-            env_environment_usage "unknown option \"$1\""
+            env_environment_usage "Unknown option \"$1\""
          ;;
 
          *)

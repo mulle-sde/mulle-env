@@ -1,3 +1,7 @@
+### 0.15.2
+
+* slightly improved error messages
+
 ### 0.15.1
 
 * cd w/o parameter now goes to `MULLE_VIRTUAL_ROOT`
