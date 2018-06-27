@@ -512,7 +512,7 @@ env_environment_set_main()
          shopt -u nullglob
       ;;
 
-      share|project)
+      share|project|aux)
          local rval
 
          filename="${MULLE_ENV_DIR}/share/environment-${scope}.sh"

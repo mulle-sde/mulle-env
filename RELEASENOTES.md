@@ -1,3 +1,7 @@
+### 0.15.3
+
+* fix aux set code
+
 ### 0.15.2
 
 * slightly improved error messages

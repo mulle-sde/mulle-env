@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.15.2"
+MULLE_ENV_VERSION="0.15.3"
 
 #
 # The default for first time mulle-env
@@ -729,6 +729,8 @@ _run_subshell()
    fi
 
    _default_setup_environment "${directory}"
+
+   [ ! -d "${MULLE_ENV_DIR}" ] && fail "No environment found in \"${directory}\". Use \`mulle-env init\` to initialize it."
 
    local etcdir
    local sharedir

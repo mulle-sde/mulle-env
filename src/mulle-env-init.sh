@@ -304,6 +304,6 @@ env_init_main()
    if [ "${OPTION_UPGRADE}" != "YES" -a "${OPTION_BLURB}" != "NO" ]
    then
       log_info "Enter the environment:
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory}\"${C_INFO}"
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory#${MULLE_USER_PWD}/}\"${C_INFO}"
    fi
 }
