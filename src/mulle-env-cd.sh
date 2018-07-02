@@ -112,7 +112,7 @@ outside of the virtual environment. Leave the shell or override with:
    nextstyle="`mulle-env style "${directory}"`"
    case "${nextstyle}" in
       "")
-         printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Can not figure out
+         printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Can not figure out \
 the environment style of \"${directory}\". Chickening out."
          return 1
       ;;

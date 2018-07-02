@@ -1,3 +1,7 @@
+### 0.15.4
+
+* unset `MULLE_USER_PWD` and fix some texts
+
 ### 0.15.3
 
 * fix aux set code

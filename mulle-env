@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.15.3"
+MULLE_ENV_VERSION="0.15.4"
 
 #
 # The default for first time mulle-env
@@ -457,11 +457,11 @@ __get_saved_style_flavor()
    if [ -z "${style}" ]
    then
       log_fluff "No style found"
-      if [ "${directory}" != "${MULLE_USER_PWD}" ]
+      if [ "${directory%%/.mulle-env/etc}" != "${MULLE_USER_PWD}" ]
       then
-         fail "No properly setup environment found in candidate project directory \"${directory}\"."
+         fail "No properly setup environment found in candidate project directory \"${directory%%/.mulle-env/etc}\"."
       else
-         fail "No properly setup environment found in \"${directory}\"."
+         fail "No properly setup environment found in \"${directory%%/.mulle-env/etc}\"."
       fi
    fi
    flavor="${style%%/*}"

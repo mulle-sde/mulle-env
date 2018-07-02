@@ -170,6 +170,11 @@ run_shell()
 
    local rval
 
+   #
+   # also clean some environment variables set by
+   # mulle-bashfunctions
+   #
+   unset MULLE_USER_PWD
 
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
