@@ -1,3 +1,7 @@
+### 0.15.6
+
+* fix PATH bug
+
 ### 0.15.5
 
 * dont show reload info in non-interactive shells

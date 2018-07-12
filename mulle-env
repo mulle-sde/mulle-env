@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.15.5"
+MULLE_ENV_VERSION="0.15.6"
 
 #
 # The default for first time mulle-env
@@ -815,12 +815,12 @@ _run_subshell()
          libexecdir="${vardir}/${MULLE_HOSTNAME}/libexec"
 
          env_setup_if_needed "${cachedir}" \
-                              "${bindir}" \
-                              "${libexecdir}" \
-                              "${style}" \
-                              "${flavor}" \
-                              "${oldstyle}" \
-                              "${oldflavor}"
+                             "${bindir}" \
+                             "${libexecdir}" \
+                             "${style}" \
+                             "${flavor}" \
+                             "${oldstyle}" \
+                             "${oldflavor}"
 
          runpath="`colon_concat "${runpath}" "${bindir}" `"
 
@@ -896,7 +896,7 @@ _run_subshell()
           "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
             "'${MULLE_UNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
-            "'${PATH}'" \
+            "'${runpath}'" \
             "'${mode}'" \
             "'${style}'" \
             "'${ENVFILENAME}'" \

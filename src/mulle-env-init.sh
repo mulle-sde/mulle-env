@@ -41,23 +41,25 @@ Usage:
    Initialize the working directory for mulle-env.
 
 Options:
-   -d <dir>             : specify directory
-   --style <tool:path>  : specify environment style
+   -d <dir>           : specify directory
+   --style <tool/env> : specify environment style
 
 EOF
 
    cat <<EOF >&2
 
 Tool-style:
-   none                 : no additions
-   mulle                : additionally support mulle-build (default)
+   none          : no additions
+   minimal       : a minimal set of tools (like cd, ls)
+   developer     : a common set of tools (like cd, ls, awk, man)
+   mulle         : extended set of tools to support mulle-sde (default)
 
-Path-style:
-   none                 : all tools must be specified in .mulle-env/etc/tools
-   inherit              : inherit PATH, don't use tools links
-   restrict             : /bin and /usr/bin are inherited. All other tools must
-                          be specified.
-   wild                 : inherit PATH and inherit environment
+Env-style:
+   tight         : all environment variables are user defined
+   relax         : none + inherit some environment (e.g. SSH_TTY)
+   restrict      : relax + all /bin and /usr/bin tools (default)
+   inherit       : restrict + all PATH tools
+   wild          : no restrictions
 EOF
    exit 1
 }
