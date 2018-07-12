@@ -1,3 +1,7 @@
+### 0.15.5
+
+* dont show reload info in non-interactive shells
+
 ### 0.15.4
 
 * unset `MULLE_USER_PWD` and fix some texts

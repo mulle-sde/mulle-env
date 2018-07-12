@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.15.4"
+MULLE_ENV_VERSION="0.15.5"
 
 #
 # The default for first time mulle-env

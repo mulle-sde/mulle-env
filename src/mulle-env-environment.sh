@@ -323,10 +323,12 @@ _env_environment_set()
    sed_escaped_key="`escaped_sed_pattern "${key}"`"
    sed_escaped_value="`escaped_sed_pattern "${value}"`"
 
-   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
-   then
-      log_info "Use ${C_RESET_BOLD}mulle-env-reload${C_INFO} to update your shell environment"
-   fi
+   case "${MULLE_SHELL_MODE}" in
+      *INTERACTIVE)
+         log_info "Use ${C_RESET_BOLD}mulle-env-reload${C_INFO} to update your \
+shell environment"
+      ;;
+   esac
 
    # on request, we comment it out
    if [ -z "${value}" ]
@@ -417,7 +419,7 @@ env_environment_set_main()
          ;;
 
          -s|--separator)
-            [ "$#" -eq 1 ] &&  env_environment_set_usage "missing argumet to \"$1\""
+            [ "$#" -eq 1 ] && env_environment_set_usage "Missing argument to \"$1\""
             shift
 
             OPTION_SEPARATOR="$1"
