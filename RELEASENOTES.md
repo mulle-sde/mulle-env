@@ -1,3 +1,7 @@
+### 0.15.7
+
+* improve usage a bit
+
 ### 0.15.6
 
 * fix PATH bug

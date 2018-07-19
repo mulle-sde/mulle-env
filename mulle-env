@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.15.6"
+MULLE_ENV_VERSION="0.15.7"
 
 #
 # The default for first time mulle-env
@@ -48,6 +48,7 @@ emit_options()
    -C <cmd>      : like -c, but command and each argument are separated by LF
    -d <dir>      : specify directory
    -s <tool/env> : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
+   -DKEY=VALUE   : define one-time environment variable
 EOF
 
    if [ ! -z "${MULLE_TRACE}" ]
@@ -55,6 +56,7 @@ EOF
       options_technical_flags_usage "         : "
    fi
 }
+
 
 usage()
 {
@@ -941,6 +943,7 @@ define_custom_environment()
 
    CUSTOM_ENVIRONMENT="`concat "${CUSTOM_ENVIRONMENT}" "${key}='${value}'" `"
 }
+
 
 main()
 {
