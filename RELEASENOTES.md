@@ -1,3 +1,8 @@
+## 0.16.0
+
+* rename scopes to scope, improve usage info a little
+
+
 ### 0.15.7
 
 * improve usage a bit

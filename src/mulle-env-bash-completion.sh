@@ -107,7 +107,7 @@ _mulle_env_complete()
             ;;
 
             --scope)
-               list="`mulle-env -s environment scopes`"
+               list="`mulle-env -s environment scope`"
                COMPREPLY=( $( compgen -W "${list}" -- "$cur" ) )
             ;;
 
@@ -118,7 +118,7 @@ _mulle_env_complete()
                   ;;
 
                   *)
-                     COMPREPLY=( $( compgen -W "get list set scopes" -- "$cur" ) )
+                     COMPREPLY=( $( compgen -W "get list set scope" -- "$cur" ) )
                   ;;
                esac
             ;;

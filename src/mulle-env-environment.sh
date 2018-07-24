@@ -54,7 +54,7 @@ Usage:
    Manage environment variables as set by mulle-env when entering an
    environment. You general settings will be in scope "global". There are
    other scopes based on the login user, the current host and the current
-   platform (os). See \`${MULLE_USAGE_NAME} environment help\` for more
+   platform (os). See \`${MULLE_USAGE_NAME} environment scope help\` for more
    information about scopes.
 
 Options:
@@ -135,7 +135,7 @@ Usage:
 
    List environment variables. If you specified no scope, you will get
    a combined listing of all scopes. Specify the scope using the
-   environment options. See \`${MULLE_USAGE_NAME} environment help\` for
+   environment options. See \`${MULLE_USAGE_NAME} environment scope help\` for
    more information about scopes.
 
    Example:
@@ -150,26 +150,26 @@ EOF
 }
 
 
-env_environment_scopes_usage()
+env_environment_scope_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment scopes [options]
+   ${MULLE_USAGE_NAME} environment scope [options]
 
    List scopes applicable to this session. The scopes vary by platform, host
    and user. Use \`${MULLE_USAGE_NAME} environment list\` to see the
-   contents of all existing environment scopes.
+   contents of all existing environment scopes with definitions.
 
    Scopes:
       aux             : only used by mulle-env
       project         : set by mulle-sde on init
       share           : set by mulle-sde extensions
       global          : global user defined settings
-      os-<platform>   : platform specific user defined settings
-      host-<hostname> : host specific user defined settings
-      user-<username> : user specific and user defined settings
+      os-<platform>   : platform specific settings (user defined)
+      host-<hostname> : host specific settings (user defined)
+      user-<username> : user specific settings (user defined)
 
 Options:
    --all              : show also aux, project and share scopes
@@ -1167,12 +1167,12 @@ env_environment_list_main()
 }
 
 #
-# scopes
+# scope
 #
 
-env_environment_scopes_main()
+env_environment_scope_main()
 {
-   log_entry "env_environment_scopes_main" "$@"
+   log_entry "env_environment_scope_main" "$@"
 
    local OPTION_FILENAME="NO"
    local OPTION_EXISTING="NO"
@@ -1184,7 +1184,7 @@ env_environment_scopes_main()
    do
       case "$1" in
          -h|--help|help)
-            env_environment_scopes_usage
+            env_environment_scope_usage
          ;;
 
          --all)
@@ -1230,7 +1230,7 @@ env_environment_scopes_main()
          ;;
 
          -*)
-            env_environment_scopes_usage "Unknown option \"$1\""
+            env_environment_scope_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1241,7 +1241,7 @@ env_environment_scopes_main()
       shift
    done
 
-   [ "$#" -ne 0 ]  && env_environment_scopes_usage "superflous arguments \"$*\""
+   [ "$#" -ne 0 ]  && env_environment_scope_usage "Superflous arguments \"$*\""
 
    if [ "${OPTION_EXISTING}" = "YES" ]
    then
@@ -1435,8 +1435,8 @@ env_environment_main()
          env_environment_set_main "${OPTION_SCOPE}" "$@"
       ;;
 
-      scopes)
-         env_environment_scopes_main "$@"
+      scope)
+         env_environment_scope_main "$@"
       ;;
 
       upgrade)
