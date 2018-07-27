@@ -676,7 +676,7 @@ _env_environment_eval_get()
 
    value="`rexekutor env -i MULLE_VIRTUAL_ROOT="${MULLE_VIRTUAL_ROOT}" \
                             MULLE_UNAME="${MULLE_UNAME}" \
-                            bash -c ". '${filename}' ; echo \\\$${key}"`"
+                            "${BASH}" -c ". '${filename}' ; echo \\\$${key}"`"
    if [ -z "${value}" ]
    then
       return 1
@@ -707,7 +707,7 @@ _env_environment_sed_get()
 
    value="`rexekutor env -i MULLE_VIRTUAL_ROOT="${MULLE_VIRTUAL_ROOT}" \
                             MULLE_UNAME="${MULLE_UNAME}" \
-                            bash -c ". '${filename}' ; echo \\\$${key}"`"
+                            "${BASH}" -c ". '${filename}' ; echo \\\$${key}"`"
    if [ -z "${value}" ]
    then
       return 1
@@ -978,7 +978,7 @@ _env_environment_eval_list()
 MULLE_UNAME=\"${MULLE_UNAME}\" \
 MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\" \
 USER=\"${USER}\" \
-bash -c '"
+\"${BASH}\" -c '"
 
    [ "$#" -eq 0 ] && internal_fail "No environment files specified"
 
@@ -1106,6 +1106,9 @@ env_environment_list_main()
    [ "$#" -ne 0 ] && env_environment_list_usage "wrong number of arguments \"$*\""
 
    log_info "Environment"
+
+   BASH="`command -v "bash"`"
+   BASH="${BASH:-/usr/bin/bash}"  # panic fallback
 
    local filename
 

@@ -512,7 +512,7 @@ find_best_environment()
 
    while :
    do
-      directory="`dirname -- "${directory}"`"
+      directory="`fast_dirname "${directory}"`"
 
       # look for .mulle-env/*/environment.sh going up to root, if we
       # find one, we latch onto it

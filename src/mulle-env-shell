@@ -33,6 +33,69 @@
 
 #set -x && : "mulle-env-shell" "$@"
 
+
+#
+# mktemp is really slow sometimes, so we prefer uuidgen
+#
+_make_tmp_in_dir()
+{
+   local tmpdir="$1"
+   local name="$2"
+   local filetype="$3"
+
+   [ ! -d "${tmpdir}" ] && fail "${tmpdir} does not exist"
+
+   name="${name:-${MULLE_EXECUTABLE_NAME}}"
+   name="${name:-mulle}"
+
+   local UUIDGEN 
+
+   UUIDGEN="`command -v "uuidgen"`"
+   if [ -z "${UUIDGEN}" ]
+   then
+      case "${filetype}" in
+         *d*)
+            TMPDIR="${tmpdir}" mktemp -d "${name}-XXXXXXXX"
+            return $?
+         ;;
+
+         *)
+            TMPDIR="${tmpdir}" mktemp "${name}-XXXXXXXX"
+            return $?
+         ;;
+      esac
+   fi
+
+   local filename
+   local prev
+
+   while :
+   do
+      prev="${filename}"
+      filename="${tmpdir}/${name}-`"${UUIDGEN}"`"
+
+      if [ "${prev}" = "${filename}" ]
+      then
+         internal_fail "uuidgen malfunction"
+      fi
+
+      case "${filetype}" in
+         *d*)
+            mkdir "${filename}" || exit 1
+            echo "${filename}"
+            return 0
+         ;;
+
+         *)
+            touch "${filename}" || exit 1
+            echo "${filename}"
+            return 0
+         ;;
+      esac
+   done
+}
+
+
 #
 # A separate file to that env can call it. there is no error checking or
 # log output here
@@ -115,9 +178,9 @@ run_shell()
 
    local initfile
 
-   if ! initfile=".mulle-env/var/tmp/`uuidgen`"
+   if ! initfile="`_make_tmp_in_dir ".mulle-env/var/tmp"`"
    then
-      echo "uuidgen failed" >&2
+      echo "Temporary initfile creation failed" >&2
       exit 255
    fi
 
