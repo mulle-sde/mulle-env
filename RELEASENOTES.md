@@ -1,3 +1,7 @@
+### 0.16.1
+
+* fixes for mingw
+
 ## 0.16.0
 
 * rename scopes to scope, improve usage info a little
