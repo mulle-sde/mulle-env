@@ -57,6 +57,10 @@ Usage:
    platform (os). See \`${MULLE_USAGE_NAME} environment scope help\` for more
    information about scopes.
 
+   Example. Clear a user set environment variable:
+      ${MULLE_USAGE_NAME} environment --user set MULLE_FETCH_SEARCH_PATH ""
+
+
 Options:
    -h                : show this usage
    --global          : scope for general environments variables

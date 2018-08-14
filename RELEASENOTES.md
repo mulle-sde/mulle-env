@@ -1,3 +1,7 @@
+### 0.16.2
+
+* improve usage info
+
 ### 0.16.1
 
 * fixes for mingw
