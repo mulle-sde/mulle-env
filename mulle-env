@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="0.16.2"
+MULLE_ENV_VERSION="0.17.0"
 
 #
 # The default for first time mulle-env
@@ -863,21 +863,21 @@ _run_subshell()
       ;;
 
       */relax|*/restrict|*/inherit)
-         [ ! -z "${DISPLAY}" ]   && s="`concat "${s}" "DISPLAY='${DISPLAY}'"`"
-         [ ! -z "${EDITOR}" ]    && s="`concat "${s}" "EDITOR='${EDITOR}'"`"
-         [ ! -z "${HOME}" ]      && s="`concat "${s}" "HOME='${HOME}'"`"
-         [ ! -z "${LOGNAME}" ]   && s="`concat "${s}" "LOGNAME='${LOGNAME}'"`"
-         [ ! -z "${LS_COLORS}" ] && s="`concat "${s}" "LS_COLORS='${LS_COLORS}'"`"
-         [ ! -z "${PS1}" ]       && s="`concat "${s}" "PS1='${PS1}'"`"
+         [ ! -z "${DISPLAY}" ]   && r_concat "${s}" "DISPLAY='${DISPLAY}'" && s="${RVAL}"
+         [ ! -z "${EDITOR}" ]    && r_concat "${s}" "EDITOR='${EDITOR}'" && s="${RVAL}"
+         [ ! -z "${HOME}" ]      && r_concat "${s}" "HOME='${HOME}'" && s="${RVAL}"
+         [ ! -z "${LOGNAME}" ]   && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
+         [ ! -z "${LS_COLORS}" ] && r_concat "${s}" "LS_COLORS='${LS_COLORS}'" && s="${RVAL}"
+         [ ! -z "${PS1}" ]       && r_concat "${s}" "PS1='${PS1}'" && s="${RVAL}"
          [ ! -z "${SSH_CONNECTION}" ] \
-                                 && s="`concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'"`"
-         [ ! -z "${SSH_TTY}" ]   && s="`concat "${s}" "SSH_TTY='${SSH_TTY}'"`"
-         [ ! -z "${TERM}" ]      && s="`concat "${s}" "TERM='${TERM}'"`"
-         [ ! -z "${TMPDIR}" ]    && s="`concat "${s}" "TMPDIR='${TMPDIR}'"`"
-         [ ! -z "${USER}" ]      && s="`concat "${s}" "USER='${USER}'"`"
-         [ ! -z "${VISUAL}" ]    && s="`concat "${s}" "VISUAL='${VISUAL}'"`"
+                                 && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
+         [ ! -z "${SSH_TTY}" ]   && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
+         [ ! -z "${TERM}" ]      && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
+         [ ! -z "${TMPDIR}" ]    && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
+         [ ! -z "${USER}" ]      && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
+         [ ! -z "${VISUAL}" ]    && r_concat "${s}" "VISUAL='${VISUAL}'" && s="${RVAL}"
          [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
-                                 && s="`concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'"`"
+                                 && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
       ;;
    esac
 
@@ -941,7 +941,10 @@ define_custom_environment()
       fail "Invalid Environment key \"${key}\""
    fi
 
-   CUSTOM_ENVIRONMENT="`concat "${CUSTOM_ENVIRONMENT}" "${key}='${value}'" `"
+   local RVAL
+
+   r_concat "${CUSTOM_ENVIRONMENT}" "${key}='${value}'"
+   CUSTOM_ENVIRONMENT="${RVAL}"
 }
 
 

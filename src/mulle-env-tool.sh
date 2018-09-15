@@ -268,8 +268,10 @@ _mulle_tool_remove_file()
    fi
 
    local escaped
+   local RVAL
 
-   escaped="`escaped_sed_pattern "${tool}"`"
+   r_escaped_sed_pattern "${tool}"
+   escaped="${RVAL}"
    inplace_sed -e "/^${escaped}\$/d" "${toolsfile}"
 
    local bindir

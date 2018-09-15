@@ -221,6 +221,7 @@ key_values_to_sed()
    local value
    local escaped_value
    local escaped_key
+   local RVAL
 
    IFS="
 "
@@ -236,8 +237,10 @@ key_values_to_sed()
       key="${line%%=*}"
       value="${line#${key}=}"
 
-      escaped_key="`escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"`"
-      escaped_value="`escaped_sed_pattern "${value}"`"
+      r_escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"
+      escaped_key="${RVAL}"
+      r_escaped_sed_pattern "${value}"
+      escaped_value="${RVAL}"
 
       # escape quotes for "eval line"
       # i really don't see why i need 6 backquotes here, but...
@@ -323,9 +326,12 @@ _env_environment_set()
    local escaped_value
    local sed_escaped_value
    local sed_escaped_key
+   local RVAL
 
-   sed_escaped_key="`escaped_sed_pattern "${key}"`"
-   sed_escaped_value="`escaped_sed_pattern "${value}"`"
+   r_escaped_sed_pattern "${key}"
+   sed_escaped_key="${RVAL}"
+   r_escaped_sed_pattern "${value}"
+   sed_escaped_value="${RVAL}"
 
    case "${MULLE_SHELL_MODE}" in
       *INTERACTIVE)
@@ -720,8 +726,10 @@ _env_environment_sed_get()
    local escaped_key
    local escaped_value
 
-   escaped_key="`escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"`"
-   escaped_value="`escaped_sed_pattern "${value}"`"
+   r_escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"
+   escaped_key="${RVAL}"
+   r_escaped_sed_pattern "${value}"
+   escaped_value="${RVAL}"
 
    # escape quotes for "eval line"
    escaped_key="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_key}"`"

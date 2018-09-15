@@ -249,10 +249,28 @@ case "\${MULLE_SHELL_MODE}" in
 
       unset FILENAME
       unset DEFAULT_IFS
+
+      if [ -z "${MULLE_SDE_NO_ALIAS}" ]
+      then
+         alias buildorder="mulle-sde buildorder"
+         alias clean="mulle-sde clean"
+         alias craft="mulle-sde craft"
+         alias dependency="mulle-sde dependency"
+         alias environment="mulle-sde environment"
+         alias extension="mulle-sde extension"
+         alias fetch="mulle-sde show"
+         alias show="mulle-sde find"
+         alias library="mulle-sde library"
+         alias log="mulle-sde log"
+         alias match="mulle-sde match"
+         alias monitor="mulle-sde monitor"
+         alias patternfile="mulle-sde patternfile"
+         alias subproject="mulle-sde subproject"
+         alias update="mulle-sde update"
+      fi
    ;;
 esac
 
-#
 #
 # show motd, if any
 #
