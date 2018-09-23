@@ -35,7 +35,10 @@ print_none_startup_sh()
    log_entry "print_none_startup_sh" "$@"
 
    cat <<EOF
-[ "\${TRACE}" = "YES" -o "\${MULLE_ENVIRONMENT_TRACE}" = "YES" ] && set -x  && : "\$0" "\$@"
+#######
+### none startup
+#######
+[ "\${TRACE}" = "YES" -o "\${ENVIRONMENT_SH_TRACE}" = "YES" ] && set -x  && : "\$0" "\$@"
 
 #
 # If mulle-env is broken, sometimes its nice just to source this file.
@@ -59,8 +62,14 @@ then
 your convenience" >&2
 fi
 
-alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/include-environment.sh"'
+#
+# now read in custom envionment (required)
+#
+. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/include-environment.sh"
 
+#
+# basic setup for interactive shells
+#
 case "\${MULLE_SHELL_MODE}" in
    *INTERACTIVE*)
       #
@@ -88,13 +97,44 @@ case "\${MULLE_SHELL_MODE}" in
       . "\${MULLE_ENV_LIBEXEC_DIR}/mulle-env-cd.sh"
       unset MULLE_ENV_LIBEXEC_DIR
 
-      mulle-env-reload
-   ;;
+      # install mulle-env-reload
 
-   *)
-      set -a ; mulle-env-reload     # export all definitions for command
-      eval \${COMMAND}  # must eval this so ls -1 \${MULLE_VIRTUAL_ROOT} works
-      exit \$?
+      alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/include-environment.sh"'
+
+
+      #
+      # source in any bash completion files
+      #
+      DEFAULT_IFS="\${IFS}"
+      shopt -s nullglob; IFS="
+"
+      for FILENAME in "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/libexec"/*-bash-completion.sh
+      do
+         . "\${FILENAME}"
+      done
+      shopt -u nullglob; IFS="\${DEFAULT_IFS}"
+
+      unset FILENAME
+      unset DEFAULT_IFS
+
+
+      #
+      # show motd, if any
+      #
+      if [ -z "\${NO_MOTD}" ]
+      then
+         if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd" ]
+         then
+            cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd"
+         else
+            if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd" ]
+            then
+               cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd"
+            fi
+         fi
+      else
+         unset NO_MOTD
+      fi
    ;;
 esac
 
@@ -107,8 +147,6 @@ print_none_include_sh()
    log_entry "print_none_include_sh" "$@"
 
    cat <<EOF
-[ "\${TRACE}" = "YES" ] && set -x  && : "\$0" "\$@"
-
 [ -z "\${MULLE_VIRTUAL_ROOT}" -o -z "\${MULLE_UNAME}"  ] && \\
    echo "Your script needs to setup MULLE_VIRTUAL_ROOT \\
 and MULLE_UNAME properly" >&2  && exit 1

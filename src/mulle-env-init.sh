@@ -32,8 +32,10 @@
 MULLE_ENV_INIT_SH="included"
 
 
-env_init_options()
+env_init_usage()
 {
+   [ $# -ne 0 ] && log_error "$*"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} [flags] init [options]
@@ -41,23 +43,22 @@ Usage:
    Initialize the working directory for mulle-env.
 
 Options:
-   -d <dir>           : specify directory
+   -d <dir>           : use directory "dir" instead of working directory
    --style <tool/env> : specify environment style
 
 EOF
 
    cat <<EOF >&2
 
-Tool-style:
+Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
    none          : no additions
    minimal       : a minimal set of tools (like cd, ls)
-   developer     : a common set of tools (like cd, ls, awk, man)
-   mulle         : extended set of tools to support mulle-sde (default)
+   developer     : a common set of tools (like cd, ls, awk, man) (default)
 
 Env-style:
    tight         : all environment variables are user defined
-   relax         : none + inherit some environment (e.g. SSH_TTY)
-   restrict      : relax + all /bin and /usr/bin tools (default)
+   relax         : none + inherit some environment (e.g. SSH_TTY) (default)
+   restrict      : relax + all /bin and /usr/bin tools
    inherit       : restrict + all PATH tools
    wild          : no restrictions
 EOF
@@ -70,14 +71,11 @@ env_init_main()
 {
    log_entry "env_init_main" "$@"
 
-   local OPTION_NINJA="DEFAULT"
-   local OPTION_CMAKE="DEFAULT"
-   local OPTION_SVN="DEFAULT"
-   local OPTION_AUTOCONF="DEFAULT"
    local OPTION_OTHER_TOOLS=
    local OPTION_BLURB="DEFAULT"
 
    local directory
+   local RVAL
 
    directory="${PWD}"
 
@@ -85,7 +83,7 @@ env_init_main()
    do
       case "$1" in
          -h*|--help|help)
-            usage
+            env_init_usage
          ;;
 
          -d|--directory)
@@ -95,44 +93,12 @@ env_init_main()
             directory="$1"
          ;;
 
-         --autoconf)
-            OPTION_AUTOCONF="YES"
-         ;;
-
-         --no-autoconf)
-            OPTION_AUTOCONF="NO"
-         ;;
-
          --blurb)
             OPTION_BLURB="YES"
          ;;
 
          --no-blurb)
             OPTION_BLURB="NO"
-         ;;
-
-         --cmake)
-            OPTION_CMAKE="YES"
-         ;;
-
-         --no-cmake)
-            OPTION_CMAKE="NO"
-         ;;
-
-         --ninja)
-            OPTION_NINJA="YES"
-         ;;
-
-         --no-ninja)
-            OPTION_NINJA="NO"
-         ;;
-
-         --svn)
-            OPTION_SVN="YES"
-         ;;
-
-         --no-svn)
-            OPTION_SVN="NO"
          ;;
 
          -s|--style)
@@ -154,7 +120,7 @@ env_init_main()
          ;;
 
          -*)
-            fail "Unknown option \"$1\""
+            env_init_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -193,6 +159,20 @@ env_init_main()
 
    stylefile="${sharedir}/style"
 
+   local style
+   local flavor
+
+   __get_user_style_flavor "${OPTION_STYLE}"
+   __load_flavor_plugin "${flavor}"
+   case "${style}" in
+      */inherit|*/relax|*/restrict|*/tight|*/wild)
+      ;;
+
+      *)
+         fail "unknown style \"${style}\""
+      ;;
+   esac
+
    if [ "${OPTION_MAGNUM_FORCE}" = "YES" ]
    then
       rmdir_safer ".mulle-env/var"
@@ -213,21 +193,6 @@ env_init_main()
 
    # indicate a fresh init by removing a possibly old versionfile
    remove_file_if_present "${versionfile}"
-
-   local style
-   local flavor
-
-   __get_user_style_flavor "${OPTION_STYLE}"
-   __load_flavor_plugin "${flavor}"
-
-   case "${style}" in
-      */inherit|*/relax|*/restrict|*/tight|*/wild)
-      ;;
-
-      *)
-         fail "unknown style \"${style}\""
-      ;;
-   esac
 
    log_verbose "Creating \"${envfile}\""
 

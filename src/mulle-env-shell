@@ -31,24 +31,31 @@
 #
 [ "${7}" = "YES" ] && set -x && : "mulle-env-shell" "$@"
 
-#set -x && : "mulle-env-shell" "$@"
+
+_fail()
+{
+   echo "$*" >&2
+   exit 255
+}
 
 
 #
 # mktemp is really slow sometimes, so we prefer uuidgen
 #
-_make_tmp_in_dir()
+r_make_tmp_in_dir()
 {
    local tmpdir="$1"
    local name="$2"
    local filetype="$3"
+
+   RVAL=""
 
    [ ! -d "${tmpdir}" ] && fail "${tmpdir} does not exist"
 
    name="${name:-${MULLE_EXECUTABLE_NAME}}"
    name="${name:-mulle}"
 
-   local UUIDGEN 
+   local UUIDGEN
 
    UUIDGEN="`command -v "uuidgen"`"
    if [ -z "${UUIDGEN}" ]
@@ -76,23 +83,37 @@ _make_tmp_in_dir()
 
       if [ "${prev}" = "${filename}" ]
       then
-         internal_fail "uuidgen malfunction"
+         _fail "uuidgen malfunction"
       fi
 
       case "${filetype}" in
          *d*)
             mkdir "${filename}" || exit 1
-            echo "${filename}"
+            RVAL="${filename}"
             return 0
          ;;
 
          *)
             touch "${filename}" || exit 1
-            echo "${filename}"
+            RVAL="${filename}"
             return 0
          ;;
       esac
    done
+}
+
+
+r_get_envfile()
+{
+   RVAL="${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}"
+   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}" ]
+   then
+      RVAL="${MULLE_VIRTUAL_ROOT}/.mulle-env/share/${ENVFILENAME}"
+   fi
+   if [ ! -f "${RVAL}" ]
+   then
+      _fail "\"${RVAL}\" not found, can not continue"
+   fi
 }
 
 
@@ -109,17 +130,10 @@ emit_initfile()
    echo "set +o posix"  # turn back to default
 
    local envfile
+   local RVAL
 
-   envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}"
-   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}" ]
-   then
-      envfile="${MULLE_VIRTUAL_ROOT}/.mulle-env/share/${ENVFILENAME}"
-   fi
-   if [ ! -f "${envfile}" ]
-   then
-      echo "\"${envfile}\" not found, can not continue" >&2
-      exit 1
-   fi
+   r_get_envfile
+   envfile="${RVAL}"
 
    if [ "${TRACE}" = "YES" ]
    then
@@ -129,12 +143,8 @@ emit_initfile()
      echo ". \"${envfile}\""
    fi
 
-   case "${MODE}" in
-      *INTERACTIVE*)
-         # try to set terminal title
-         echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
-      ;;
-   esac
+   # try to set terminal title
+   echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
 
    if [ "${TRACE}" = "YES" ]
    then
@@ -151,22 +161,35 @@ emit_initfile()
 }
 
 
-run_shell()
+run_script_shell()
 {
-   local envname
+   local args
+   local envfile
+   local RVAL
 
-   envname="`basename -- "${MULLE_VIRTUAL_ROOT}"`"
+   r_get_envfile
+   envfile="${RVAL}"
 
-   local cmd_env
-   local cmd_string
+   #
+   # For script this is somewhat easy. We emit
+   # . ${envfile} || exit 1 ; ${command}
+   #
+   printf -v args "%q" ". \"${envfile}\" || exit 1 ; $1"
 
-   cmd_string="`command -v "bash"`"
-   if [ -z "${cmd_string}" ]
-   then
-      echo "failed to locate bash" >&2
-      exit 255
-   fi
+   eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
+        "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
+        "MULLE_SHELL_MODE='${MODE}'" \
+        "MULLE_UNAME='${MULLE_UNAME}'" \
+        "TRACE='${TRACE}'" \
+        "NO_MOTD='YES'" \
+        "PATH='${RUNPATH}'" \
+            "'${BASH}'" -c "${args}"
+}
 
+
+
+run_interactive_shell()
+{
    #
    # Because some environment strings like
    # DYLD_LIBRARY_PATH are stripped off by dyld
@@ -176,25 +199,25 @@ run_shell()
    #
    mkdir -p ".mulle-env/var/tmp" 2> /dev/null
 
+   local RVAL
    local initfile
 
-   if ! initfile="`_make_tmp_in_dir ".mulle-env/var/tmp"`"
+   if ! r_make_tmp_in_dir ".mulle-env/var/tmp"
    then
-      echo "Temporary initfile creation failed" >&2
-      exit 255
+      _fail "Temporary initfile creation failed"
    fi
+   initfile="${RVAL}"
 
    if ! emit_initfile > "${initfile}"
    then
-      echo "Could not write \"${initfile}\"" >&2
-      exit 13
+      _fail "Could not write \"${initfile}\""
    fi
 
-   #
    # The only way to avoid SYS_BASHRC is to go posix.
    # But --posix doesn't work propely on darwin. But that doesn't have
    # SYS_BASHRC ...
    #
+   local cmd_env
    local cmd_options
 
    case "${MULLE_UNAME}" in
@@ -208,36 +231,14 @@ run_shell()
       ;;
    esac
 
-   # trying to get aliases back in "wild" is not fruitful portably IMO
+   # trying to get aliases back portably in "wild" is not fruitful  IMO
    case "${STYLE}" in
       *)
          cmd_options="${cmd_options} --noprofile"
       ;;
    esac
 
-   local args
-
-   #
-   # the proper way to escape strings for eval
-   #
-   printf -v args "%q" "$1"
-   [ $# -ne 0 ] && shift
-
-   if [ $# -ne 0 ]
-   then
-      echo "Superflous arguments \"$*\""
-      exit 12 # can't deal with that
-   fi
-
-   MULLE_ENV_LIBEXEC_DIR="`dirname -- "$0"`"
-
    local rval
-
-   #
-   # also clean some environment variables set by
-   # mulle-bashfunctions
-   #
-   unset MULLE_USER_PWD
 
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
@@ -246,23 +247,19 @@ run_shell()
         "TRACE='${TRACE}'" \
         "NO_MOTD='${NO_MOTD}'" \
         "PATH='${RUNPATH}'" \
-        "COMMAND=${args}" \
         "${cmd_env}" \
-            "'${cmd_string}'" \
+            "'${BASH}'" \
                "${cmd_options}"
+
    rval=$?
 
-   if [ "${OPTION_KEEP_TMP}" = "NO" ] && [ -f "${initfile}" ]
+   if [ "${OPTION_KEEP_TMP}" = "NO" ]
    then
-      rm "${initfile}"
+      ( rm "${initfile}" 2> /dev/null )
    fi
 
-   case "${MODE}" in
-      *INTERACTIVE*)
-         # try to reset
-         printf '\033]0;%s\007' ""
-      ;;
-   esac
+   printf '\033]0;%s\007' ""  # try to reset colors
+
    return ${rval}
 }
 
@@ -295,42 +292,42 @@ main()
       shift
    done
 
-   [ $# -lt 8 -o $# -gt 9 ] && echo "API mismatch ($# args: $*)" >&2 && exit 1
+   [ $# -lt 8 -o $# -gt 9 ] && _fail "API mismatch ($# args: $*)"
 
    local MULLE_UNAME
 
    MULLE_UNAME="$1"
-   [ -z "${MULLE_UNAME}" ] && echo "empty MULLE_UNAME" >&2 && exit 1
+   [ -z "${MULLE_UNAME}" ] && _fail "empty MULLE_UNAME"
    shift
 
    local MULLE_VIRTUAL_ROOT
 
    MULLE_VIRTUAL_ROOT="$1"
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && echo "empty MULLE_VIRTUAL_ROOT" >&2 && exit 1
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _fail "empty MULLE_VIRTUAL_ROOT"
    shift
 
    local RUNPATH
 
    RUNPATH="$1"
-   [ -z "${RUNPATH}" ] && echo "empty RUNPATH" >&2 && exit 1
+   [ -z "${RUNPATH}" ] && _fail "empty RUNPATH"
    shift
 
    local MODE  # either SCRIPT or INTERACTIVE
 
    MODE="$1"
-   [ -z "${MODE}" ] && echo "empty MODE" >&2 && exit 1
+   [ -z "${MODE}" ] && _fail "empty MODE"
    shift
 
    local STYLE  # wild or else
 
    STYLE="$1"
-   [ -z "${STYLE}" ] && echo "empty STYLE" >&2 && exit 1
+   [ -z "${STYLE}" ] && _fail "empty STYLE"
    shift
 
    local ENVFILENAME  # environment.sh or so
 
    ENVFILENAME="$1"
-   [ -z "${ENVFILENAME}" ] && echo "empty ENVFILENAME" >&2 && exit 1
+   [ -z "${ENVFILENAME}" ] && _fail "empty ENVFILENAME"
    shift
 
    local TRACE  # either YES or usually empty
@@ -343,8 +340,34 @@ main()
    NO_MOTD="$1"
    shift
 
-   # remainder is "command"
-   run_shell "$@"
+   local MULLE_ENV_LIBEXEC_DIR
+
+   MULLE_ENV_LIBEXEC_DIR="`dirname -- "$0"`"
+
+   #
+   # Clean some environment variables set by
+   # mulle-bashfunctions
+   #
+   unset MULLE_USER_PWD
+
+   local BASH
+
+   BASH="`command -v "bash"`"
+   if [ -z "${BASH}" ]
+   then
+      _fail "failed to locate bash"
+   fi
+
+   # remainder is "command" for SCRIPT
+   case "${MODE}" in
+      *INTERACTIVE*)
+         run_interactive_shell
+      ;;
+
+      *)
+         run_script_shell "$1"  # it's a command string
+      ;;
+   esac
 }
 
 

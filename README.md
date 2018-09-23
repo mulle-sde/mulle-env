@@ -1,23 +1,51 @@
 # mulle-env, 🌳 Virtual environment for Unix
 
-**mulle-env** is a sub-shell that provides a restricted environment.
-Developing inside the **mulle-env** sub-shell protects you from the following
+**mulle-env** provides a virtual environment as an interactive shell.
+Developing inside the **mulle-env** shell protects you from the following
 common mistakes:
 
 * inadvertant reliance on non-standard tools
 * reproducabilty problems due to non-standard environment variables
 
-Executable          | Description
+With **mulle-env** you can easily manage
+
+* the command line tools available in the virtual environment
+* additional virtual environment variables with multiple scopes, like per-user or
+per-host.
+
+
+
+Commands            | Description
 --------------------|--------------------------------
 `mulle-env`         | Virtual environment sub-shell
 `mudo`              | Run a command with the unrestricted PATH
+`mulle-env-reload`  | Refresh virtual environment variables
 
 
 ## Install
 
-See [mulle-sde-developer](//github.com/mulle-sde/mulle-sde-developer) how
-to install mulle-sde.
+## Packages
 
+OS      | Command
+--------|------------------------------------
+macos   | `brew install mulle-kybernetik/software/mulle-env`
+debian  | `sudo apt-get -y install mulle-env` (but see below)
+ubuntu  | same as debian
+
+
+Otherwise see [mulle-sde-developer](//github.com/mulle-sde/mulle-sde-developer)
+how to install mulle-sde, which will also install **mulle-env**.
+
+#### Debian Mulle kybernetiK repository
+
+For apt installation you need to add the Mulle kybernetiK debian repository
+first:
+
+```
+wget -O - "https://www.mulle-kybernetik.com/dists/debian-admin-pub.asc" | sudo apt-key add -
+echo "deb [arch=all] http://www.mulle-kybernetik.com `lsb_release -c -s` main" | sudo tee "/etc/apt/sources.list.d/mulle-kybernetik.com-main.list" > /dev/null
+sudo apt-get update
+```
 
 ## What mulle-env does in a nutshell
 
@@ -95,7 +123,6 @@ And this is what happens:
 ![dox](dox/mulle-env-overview.png)
 
 
-
 ```
 $ mulle-env project
 Enter the environment:
@@ -120,6 +147,15 @@ And we leave the subshell with
 $ exit
 ```
 
+You can also run a command in the environment without an interactive subshell
+with the '-c' flag, like you would using bash:
+
+
+```
+$ mulle-env -c 'echo "${PATH}"'
+```
+
+
 ## Styles
 
 A style is mix of a tool-style and an environment style of the form
@@ -130,23 +166,26 @@ The env style determines the filtering of the environment variables.
 The tool style determines the change of the PATH variables,
 in the environment styles `tight`, `relax`, `inherit`.
 
+> Toolstyles can be augmented with plugins. See `mulle-env toolstyles` for
+> what's available.
+
 Tool Style  | Descripton
 ------------|--------------------------
 `none`      | No default commands available.
 `minimal`   | PATH with a minimal `/bin` like set of tools like `ls` or `chmod`
 `developer` | PATH with a a set of common unix tools like `awk` or `man` in addition to `minimal`
-`mulle`     | developer + support mulle-sde (default)
 
 
 Environment Style | Description
 ------------------|--------------------------
 `tight`           | All environment variables must be defined via `mulle-env`
 `relax`           | Inherit some environment environment variables (e.g. SSH_TTY)
-`restrict`        | In addition to `relax`  + all /bin and /usr/bin tools (default)
+`restrict`        | In addition to `relax`  + all /bin and /usr/bin tools
 `inherit`         | The environment is restricted but tool style is ignored and the original PATH is unchanged.
 `wild`            | The environment unchanged and the tool style is ignored.
 
-## Tasks
+
+## Enviroment
 
 #### Enter the subshell
 
@@ -160,6 +199,13 @@ mulle-env
 ```
 exit
 ```
+
+#### Run any command
+
+```
+mulle-env -c ls
+```
+
 
 ## Manage tools
 
@@ -180,6 +226,7 @@ Remove a tool
 ```
 mulle-env tool remove git
 ```
+
 
 ## Manage environment variables
 
@@ -225,14 +272,16 @@ Use `mulle-env -f init` to overwrite a previous environment.
 
 #### Specify a global list of tools
 
-Tools that you always require can be specified globally
+Tools that you always require can be specified in your home directory as
 `~/.config/mulle-env/tool`. These will be installed in addition to those found
 in `.mulle-env/etc/tool`.
 
+
 #### Specify optionals tools
 
-Tools that are nice to have, but aren't required for building the project
-can be placed into `.mulle-env/etc/optionaltool`.
+Tools that are nice to have, but aren't required can be placed into
+`.mulle-env/etc/optionaltool`.
+
 
 #### Specify platform specific tools
 
@@ -243,6 +292,7 @@ with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
 
 Platform specific tool configuration files take precedence over the
 cross-platform ones without the extension.
+
 
 #### Specify personal preferences (like a different shell)
 

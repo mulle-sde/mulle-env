@@ -1,6 +1,6 @@
 #! /bin/sh
 
-[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+[ "${TRACE}" = "YES" -o "${MUDO_TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 if [ $# -eq 0 ]
 then

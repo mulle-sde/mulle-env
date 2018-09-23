@@ -32,23 +32,54 @@
 MULLE_ENV_PLUGINS_SH="included"
 
 
-env_all_plugin_names()
+r_plugin_searchpath()
 {
-   log_entry "env_all_plugin_names"
+   r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/../share/mulle-env/plugins"
+   r_colon_concat "${RVAL}" \
+                  "${MULLE_ENV_LIBEXEC_DIR}/plugins"
+   r_colon_concat "${MULLE_ENV_PLUGIN_PATH}" "${RVAL}"
 
-   local pluginpath
+   log_debug "plugin searchpath: ${RVAL}"
+}
+
+
+_env_all_plugin_names()
+{
+   log_entry "_env_all_plugin_names"
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "DEFAULT_IFS not set"
    [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
 
-   IFS="
-"
-   for pluginpath in `ls -1 "${MULLE_ENV_LIBEXEC_DIR}/plugins/"*.sh`
+   local searchpath
+   local RVAL
+
+   r_plugin_searchpath
+   searchpath="${RVAL}"
+
+   local directory
+   local pluginpath
+
+   IFS=":"
+   for directory in ${searchpath}
    do
-      basename -- "${pluginpath}" .sh
+      IFS="
+"
+      for pluginpath in `ls -1 "${directory}"/*.sh 2> /dev/null`
+      do
+         basename -- "${pluginpath}" .sh
+      done
+      IFS=":"
    done
 
    IFS="${DEFAULT_IFS}"
+}
+
+
+env_all_plugin_names()
+{
+   log_entry "env_all_plugin_names" "$@"
+
+   _env_all_plugin_names "$@" | sort -u
 }
 
 
@@ -58,16 +89,34 @@ env_load_plugin()
 
    local flavor="$1"
 
+   [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && \
+      internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
+
+   local searchpath
+   local RVAL
+
+   r_plugin_searchpath
+   searchpath="${RVAL}"
+
+   local directory
    local pluginpath
 
-   [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
+   IFS=":"
+   for directory in ${searchpath}
+   do
+      IFS="${DEFAULT_IFS}"
 
-   pluginpath="${MULLE_ENV_LIBEXEC_DIR}/plugins/${flavor}.sh"
-   if [ -f "${pluginpath}" ]
-   then
-      . "${pluginpath}"
-      log_fluff "Env plugin \"${flavor}\" loaded"
-   else
-      fail "No plugin \"${flavor}\" found (${pluginpath})"
-   fi
+      pluginpath="${directory}/${flavor}.sh"
+      if [ -f "${pluginpath}" ]
+      then
+         . "${pluginpath}" || exit 1
+
+         log_fluff "Env plugin \"${flavor}\" loaded"
+         return
+      fi
+      IFS=":"
+   done
+   IFS="${DEFAULT_IFS}"
+
+   fail "No plugin \"${flavor}\" found in ${searchpath}"
 }

@@ -40,6 +40,7 @@ SHOWN_COMMANDS="\
    list              : list environment variables
    set               : set an environment variable
    get               : get value of an environment variable
+   scopes            : list available scopes
 "
 
 HIDDEN_COMMANDS="\
@@ -1274,7 +1275,17 @@ env_environment_scope_main()
    local scope
    local filename
 
-   log_info "Session Scopes"
+   if [ "${OPTION_SHARE}" = "NO" -a "${OPTION_PROJECT}" = "NO" -a "${OPTION_AUX}" = "NO" ]
+   then
+      log_info "User Scopes"
+   else
+      if [ "${OPTION_SHARE}" = "YES" -a "${OPTION_PROJECT}" = "YES" -a "${OPTION_AUX}" = "YES" ]
+      then
+         log_info "All Scopes"
+      else
+         log_info "Partial Scopes"
+      fi
+   fi
 
    set -f
    for scope in aux project share global os-${MULLE_UNAME} host-${MULLE_HOSTNAME} user-${USER}
@@ -1450,7 +1461,7 @@ env_environment_main()
          env_environment_set_main "${OPTION_SCOPE}" "$@"
       ;;
 
-      scope)
+      scope|scopes)
          env_environment_scope_main "$@"
       ;;
 
