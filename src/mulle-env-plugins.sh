@@ -83,20 +83,15 @@ env_all_plugin_names()
 }
 
 
-env_load_plugin()
+_env_load_plugin()
 {
-   log_entry "env_load_plugin" "$@"
+   log_entry "_env_load_plugin" "$@"
 
    local flavor="$1"
+   local searchpath="$2"
 
    [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && \
       internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
-
-   local searchpath
-   local RVAL
-
-   r_plugin_searchpath
-   searchpath="${RVAL}"
 
    local directory
    local pluginpath
@@ -111,12 +106,33 @@ env_load_plugin()
       then
          . "${pluginpath}" || exit 1
 
-         log_fluff "Env plugin \"${flavor}\" loaded"
-         return
+         return 0
       fi
       IFS=":"
    done
    IFS="${DEFAULT_IFS}"
 
-   fail "No plugin \"${flavor}\" found in ${searchpath}"
+   return 1
+}
+
+
+env_load_plugin()
+{
+   log_entry "env_load_plugin" "$@"
+
+   local flavor="$1"
+
+   local searchpath
+   local RVAL
+
+   r_plugin_searchpath
+   searchpath="${RVAL}"
+
+   if _env_load_plugin "${flavor}" "${searchpath}"
+   then
+      log_fluff "Env plugin \"${flavor}\" loaded"
+      return
+   fi
+
+   fail "No plugin \"${flavor}\" found in \"${searchpath}\""
 }

@@ -537,7 +537,24 @@ __load_flavor_plugin()
    # shellcheck source=src/mulle-env-plugins.sh
    . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
 
-   env_load_plugin "${flavor}"
+   local searchpath
+   local RVAL
+
+   r_plugin_searchpath
+   searchpath="${RVAL}"
+
+   if ! _env_load_plugin "${flavor}" "${searchpath}"
+   then
+      if [ "${OPTION_MAGNUM_FORCE}" != "YES" ]
+      then
+         fail "No plugin \"${flavor}\" found in \"${searchpath}\".
+${C_INFO}Fixes:
+   * install the missing mulle-env plugin or modify MULLE_ENV_PLUGIN_PATH
+   * use ${MULLE_USAGE_NAME} -f to skip this check.
+   * change to an available style with ${MULLE_USAGE_NAME} --style"
+      fi
+      return 1
+   fi
 }
 
 
@@ -820,7 +837,13 @@ _run_subshell()
       ;;
    esac
 
-   __load_flavor_plugin "${flavor}"
+   if ! __load_flavor_plugin "${flavor}"
+   then
+      if [ "${style}" != "${oldstyle}" ]
+      then
+         fail "Plugin \"${flavor}\" is not available. Current style is \"${oldstyle}\""
+      fi
+   fi
 
    local s
 
