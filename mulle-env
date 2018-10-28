@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${TRACE}" = "YES" -o "${MULLE_ENV_TRACE}" = "YES" ] && set -x && : "$0" "$@"
+[ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 MULLE_ENV_VERSION="1.0.0"
 
@@ -171,7 +171,7 @@ env_link_other_tool()
    filename="`command -v "${toolname}" `"
    if [ -z "${filename}" ]
    then
-      if [ "${isrequired}" = "YES" ]
+      if [ "${isrequired}" = 'YES' ]
       then
          fail "Required tool \"${toolname}\" not found"
       fi
@@ -282,11 +282,11 @@ env_setup_other_tools()
       then
          case "${toolfile}" in
             optional-*|*/optional-*)
-               env_link_other_tools "${tools}" "${bindir}" "NO"
+               env_link_other_tools "${tools}" "${bindir}" 'NO'
             ;;
 
             *)
-               env_link_other_tools "${tools}" "${bindir}" "YES"
+               env_link_other_tools "${tools}" "${bindir}" 'YES'
             ;;
          esac
       fi
@@ -354,7 +354,7 @@ If yes, check your tool lists."
       if ${callback} "${directory}"
       then
          log_fluff "Flavor \"${flavor}\" needs update"
-         needs_flavor_update="YES"
+         needs_flavor_update='YES'
       else
          log_fluff "Flavor \"${flavor}\" is up-to-date"
       fi
@@ -385,7 +385,7 @@ If yes, check your tool lists."
    do
       IFS="${DEFAULT_IFS}"
 
-      if [ "${OPTION_MAGNUM_FORCE}" = "YES" -a -f "${toolfile}" ] || \
+      if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' -a -f "${toolfile}" ] || \
          [ "${toolfile}" -nt "${uptodatefile}" ]
       then
          log_fluff "Tools \"${toolfile}\" needs update"
@@ -461,6 +461,7 @@ __get_saved_style_flavor()
          style="`sed -e '/^#/d' -e 's|:|/|g' "${fallback}/style" `"
       fi
    fi
+
    if [ -z "${style}" ]
    then
       r_simplified_absolutepath "${directory}"
@@ -469,10 +470,10 @@ __get_saved_style_flavor()
       if [ "${directory%%/.mulle-env/etc}" != "${MULLE_USER_PWD}" ]
       then
          fail "No properly setup environment found in candidate project \
-directory \"${directory%%/.mulle-env/etc}\"."
+directory \"${directory}\" or \"${fallback}\" - style is missing."
       else
          fail "No properly setup environment found in \
-\"${directory%%/.mulle-env/etc}\"."
+\"${directory}\" or \"${fallback}\" - style is missing."
       fi
    fi
    flavor="${style%%/*}"
@@ -485,7 +486,7 @@ __check_version()
 
    local fallback="$1"
 
-   if [ "${OPTION_MAGNUM_FORCE}" != "YES" ]
+   if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
    then
       local version
 
@@ -498,8 +499,9 @@ __check_version()
          0\.*)
             # incompatible change of -c execution, otherwise try to support
             # and make this a warning
-            fail "You should upgrade this environment (version ${version})
-as it is too old for mulle-env ${MULLE_ENV_VERSION}."
+            fail "This environment with version ${version} is too old for
+mulle-env ${MULLE_ENV_VERSION}.
+${C_INFO}You can upgrade it to ${MULLE_ENV_VERSION} with \`mulle-env upgrade\`"
          ;;
 
          1\.*)
@@ -545,7 +547,7 @@ __load_flavor_plugin()
 
    if ! _env_load_plugin "${flavor}" "${searchpath}"
    then
-      if [ "${OPTION_MAGNUM_FORCE}" != "YES" ]
+      if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
       then
          fail "No plugin \"${flavor}\" found in \"${searchpath}\".
 ${C_INFO}Fixes:
@@ -554,6 +556,8 @@ ${C_INFO}Fixes:
    * change to an available style with ${MULLE_USAGE_NAME} --style"
       fi
       return 1
+   else
+   	log_verbose "Using plugin ${C_MAGENTA}${C_BOLD}${flavor}"
    fi
 }
 
@@ -568,11 +572,13 @@ find_best_environment()
    local best
 
    best="${start}"
-   directory="`absolutepath "${start}"`"  # paranoia
+   r_absolutepath "${start}"
+   directory="${RVAL}"  # paranoia
 
    while :
    do
-      directory="`fast_dirname "${directory}"`"
+      r_fast_dirname "${directory}"
+      directory="${RVAL}"
 
       # look for .mulle-env/*/environment.sh going up to root, if we
       # find one, we latch onto it
@@ -665,7 +671,7 @@ _default_setup_environment()
 
    local directory="${1:-${PWD}}"
 
-   if [ "${OPTION_SEARCH}" = "YES" ]
+   if [ "${OPTION_SEARCH}" = 'YES' ]
    then
       directory="`find_best_environment "${PWD}"`"
    fi
@@ -760,7 +766,7 @@ _run_subshell()
          directory="${callerdirectory}"
          if [ "${OPTION_SEARCH}" = "DEFAULT" ]
          then
-            OPTION_SEARCH="YES"
+            OPTION_SEARCH='YES'
          fi
 
       else
@@ -915,7 +921,7 @@ undefined (old mulle-bashfunctions)"
    log_debug "future PATH=${runpath}"
 
    rundirectory="${MULLE_VIRTUAL_ROOT}"
-   if [ "${OPTION_SEARCH}" = "YES" ]
+   if [ "${OPTION_SEARCH}" = 'YES' ]
    then
       rundirectory="${callerdirectory}"
    fi
@@ -938,6 +944,7 @@ undefined (old mulle-bashfunctions)"
    case "${style}" in
       */wild)
          unset MULLE_EXECUTABLE_NAME
+         unset MULLE_ENV_PLUGIN_PATH
          unset MULLE_USAGE_NAME
       ;;
 
@@ -992,6 +999,37 @@ undefined (old mulle-bashfunctions)"
 }
 
 
+assert_valid_environment_key()
+{
+   log_entry "assert_valid_environment_key" "$@"
+
+   local key="$1"
+
+   local identifier
+
+   case "${OPTION_IDENTIFIERCASE}" in
+      UPPERCASE_ONLY)
+         identifier="`printf "%s" "${key}" | tr -c 'a-zA-Z0-9' '_' | tr 'a-z' 'A-Z'`"
+      ;;
+
+      *)
+         identifier="`printf "%s" "${key}" | tr -c 'a-zA-Z0-9' '_'`"
+      ;;
+   esac
+
+   if [ "${key}" != "${identifier}" ]
+   then
+      fail "\"${key}\" is not a valid environment identifier"
+   fi
+
+   case "${identifier}" in
+      [0-9]*)
+         fail "\"${key}\" is not a valid environment identifier"
+      ;;
+   esac
+}
+
+
 define_custom_environment()
 {
    log_entry "define_custom_environment" "$@"
@@ -1015,10 +1053,7 @@ define_custom_environment()
       value="${keyvalue#*=}"
    fi
 
-   if [ "${key}" != "`printf "%q" "${key}"`" ]
-   then
-      fail "Invalid Environment key \"${key}\""
-   fi
+   assert_valid_environment_key "${key}"
 
    local RVAL
 
@@ -1029,10 +1064,11 @@ define_custom_environment()
 
 main()
 {
+   # todo rename these to FLAG
    local OPTION_DIRECTORY
    local OPTION_SHELL_COMMAND
-   local OPTION_KEEP_TMP="NO"
-   local OPTION_MAGNUM_FORCE=
+   local OPTION_KEEP_TMP='NO'
+   local MULLE_FLAG_MAGNUM_FORCE=
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCH="DEFAULT"
 
@@ -1106,7 +1142,7 @@ main()
          ;;
 
          -f|--force)
-            OPTION_MAGNUM_FORCE="YES"
+            MULLE_FLAG_MAGNUM_FORCE='YES'
          ;;
 
          -d|--directory)
@@ -1136,11 +1172,11 @@ main()
          ;;
 
          --keep-tmp)
-            OPTION_KEEP_TMP="YES"
+            OPTION_KEEP_TMP='YES'
          ;;
 
          --no-motd)
-            NO_MOTD="YES"
+            NO_MOTD='YES'
          ;;
 
          -s|--style)
@@ -1151,11 +1187,15 @@ main()
          ;;
 
          --search)
-            OPTION_SEARCH="YES"
+            OPTION_SEARCH='YES'
          ;;
 
-         -ns|--no-search)
-            OPTION_SEARCH="NO"
+         --uppercase-only)
+            OPTION_IDENTIFIERCASE='UPPERCASE_ONLY'
+         ;;
+
+         -N|--no-search)
+            OPTION_SEARCH='NO'
          ;;
 
          --)
@@ -1227,7 +1267,7 @@ wild"
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
-         OPTION_MAGNUM_FORCE="YES"
+         MULLE_FLAG_MAGNUM_FORCE='YES'
          env_init_main --style "${style}"
          return $?
       ;;
@@ -1281,7 +1321,7 @@ wild"
       ;;
 
       upgrade)
-         OPTION_MAGNUM_FORCE="YES"
+         MULLE_FLAG_MAGNUM_FORCE='YES'
 
          local style
          local flavor

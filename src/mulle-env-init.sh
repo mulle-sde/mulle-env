@@ -44,12 +44,12 @@ Usage:
 
 Options:
    -d <dir>           : use directory "dir" instead of working directory
+   --no-blurb         : don't print helpful info at exit
    --style <tool/env> : specify environment style
 
 EOF
 
    cat <<EOF >&2
-
 Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
    none          : no additions
    minimal       : a minimal set of tools (like cd, ls)
@@ -65,6 +65,42 @@ EOF
    exit 1
 }
 
+
+custom_environment_init()
+{
+   log_entry "custom_environment_init" "$@"
+
+   local keyvalue
+
+   local key
+   local quotedvalue
+
+   [ -z "${CUSTOM_ENVIRONMENT}" ] && return
+
+   [ -z "${MULLE_ENV_ENVIRONMENT_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh"
+
+   #
+   # use custom environment values to set plugin environment
+   # more or less to keep user expectations up with regards to
+   # flags. Can't set it in global though. They will be clobbered
+   # by an upgrade
+   #
+   set -f; IFS="
+"
+   for keyvalue in ${CUSTOM_ENVIRONMENT}
+   do
+      set +f; IFS="${DEFAULT_IFS}"
+
+      key="${keyvalue%%=*}"
+      value="${keyvalue#*=\'}"
+      value="${value%\'}"
+
+      log_warning "Environment variable \"${key}\" will be lost on next upgrade"
+
+      env_environment_set_main "plugin" "${key}" "${value}" "no comment" || exit 1
+   done
+   set +f; IFS="${DEFAULT_IFS}"
+}
 
 
 env_init_main()
@@ -94,11 +130,11 @@ env_init_main()
          ;;
 
          --blurb)
-            OPTION_BLURB="YES"
+            OPTION_BLURB='YES'
          ;;
 
          --no-blurb)
-            OPTION_BLURB="NO"
+            OPTION_BLURB='NO'
          ;;
 
          -s|--style)
@@ -116,7 +152,7 @@ env_init_main()
          ;;
 
          --upgrade)
-            OPTION_UPGRADE="YES"
+            OPTION_UPGRADE='YES'
          ;;
 
          -*)
@@ -135,6 +171,7 @@ env_init_main()
 
    local envfile
    local envincludefile
+   local auxscopesfile
    local toolsfile
    local stylefile
    local versionfile
@@ -144,14 +181,19 @@ env_init_main()
 
    MULLE_ENV_DIR="${directory}/.mulle-env"
 
+   if [ "${OPTION_UPGRADE}" = 'YES' -a ! -d "${MULLE_ENV_DIR}" ]
+   then
+      fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_DIR}"
+   fi
+
    sharedir="${MULLE_ENV_DIR}/share"
 
    envfile="${sharedir}/environment.sh"
    envincludefile="${sharedir}/include-environment.sh"
 
-   # user editable stuff goes into in etc
-   auxfile="${sharedir}/environment-aux.sh"
+   pluginfile="${sharedir}/environment-plugin.sh"
    completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
+   auxscopesfile="${sharedir}/auxscopes"
 
    toolsfile="${sharedir}/tool"
    optional_toolsfile="${sharedir}/optionaltool"
@@ -173,7 +215,7 @@ env_init_main()
       ;;
    esac
 
-   if [ "${OPTION_MAGNUM_FORCE}" = "YES" ]
+   if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
    then
       rmdir_safer ".mulle-env/var"
       # don't throw away share though
@@ -181,7 +223,7 @@ env_init_main()
       # remove some known trouble makers...
       remove_file_if_present ".mulle-env/etc/style"
    else
-      if [ "${OPTION_UPGRADE}" != "YES" -a -f "${envfile}" ]
+      if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
       then
          log_warning "\"${envfile}\" already exists"
          return 2
@@ -204,7 +246,12 @@ env_init_main()
    fi
    redirect_exekutor "${envfile}" echo "${text}"
 
-   local text
+   text="`print_${flavor}_auxscopes_sh "${style}" `"
+   if [ ! -z "${text}" ]
+   then
+      log_verbose "Creating \"${auxscopesfile}\""
+      redirect_exekutor "${auxscopesfile}" echo "${text}"
+   fi
 
    log_verbose "Creating \"${envincludefile}\""
    if ! text="`print_${flavor}_include_sh "${style}" `"
@@ -213,12 +260,12 @@ env_init_main()
    fi
    redirect_exekutor "${envincludefile}" echo "${text}"
 
-   log_verbose "Creating \"${auxfile}\""
+   log_verbose "Creating \"${pluginfile}\""
    if ! text="`print_${flavor}_environment_aux_sh "${style}" `"
    then
       return 1
    fi
-   redirect_exekutor "${auxfile}" echo "${text}"
+   redirect_exekutor "${pluginfile}" echo "${text}"
 
    # add more os flavors later
    for os in darwin freebsd linux mingw
@@ -226,17 +273,19 @@ env_init_main()
       callback="print_${flavor}_environment_os_${os}_sh"
       if [ "`type -t "${callback}"`" = "function" ]
       then
-         darwinauxfile="${sharedir}/environment-os-${os}.sh"
-         log_verbose "Creating \"${darwinauxfile}\""
+         local pluginosfile
+
+         pluginosfile="${sharedir}/environment-plugin-os-${os}.sh"
+         log_verbose "Creating \"${pluginosfile}\""
          if ! text="`${callback} "${style}" `"
          then
             return 1
          fi
-         redirect_exekutor "${darwinauxfile}" echo "${text}"
+         redirect_exekutor "${pluginosfile}" echo "${text}"
       fi
    done
 
-   if [ "${OPTION_UPGRADE}" != "YES" ]
+   if [ "${OPTION_UPGRADE}" != 'YES' ]
    then
       log_verbose "Creating \"${toolsfile}\""
       if ! text="`print_${flavor}_tools_sh "${style}" `"
@@ -261,6 +310,8 @@ env_init_main()
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
 
+   custom_environment_init
+
    # we create this last, if its present than the init ran through
    log_verbose "Creating \"${versionfile}\""
    redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
@@ -268,7 +319,7 @@ env_init_main()
    # chowning the directory is bad for git
    find "${sharedir}" -type f -exec chmod a-w {} \;
 
-   if [ "${OPTION_UPGRADE}" != "YES" -a "${OPTION_BLURB}" != "NO" ]
+   if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
    then
       log_info "Enter the environment:
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory#${MULLE_USER_PWD}/}\"${C_INFO}"

@@ -1,7 +1,7 @@
 # mulle-env, 🌳 Virtual environment for Unix
 
 **mulle-env** provides a virtual environment as an interactive shell.
-Developing inside the **mulle-env** shell protects you from the following
+Developing inside the mulle-env shell protects you from the following
 common mistakes:
 
 * inadvertant reliance on non-standard tools
@@ -10,9 +10,10 @@ common mistakes:
 With **mulle-env** you can easily manage
 
 * the command line tools available in the virtual environment
-* additional virtual environment variables with multiple scopes, like per-user or
-per-host.
+* additional virtual environment variables with multiple scopes, like on a per-user or per-host basis.
 
+Therefore a directory can become a self containe virtual environment using
+mulle-env.
 
 
 Commands            | Description
@@ -110,7 +111,7 @@ Notice the absence of most environment variables and see how restricted the
 
 ## Prepare a directory to use mulle-env
 
-A directory must be "init"ed, before you can use **mulle-env** with it.
+A directory must be initialized, before you can use **mulle-env** on it.
 Let's try an example with a `project` directory. We want a minimal portable set
 of commandline tools, so we specify the style as "minimal/tight".
 
@@ -231,10 +232,31 @@ mulle-env tool remove git
 ## Manage environment variables
 
 
+There are multiple environment variable domains, that override each other
+in top (weakest) to bottom (strongest) fashion. User values should not be
+manipulated by tools, where as non-user values will lose changes on
+later mulle-env upgrades.
+
+
+Domain        | User Value | Description
+--------------|------------|----------------------------------
+`plugin`      | NO         | Values set by a mulle-env plugin
+`global`      | YES        | Global user values
+`os-<name>`   | YES        | Operating system specific user values
+`host-<name>` | YES        | Host specific user values
+`user-<name>` | YES        | User specific user values
+
+
 List all environment variables
 
 ```
 mulle-env environment list
+```
+
+Set an environment variable
+
+```
+mulle-env environment --global set FOO "whatever"
 ```
 
 Get an environment variable
@@ -243,16 +265,10 @@ Get an environment variable
 mulle-env environment get FOO
 ```
 
-Set an environment variable
-
-```
-mulle-env environment set FOO "whatever"
-```
-
 Remove an environment variable
 
 ```
-mulle-env tool set FOO ""
+mulle-env environment set FOO ""
 ```
 
 
@@ -264,6 +280,7 @@ mulle-env tool set FOO ""
 
 Use `mulle-env --style none/restrict init` when initalizing your environment.
 > `mulle-restrict` is the default as it gives access to the **mulle-sde**.
+
 
 #### Reinitialize an environment
 
@@ -298,15 +315,18 @@ cross-platform ones without the extension.
 
 Short of executing `exec zsh` - or whatever the shell flavor du jour is -
 everytime you enter the **mulle-env** subshell, you can add this to your
-`.mulle-env/etc/environment-${USER}-user.sh` file:
+`.mulle-env/etc/environment-custom.sh` file:
 
 ```
-$ cat <<EOF >> .mulle-env/etc/environment-${USER}-user.sh
-case "${MULLE_SHELL_MODE}" in
-   *INTERACTIVE*)
-      exec /bin/zsh
-   ;;
-esac
+$ cat <<EOF >> .mulle-env/etc/environment-custom.sh
+if [ "${LOGNAME}" = "moi"]
+then
+   case "${MULLE_SHELL_MODE}" in
+      *INTERACTIVE*)
+         exec /bin/zsh
+      ;;
+   esac
+fi
 EOF
 ```
 

@@ -40,7 +40,7 @@ env_tool_usage()
 Usage:
    ${MULLE_USAGE_NAME} tool [options] <command>
 
-   Manage commandline tools for a -restrict or -tight environment.
+   Manage commandline tools for a 'restrict' or 'tight' style environment.
    See \`${MULLE_EXECUTABLE_NAME} init\` for more information about
    environment styles.
 
@@ -79,12 +79,12 @@ env_tool_add_usage()
 Usage:
    ${MULLE_USAGE_NAME} tool add <tool>
 
-   Add a tool to the list of tools available to the subshell.
-   This doesn't install the tool, but merely symlinks it if
-   the current environment style needs it.
+   Add a tool to the list of tools available to the subshell. This doesn't
+   install the tool, but merely symlinks it if the current environment style
+   needs it.
 
-   You can change the optionality of a tool, by re-adding it
-   with the desired optionality.
+   You can change the optionality of a tool, by re-adding it with the desired
+   optionality.
 
    Example:
       ${MULLE_USAGE_NAME} tool --optional add ninja
@@ -116,7 +116,7 @@ prepare_for_add()
 
    if [ ! -f "${etctoolsfile}" ]
    then
-      mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
+      r_mkdir_parent_if_missing "${etctoolsfile}"
       if [ -f "${sharetoolsfile}" ]
       then
          exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
@@ -139,7 +139,7 @@ prepare_for_remove()
       then
          return 1
       fi
-      mkdir_if_missing "`fast_dirname "${etctoolsfile}"`"
+      r_mkdir_parent_if_missing "${etctoolsfile}"
       exekutor cp "${sharetoolsfile}" "${etctoolsfile}"
       exekutor chmod ug+w "${etctoolsfile}"
    fi
@@ -210,9 +210,19 @@ _mulle_tool_add_file()
       fi
    fi
 
-   if fgrep -q -s -x -e "${tool}" "${toolsfile}"
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+   then
+      log_trace2 "toolsfile: ${toolsfile}"
+      cat "${toolsfile}" >&2
+   fi
+
+   local rval
+
+   rval=0
+   if rexekutor fgrep -q -s -x -e "${tool}" "${toolsfile}"
    then
       log_warning "\"${tool}\" is already in the list of tools, will relink"
+      rval=2
    else
       redirect_append_exekutor "${toolsfile}" echo "${tool}"
    fi
@@ -226,7 +236,7 @@ _mulle_tool_add_file()
 
    case "${style}" in
       */wild|*-inherit)
-         return
+         return 1
       ;;
    esac
 
@@ -251,6 +261,8 @@ _mulle_tool_add_file()
 
    exekutor chmod -f ugo-w "${dstfile}"  || : # see above
    exekutor chmod ugo-w "${bindir}"
+
+   return $rval
 }
 
 
@@ -465,7 +477,13 @@ _mulle_tool_list_file()
 
    log_info "${title}"
 
-   LC_ALL=C egrep -v '^#' "${toolsfile}" | sed '/^[ ]*$/d' | LC_ALL=C sort
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+   then
+      log_trace2 "toolsfile: ${toolsfile}"
+      cat "${toolsfile}" >&2
+   fi
+
+   LC_ALL=C rexekutor egrep -v '^#' "${toolsfile}" | sed '/^[ ]*$/d' | LC_ALL=C sort
 }
 
 

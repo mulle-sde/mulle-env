@@ -1,0 +1,85 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+   directory="${directory:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   local value
+
+   run_mulle_env environment --user set FOO ""
+   run_mulle_env environment --user set BAR "bar with spaces"
+
+   if run_mulle_env environment --user remove UNKNOWN
+   then
+      fail "Positive value for remove with unknown key"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   if ! run_mulle_env environment --user remove FOO
+   then
+      fail "Negative value for remove with empty value"
+   fi
+
+   log_verbose "----- #2 PASSED -----"
+
+
+   if ! run_mulle_env environment --user remove BAR
+   then
+      fail "Negative rval for remove"
+   fi
+
+   value="`run_mulle_env environment --user get BAR`"
+   if [ ! -z "${value}" ]
+   then
+      fail "Did not remove value"
+   fi
+
+   log_verbose "----- #3 PASSED -----"
+
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
+

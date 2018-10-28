@@ -38,7 +38,7 @@ print_none_startup_sh()
 #######
 ### none startup
 #######
-[ "\${TRACE}" = "YES" -o "\${ENVIRONMENT_SH_TRACE}" = "YES" ] && set -x  && : "\$0" "\$@"
+[ "\${TRACE}" = 'YES' -o "\${ENVIRONMENT_SH_TRACE}" = 'YES' ] && set -x  && : "\$0" "\$@"
 
 #
 # If mulle-env is broken, sometimes its nice just to source this file.
@@ -142,9 +142,9 @@ EOF
 }
 
 
-print_none_include_sh()
+print_none_include_header_sh()
 {
-   log_entry "print_none_include_sh" "$@"
+   log_entry "print_none_include_header_sh" "$@"
 
    cat <<EOF
 [ -z "\${MULLE_VIRTUAL_ROOT}" -o -z "\${MULLE_UNAME}"  ] && \\
@@ -163,50 +163,41 @@ esac
 
 MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
+EOF
+}
 
 
-# Top/down order of inclusion.
-# Left overrides right if present.
+print_none_include_environment_sh()
+{
+   log_entry "print_none_include_environment_sh" "$@"
+
+   cat <<EOF
+# Top/down order of inclusion. Left overrides right if present.
+# Keep these files (except environment-custom.sh) clean off manual edits so
+# that mulle-env can read and set environment variables.
 #
 # .mulle-env/etc                        | .mulle-env/share
 # --------------------------------------|--------------------
-#                                       | environment-aux.sh
-#                                       | environment-project.sh
-#                                       | environment-share.sh
+#                                       | environment-plugin.sh
 # environment-global.sh                 |
 # environment-os-\${MULLE_UNAME}.sh      | environment-os-\${MULLE_UNAME}.sh
 # environment-host-\${MULLE_HOSTNAME}.sh |
 # environment-user-\${USER}.sh           |
-# custom-environment.sh                 |
+# environment-custom.sh                 |
 #
 
 #
-# The aux file, if present is to be set by a mulle-env plugin
+# The plugin file, if present is to be set by a mulle-env plugin
 #
-if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh" ]
+if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-plugin.sh" ]
 then
-   . "\${MULLE_ENV_SHARE_DIR}/environment-aux.sh"
+   . "\${MULLE_ENV_SHARE_DIR}/environment-plugin.sh"
 fi
 
 
 #
-# The project file, if present is to be set by mulle-sde init itself
-# w/o extensions
+# Global user settings
 #
-if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-project.sh" ]
-then
-   . "\${MULLE_ENV_SHARE_DIR}/environment-project.sh"
-fi
-
-#
-# The share file, if present is to be set by mulle-sde extensions.
-#
-if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-share.sh" ]
-then
-   . "\${MULLE_ENV_SHARE_DIR}/environment-share.sh"
-fi
-
-
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-global.sh" ]
 then
    . "\${MULLE_ENV_ETC_DIR}/environment-global.sh"
@@ -226,13 +217,9 @@ else
 fi
 
 #
-# Load in some modifications depending on hostname, username. These
+# Load in some user modifications depending on hostname, username. These
 # won't be provided by extensions or plugins.
 #
-# These settings could be "cased" in a single file, but it seems convenient.
-# And more managable for mulle-env environment
-#
-
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-host-\${MULLE_HOSTNAME}.sh" ]
 then
    . "\${MULLE_ENV_ETC_DIR}/environment-host-\${MULLE_HOSTNAME}.sh"
@@ -246,11 +233,19 @@ fi
 #
 # For more complex edits, that don't work with the cmdline tool
 #
-if [ -f "\${MULLE_ENV_ETC_DIR}/custom-environment.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-custom.sh" ]
 then
-   . "\${MULLE_ENV_ETC_DIR}/custom-environment.sh"
+   . "\${MULLE_ENV_ETC_DIR}/environment-custom.sh"
 fi
+EOF
+}
 
+
+print_none_include_footer_sh()
+{
+   log_entry "print_none_include_footer_sh" "$@"
+
+   cat <<EOF
 unset MULLE_ENV_ETC_DIR
 unset MULLE_ENV_SHARE_DIR
 unset MULLE_HOSTNAME
@@ -259,11 +254,28 @@ EOF
 }
 
 
+print_none_include_sh()
+{
+   log_entry "print_none_include_sh" "$@"
+
+   print_none_include_header_sh "$@"
+   print_none_include_environment_sh "$@"
+   print_none_include_footer_sh "$@"
+}
+
+
 print_none_environment_aux_sh()
 {
    cat <<EOF
 # add your stuff here
 EOF
+}
+
+
+
+print_none_auxscopes_sh()
+{
+   log_entry "print_none_auxscopes_sh" "$@"
 }
 
 
@@ -279,7 +291,6 @@ print_none_tools_sh()
       echo "${OPTION_OTHER_TOOLS}"
    fi
 }
-
 
 print_none_optional_tools_sh()
 {

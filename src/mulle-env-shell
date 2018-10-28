@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${7}" = "YES" ] && set -x && : "mulle-env-shell" "$@"
+[ "${7}" = 'YES' ] && set -x && : "mulle-env-shell" "$@"
 
 
 _fail()
@@ -50,7 +50,7 @@ r_make_tmp_in_dir()
 
    RVAL=""
 
-   [ ! -d "${tmpdir}" ] && fail "${tmpdir} does not exist"
+   [ ! -d "${tmpdir}" ] && _fail "${tmpdir} does not exist"
 
    name="${name:-${MULLE_EXECUTABLE_NAME}}"
    name="${name:-mulle}"
@@ -123,7 +123,7 @@ r_get_envfile()
 #
 emit_initfile()
 {
-   if [ "${TRACE}" = "YES" ]
+   if [ "${TRACE}" = 'YES' ]
    then
       echo "set -x"
    fi
@@ -135,7 +135,7 @@ emit_initfile()
    r_get_envfile
    envfile="${RVAL}"
 
-   if [ "${TRACE}" = "YES" ]
+   if [ "${TRACE}" = 'YES' ]
    then
      echo "TRACE=\"${TRACE}\" && . \"${envfile}\""
      echo "unset TRACE"
@@ -146,12 +146,12 @@ emit_initfile()
    # try to set terminal title
    echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
 
-   if [ "${TRACE}" = "YES" ]
+   if [ "${TRACE}" = 'YES' ]
    then
       echo "set +x"
    fi
 
-   if [ "${OPTION_KEEP_TMP}" = "NO" ]
+   if [ "${OPTION_KEEP_TMP}" = 'NO' ]
    then
       #
       # run in envelope subshell to squelch job control message
@@ -253,7 +253,7 @@ run_interactive_shell()
 
    rval=$?
 
-   if [ "${OPTION_KEEP_TMP}" = "NO" ]
+   if [ "${OPTION_KEEP_TMP}" = 'NO' ]
    then
       ( rm "${initfile}" 2> /dev/null )
    fi
@@ -266,23 +266,23 @@ run_interactive_shell()
 
 main()
 {
-   local OPTION_MAKE_FLAGS="NO"
-   local OPTION_INHERIT="NO"
-   local OPTION_KEEP_TMP="NO"
+   local OPTION_MAKE_FLAGS='NO'
+   local OPTION_INHERIT='NO'
+   local OPTION_KEEP_TMP='NO'
 
    while [ "$#" -ne 0 ]
    do
       case "$1" in
          -m)
-            OPTION_MAKE_FLAGS="YES"
+            OPTION_MAKE_FLAGS='YES'
          ;;
 
          -i)
-            OPTION_INHERIT="YES"
+            OPTION_INHERIT='YES'
          ;;
 
          -k)
-            OPTION_KEEP_TMP="YES"
+            OPTION_KEEP_TMP='YES'
          ;;
 
          *)

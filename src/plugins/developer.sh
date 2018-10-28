@@ -54,6 +54,13 @@ print_developer_environment_aux_sh()
 }
 
 
+print_developer_auxscopes_sh()
+{
+   log_entry "print_developer_auxscopes_sh" "$@"
+}
+
+
+
 # callback
 print_developer_tools_sh()
 {

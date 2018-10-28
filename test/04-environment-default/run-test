@@ -1,0 +1,97 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+setup()
+{
+   run_mulle_env environment --global set FOO "global"
+   run_mulle_env environment --host set FOO "host"
+   run_mulle_env environment --user set FOO "user"
+
+   if [ "`run_mulle_env environment --global get FOO`" != "global" -o \
+        "`run_mulle_env environment --host get FOO`"   != "host" -o \
+        "`run_mulle_env environment --user get FOO`"   != "user" ]
+   then
+      fail "setup failed"
+   fi
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+   directory="${directory:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   setup
+
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "global" ] && fail "Wrong value for get"
+
+   run_mulle_env environment --global remove FOO
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "host" ] && fail "Wrong value for get"
+
+   run_mulle_env environment --host remove FOO
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "user" ] && fail "Wrong value for get"
+
+   run_mulle_env environment --user remove FOO
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "" ] && fail "Wrong value for get"
+
+   log_verbose "----- #1 PASSED -----"
+
+   setup
+
+   run_mulle_env environment set FOO  "global2"
+
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "global2" ] && fail "Wrong value for get"
+
+   value="`run_mulle_env environment --user get FOO`"
+   [ "${value}" != "" ] && fail "Wrong value for get"
+
+   log_verbose "----- #2 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
+
