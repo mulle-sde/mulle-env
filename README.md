@@ -1,6 +1,6 @@
 # mulle-env, 🌳 Virtual environment for Unix
 
-**mulle-env** provides a virtual environment as an interactive shell.
+**mulle-env** provides a virtual environment as an interactive bash shell.
 Developing inside the mulle-env shell protects you from the following
 common mistakes:
 
@@ -12,7 +12,7 @@ With **mulle-env** you can easily manage
 * the command line tools available in the virtual environment
 * additional virtual environment variables with multiple scopes, like on a per-user or per-host basis.
 
-Therefore a directory can become a self containe virtual environment using
+Therefore any directory can become a self contained virtual environment with
 mulle-env.
 
 
@@ -36,6 +36,7 @@ ubuntu  | same as debian
 
 Otherwise see [mulle-sde-developer](//github.com/mulle-sde/mulle-sde-developer)
 how to install mulle-sde, which will also install **mulle-env**.
+
 
 #### Debian Mulle kybernetiK repository
 
@@ -93,6 +94,7 @@ and this is inside **mulle-env**
 DISPLAY=/private/tmp/com.apple.launchd.gKyY8aVeiV/org.macosforge.xquartz:0
 HOME=/Volumes/Users/nat
 LOGNAME=nat
+MULLE_HOSTNAME=myhost
 MULLE_UNAME=darwin
 MULLE_VIRTUAL_ROOT=/Volumes/Source/srcO/MulleObjC-master
 PATH=/Volumes/Source/srcO/MulleObjC-master/bin
@@ -111,9 +113,9 @@ Notice the absence of most environment variables and see how restricted the
 
 ## Prepare a directory to use mulle-env
 
-A directory must be initialized, before you can use **mulle-env** on it.
-Let's try an example with a `project` directory. We want a minimal portable set
-of commandline tools, so we specify the style as "minimal/tight".
+A directory must be initialized, before you can run the **mulle-env** subshell
+it it. Let's try an example with a `project` directory. We want a minimal
+portable set of commandline tools, so we specify the 'style' as "minimal/tight".
 
 ```
 mulle-env init -d project --style minimal/tight
@@ -131,7 +133,7 @@ Enter the environment:
 $ mulle-env "project"
 $ ls
 $ echo $PATH
-/tmp/project/.mulle-env/bin
+/tmp/project/.mulle-env/var/<hostname>/bin
 $ ls -l $PATH
 total 0
 lrwxrwxrwx 1 nat nat 12 Jan 21 22:28 awk -> /usr/bin/awk
@@ -208,6 +210,15 @@ mulle-env -c ls
 ```
 
 
+## Upgrade an environment
+
+To upgrade an environment to a newer mulle-env release use
+
+```
+mulle-env upgrade
+```
+
+
 ## Manage tools
 
 List all tools
@@ -268,7 +279,7 @@ mulle-env environment get FOO
 Remove an environment variable
 
 ```
-mulle-env environment set FOO ""
+mulle-env environment remove FOO
 ```
 
 
@@ -279,7 +290,6 @@ mulle-env environment set FOO ""
 #### Add /bin and /usr/bin to your sub-shell PATH
 
 Use `mulle-env --style none/restrict init` when initalizing your environment.
-> `mulle-restrict` is the default as it gives access to the **mulle-sde**.
 
 
 #### Reinitialize an environment
@@ -297,7 +307,8 @@ in `.mulle-env/etc/tool`.
 #### Specify optionals tools
 
 Tools that are nice to have, but aren't required can be placed into
-`.mulle-env/etc/optionaltool`.
+`.mulle-env/etc/optionaltool`. A non-required tool does not prevent a subshell
+from running.
 
 
 #### Specify platform specific tools
@@ -314,8 +325,8 @@ cross-platform ones without the extension.
 #### Specify personal preferences (like a different shell)
 
 Short of executing `exec zsh` - or whatever the shell flavor du jour is -
-everytime you enter the **mulle-env** subshell, you can add this to your
-`.mulle-env/etc/environment-custom.sh` file:
+everytime you enter the **mulle-env** subshell, you can add this at the end
+of a `.mulle-env/etc/environment-custom.sh` file:
 
 ```
 $ cat <<EOF >> .mulle-env/etc/environment-custom.sh
@@ -329,6 +340,3 @@ then
 fi
 EOF
 ```
-
-
-

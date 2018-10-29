@@ -44,6 +44,8 @@ Usage:
    See \`${MULLE_EXECUTABLE_NAME} init\` for more information about
    environment styles.
 
+   You can not manage tools from the inside of a virtual environment.
+
 Options:
    --required : restrict command to required tools
    --optional : restrict command to optional tools

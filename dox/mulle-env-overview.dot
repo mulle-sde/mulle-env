@@ -12,6 +12,9 @@ digraph G {
         "mulle-env init" -> "project" [ arrowhead="", style="dotted", label=" create"]
          "project"     [ shape="folder", penwidth="2" ]
         ".mulle-env"   [ shape="folder" ]
+        "var"          [ shape="folder" ]
+        "<hostname>"   [ shape="folder" ]
+        "etc"          [ shape="folder" ]
         "share"        [ shape="folder" ]
         "bin"          [ shape="folder" ]
 
@@ -19,11 +22,14 @@ digraph G {
         "environment.sh"
 
         "project"    ->  ".mulle-env"
+        ".mulle-env" ->  "var"
+        ".mulle-env" ->  "etc"
         ".mulle-env" ->  "share"
+        "var"        ->  "<hostname>"
+        "<hostname>" -> "bin"
         "share"      -> "environment.sh"
         "share"      -> "tool"
         "share"      -> "optionaltool"
-        "share"      -> "bin"
         "bin"        ->     "..."
         "..." [ shape="none"]
 }

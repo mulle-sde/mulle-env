@@ -66,41 +66,41 @@ EOF
 }
 
 
-custom_environment_init()
-{
-   log_entry "custom_environment_init" "$@"
-
-   local keyvalue
-
-   local key
-   local quotedvalue
-
-   [ -z "${CUSTOM_ENVIRONMENT}" ] && return
-
-   [ -z "${MULLE_ENV_ENVIRONMENT_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh"
-
-   #
-   # use custom environment values to set plugin environment
-   # more or less to keep user expectations up with regards to
-   # flags. Can't set it in global though. They will be clobbered
-   # by an upgrade
-   #
-   set -f; IFS="
-"
-   for keyvalue in ${CUSTOM_ENVIRONMENT}
-   do
-      set +f; IFS="${DEFAULT_IFS}"
-
-      key="${keyvalue%%=*}"
-      value="${keyvalue#*=\'}"
-      value="${value%\'}"
-
-      log_warning "Environment variable \"${key}\" will be lost on next upgrade"
-
-      env_environment_set_main "plugin" "${key}" "${value}" "no comment" || exit 1
-   done
-   set +f; IFS="${DEFAULT_IFS}"
-}
+# custom_environment_init()
+# {
+#    log_entry "custom_environment_init" "$@"
+#
+#    local keyvalue
+#
+#    local key
+#    local quotedvalue
+#
+#    [ -z "${CUSTOM_ENVIRONMENT}" ] && return
+#
+#    [ -z "${MULLE_ENV_ENVIRONMENT_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh"
+#
+#    #
+#    # use custom environment values to set plugin environment
+#    # more or less to keep user expectations up with regards to
+#    # flags. Can't set it in global though. They will be clobbered
+#    # by an upgrade
+#    #
+#    set -f; IFS="
+# "
+#    for keyvalue in ${CUSTOM_ENVIRONMENT}
+#    do
+#       set +f; IFS="${DEFAULT_IFS}"
+#
+#       key="${keyvalue%%=*}"
+#       value="${keyvalue#*=\'}"
+#       value="${value%\'}"
+#
+#       log_warning "Environment variable \"${key}\" will be lost on next upgrade"
+#
+#       env_environment_set_main "plugin" "${key}" "${value}" "no comment" || exit 1
+#    done
+#    set +f; IFS="${DEFAULT_IFS}"
+# }
 
 
 env_init_main()
@@ -265,7 +265,10 @@ env_init_main()
    then
       return 1
    fi
-   redirect_exekutor "${pluginfile}" echo "${text}"
+   if [ ! -z "${text}" ]
+   then
+      redirect_exekutor "${pluginfile}" echo "${text}"
+   fi
 
    # add more os flavors later
    for os in darwin freebsd linux mingw
@@ -310,7 +313,8 @@ env_init_main()
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
 
-   custom_environment_init
+   # useless IMO
+   # custom_environment_init
 
    # we create this last, if its present than the init ran through
    log_verbose "Creating \"${versionfile}\""

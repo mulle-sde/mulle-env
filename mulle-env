@@ -67,10 +67,10 @@ usage()
 Usage:
    ${MULLE_USAGE_NAME} [options] [commands] [path-or-url]
 
-   Creates a virtual environment with a custom set of environment variables
-   and tools as a subshell. If the directory at "path-or-url" does not exist
-   and the path looks like an URL, then ${MULLE_USAGE_NAME} will attempt to
-   "git clone" that URL.
+   Create a virtual environment with a custom set of environment variables
+   and tools for use in a subshell. If the directory at "path-or-url" does not
+   exist and the path looks like an URL, then ${MULLE_USAGE_NAME} will attempt
+   to \`git clone\` that URL.
 
    Use the -c or -C options to run commands in the virtual environment
    without entering an interactive subshell.
@@ -108,7 +108,7 @@ EOF
       cat <<EOF >&2
 
 Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
-   none          : no additions
+   none          : a fairly empty virtual environment
    minimal       : a minimal set of tools (like cd, ls)
    developer     : a common set of tools (like cd, ls, awk, man) (default)
 
@@ -155,6 +155,96 @@ r_censored_path()
    done
 
    set +f ; IFS="${DEFAULT_IFS}"
+}
+
+
+#
+# since all mulle- tools are uniform, this is easy.
+# If it's a library, we need to strip off -env from
+# the toolname for the libraryname. Also libexec is versionized
+# so add the version
+#
+env_link_mulle_tool()
+{
+   log_entry "env_link_mulle_tool" "$@"
+
+   local toolname="$1"
+   local dstbindir="$2"
+   local dstlibexecdir="$3"
+   local copystyle="${4:-tool}"
+
+   #
+   # these dependencies should be there, but just check
+   #
+   local exefile
+
+   exefile="`command -v "${toolname}" `"
+   if [ -z "${exefile}" ]
+   then
+      fail "${toolname} not in PATH"
+   fi
+
+   # doing it like this renames "src" to $toolname
+
+   local srclibexecdir
+   local parentdir
+   local srclibname
+
+   srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
+   r_fast_dirname "${srclibdir}"
+   srclibexecdir="${RVAL}"
+   r_fast_basename "${srclibdir}"
+   srclibname="${RVAL}"
+
+   local dstbindir
+   local dstexefile
+   local dstlibname
+
+   dstlibname="${toolname}"
+   dstexefile="${dstbindir}/${toolname}"
+   mkdir_if_missing "${dstbindir}"
+
+   if [ "${copystyle}" = "library" ]
+   then
+      local version
+
+      version="`"${exefile}" version `" || exit 1
+      dstlibname="`sed 's/-env$//' <<< "${toolname}" `"
+      dstlibdir="${dstlibexecdir}/${dstlibname}/${version}"
+   else
+      dstlibdir="${dstlibexecdir}/${dstlibname}"
+   fi
+
+   # remove previous symlinks or files
+   remove_file_if_present "${dstexefile}"
+   remove_file_if_present "${dstlibdir}" || rmdir_safer "${dstlibdir}"
+
+   #
+   # Developer option, since I don't want to edit copies. Doesn't work
+   # on mingw, but shucks.
+   #
+   if [ "${srclibname}" = "src" -a "${MULLE_ENV_DEVELOPER}" != 'NO' ]
+   then
+      mkdir_if_missing "${dstbindir}"
+      mkdir_parent_if_missing "${dstlibdir}" > /dev/null
+
+      log_fluff "Creating symlink \"${dstexefile}\""
+
+      exekutor ln -s -f "${exefile}" "${dstexefile}"
+      exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}"
+   else
+      mkdir_if_missing "${dstlibdir}"
+
+      ( cd "${srclibdir}" ; tar cf - . ) | \
+      ( cd "${dstlibdir}" ; tar xf -  )
+
+      mkdir_if_missing "${dstbindir}"
+
+      log_fluff "Copying \"${dstexefile}\""
+
+      exekutor cp "${exefile}" "${dstexefile}" &&
+      exekutor chmod 755 "${dstexefile}"
+   fi
 }
 
 
@@ -343,9 +433,10 @@ env_setup_if_needed()
 
    if [ "${flavor}" != "${oldflavor}" ]
    then
-      log_info "Do you intend the tool style change from \
-\"${oldflavor}\" to \"${flavor}\" as a downgrade ?
-If yes, check your tool lists."
+      log_info "You affected a tool style change from \
+\"${oldflavor}\" to \"${flavor}\". You may want to
+check your tool list.
+   ${C_RESET_BOLD} mulle-env tool list"
    fi
 
    callback="env_${flavor}_tools_need_update"
@@ -734,6 +825,7 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
       "${CUSTOM_ENVIRONMENT}" \
       "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
         "'${MULLE_UNAME}'" \
+        "'${MULLE_HOSTNAME}'" \
         "'${MULLE_VIRTUAL_ROOT}'" \
         "'${PATH}'" \
         "'${mode}'" \
@@ -983,6 +1075,7 @@ undefined (old mulle-bashfunctions)"
           "${CUSTOM_ENVIRONMENT}" \
           "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
             "'${MULLE_UNAME}'" \
+            "'${MULLE_HOSTNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
             "'${runpath}'" \
             "'${mode}'" \
@@ -1253,6 +1346,11 @@ relax
 restrict
 tight
 wild"
+         return 0
+      ;;
+
+      hostname)
+         echo "${MULLE_HOSTNAME}"
          return 0
       ;;
 

@@ -138,7 +138,6 @@ emit_initfile()
    if [ "${TRACE}" = 'YES' ]
    then
      echo "TRACE=\"${TRACE}\" && . \"${envfile}\""
-     echo "unset TRACE"
    else
      echo ". \"${envfile}\""
    fi
@@ -150,6 +149,7 @@ emit_initfile()
    then
       echo "set +x"
    fi
+   echo "unset TRACE"
 
    if [ "${OPTION_KEEP_TMP}" = 'NO' ]
    then
@@ -179,6 +179,7 @@ run_script_shell()
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
+        "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
         "TRACE='${TRACE}'" \
         "NO_MOTD='YES'" \
@@ -243,6 +244,7 @@ run_interactive_shell()
    eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
+        "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
         "TRACE='${TRACE}'" \
         "NO_MOTD='${NO_MOTD}'" \
@@ -298,6 +300,11 @@ main()
 
    MULLE_UNAME="$1"
    [ -z "${MULLE_UNAME}" ] && _fail "empty MULLE_UNAME"
+   shift
+
+   local MULLE_HOSTNAME
+
+   MULLE_HOSTNAME="$1"     # hostname empty ? we don't care
    shift
 
    local MULLE_VIRTUAL_ROOT

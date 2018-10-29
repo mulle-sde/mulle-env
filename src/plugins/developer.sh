@@ -114,6 +114,36 @@ print_developer_optional_tools_sh()
 }
 
 
+env_setup_developer_tools()
+{
+   log_entry "env_setup_developer_tools" "$@"
+
+   env_setup_minimal_tools "$@"
+}
+
+
+env_setup_developer_tools()
+{
+   log_entry "env_setup_developer_tools" "$@"
+
+   local bindir="$1"
+   local libexecdir="$2"
+
+   [ -z "${directory}" ] && internal_fail "directory is empty"
+
+   #
+   # Since the PATH is restricted, we need a basic set of tools
+   # in directory/bin to get things going
+   # (We'd also need in PATH: git, tar, sed, tr, gzip, zip. But that's not
+   # checked yet)
+   #
+   (
+      env_link_mulle_tool "mulle-bashfunctions-env" "${bindir}" "${libexecdir}" "library" &&
+      env_link_mulle_tool "mulle-env"               "${bindir}" "${libexecdir}"
+   ) || return 1
+}
+
+
 env_mulle_initialize()
 {
    env_load_plugin "minimal"

@@ -151,16 +151,6 @@ print_none_include_header_sh()
    echo "Your script needs to setup MULLE_VIRTUAL_ROOT \\
 and MULLE_UNAME properly" >&2  && exit 1
 
-case "\${MULLE_UNAME}" in
-   'mingw'*)
-      MULLE_HOSTNAME="\`PATH=/bin:/usr/bin hostname\`" # don't export it
-   ;;
-
-   *)
-      MULLE_HOSTNAME="\`PATH=/bin:/usr/bin hostname -s\`" # don't export it
-   ;;
-esac
-
 MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
 MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
 EOF
@@ -248,7 +238,6 @@ print_none_include_footer_sh()
    cat <<EOF
 unset MULLE_ENV_ETC_DIR
 unset MULLE_ENV_SHARE_DIR
-unset MULLE_HOSTNAME
 
 EOF
 }
@@ -266,9 +255,7 @@ print_none_include_sh()
 
 print_none_environment_aux_sh()
 {
-   cat <<EOF
-# add your stuff here
-EOF
+   log_entry "print_none_environment_aux_sh" "$@"
 }
 
 
