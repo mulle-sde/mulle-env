@@ -60,7 +60,7 @@ Usage:
    information about scopes.
 
    Speciying no scope invokes the "DEFAULT" scope, which has special semantics
-   depending on the command used.
+   depending on the command used. See each commands usage info for specifics.
 
 Example:
    Clear a user set environment variable:
@@ -68,11 +68,10 @@ Example:
 
 Options:
    -h                : show this usage
-   --scope <name>    : use an arbitrarily named scope
    --global          : scope for general environments variables
    --host            : narrow scope to this host only ($MULLE_HOSTNAME)
    --os              : narrow scope to this operating system only ($MULLE_UNAME)
-   --project         : scope for project variables
+   --scope <name>    : use an arbitrarily named scope
    --user            : narrow scope to this user only ($USER)
 
 Commands:
@@ -1356,7 +1355,7 @@ USER=\"${USER}\" \
    do
       if [ -f "$1" ]
       then
-         log_info "${C_RESET_BOLD}`fast_basename "$1"`:"
+         log_verbose "${C_RESET_BOLD}`fast_basename "$1"`:"
 
          r_concat "${files}" ". \"$1\" ; "
          files="${RVAL}"
@@ -1778,7 +1777,7 @@ env_environment_main()
 
    [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
 
-   case "${cmd:-list}" in
+   case "${cmd}" in
       host|hostname)
          hostname
       ;;

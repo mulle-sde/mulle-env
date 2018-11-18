@@ -1036,7 +1036,7 @@ undefined (old mulle-bashfunctions)"
    case "${style}" in
       */wild)
          unset MULLE_EXECUTABLE_NAME
-         unset MULLE_ENV_PLUGIN_PATH
+         # unset MULLE_ENV_PLUGIN_PATH # don't do this because its needed for mulle-sde upgrade
          unset MULLE_USAGE_NAME
       ;;
 

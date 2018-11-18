@@ -291,14 +291,14 @@ env_init_main()
    if [ "${OPTION_UPGRADE}" != 'YES' ]
    then
       log_verbose "Creating \"${toolsfile}\""
-      if ! text="`print_${flavor}_tools_sh "${style}" `"
+      if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
       then
          return 1
       fi
       redirect_exekutor "${toolsfile}" echo "${text}"
 
       log_verbose "Creating \"${optional_toolsfile}\""
-      if ! text="`print_${flavor}_optional_tools_sh "${style}" `"
+      if ! text="`print_${flavor}_optional_tools_sh "${style}" | sort -u`"
       then
          return 1
       fi

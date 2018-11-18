@@ -176,14 +176,14 @@ run_script_shell()
    #
    printf -v args "%q" ". \"${envfile}\" || exit 1 ; $1"
 
-   eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
-        "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
-        "MULLE_SHELL_MODE='${MODE}'" \
+   eval "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
         "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
+        "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
-        "TRACE='${TRACE}'" \
+	     "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "NO_MOTD='YES'" \
         "PATH='${RUNPATH}'" \
+        "TRACE='${TRACE}'" \
             "'${BASH}'" -c "${args}"
 }
 
@@ -241,14 +241,14 @@ run_interactive_shell()
 
    local rval
 
-   eval "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
-        "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
-        "MULLE_SHELL_MODE='${MODE}'" \
+   eval "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
         "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
+        "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
-        "TRACE='${TRACE}'" \
+	     "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "NO_MOTD='${NO_MOTD}'" \
         "PATH='${RUNPATH}'" \
+        "TRACE='${TRACE}'" \
         "${cmd_env}" \
             "'${BASH}'" \
                "${cmd_options}"
@@ -294,7 +294,7 @@ main()
       shift
    done
 
-   [ $# -lt 8 -o $# -gt 9 ] && _fail "API mismatch ($# args: $*)"
+   [ $# -lt 9 -o $# -gt 10 ] && _fail "API mismatch ($# args: $*)"
 
    local MULLE_UNAME
 

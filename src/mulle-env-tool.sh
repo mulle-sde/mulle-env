@@ -212,6 +212,20 @@ _mulle_tool_add_file()
       fi
    fi
 
+   local style
+   local flavor
+
+   # defined in mulle_env
+   __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc" \
+                            "${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
+
+   case "${style}" in
+      */wild|*-inherit)
+         return 0
+      ;;
+   esac
+
+
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "toolsfile: ${toolsfile}"
@@ -229,18 +243,6 @@ _mulle_tool_add_file()
       redirect_append_exekutor "${toolsfile}" echo "${tool}"
    fi
 
-   local style
-   local flavor
-
-   # defined in mulle_env
-   __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc" \
-                            "${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
-
-   case "${style}" in
-      */wild|*-inherit)
-         return 1
-      ;;
-   esac
 
    local bindir
 
