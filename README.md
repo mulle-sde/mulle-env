@@ -5,7 +5,7 @@ Developing inside the mulle-env shell protects you from the following
 common mistakes:
 
 * inadvertant reliance on non-standard tools
-* reproducabilty problems due to non-standard environment variables
+* reproducability problems due to non-standard environment variables
 
 With **mulle-env** you can easily manage
 
@@ -52,63 +52,29 @@ sudo apt-get update
 ## What mulle-env does in a nutshell
 
 
-mulle-env uses `env -i` to restrict the environment of the subshell to a minimal
-set of values. The PATH is modified, so that only a definable subset of tools
-is available.
-
-As an example here is my environment when running in a macos Terminal.app
-session:
+mulle-env uses `env` to restrict the environment of the subshell to a minimal
+set of values. With `env -i bash -c env` you can see the restricted environment
 
 ```
-Apple_PubSub_Socket_Render=/private/tmp/com.apple.launchd.yxJqn34O3N/Render
-CAML_LD_LIBRARY_PATH=/Volumes/Users/nat/.opam/system/lib/stublibs:/usr/local/lib/ocaml/stublibs
-DISPLAY=/private/tmp/com.apple.launchd.gKyY8aVeiV/org.macosforge.xquartz:0
-HOME=/Volumes/Users/nat
-LANG=de_DE.UTF-8
-LOGNAME=nat
-MANPATH=:/Volumes/Users/nat/.opam/system/man
-OCAML_TOPLEVEL_PATH=/Volumes/Users/nat/.opam/system/lib/toplevel
-OLDPWD=/Volumes/Source/srcO
-OPAMUTF8MSGS=1
-PATH=/Volumes/Users/nat/.opam/system/bin:/Volumes/Source/srcO/mulle-foundation-developer:/Volumes/Source/srcO/mulle-objc-developer:/Volumes/Source/srcM/mulle-env:/Volumes/Source/srcM/mulle-templates:/Volumes/Source/srcM/mulle-project:/Volumes/Source/srcM/mulle-build:/Volumes/Source/srcM/mulle-dispense:/Volumes/Source/srcM/mulle-bootstrap:/Volumes/Source/srcM/mulle-sourcetree:/Volumes/Source/srcM/mulle-settings:/Volumes/Source/srcM/mulle-make:/Volumes/Source/srcM/mulle-fetch:/Volumes/Source/srcM/mulle-bashfunctions:/Volumes/Applications/Applications/Sublime Text.app/Contents/SharedSupport/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin
-PERL5LIB=/Volumes/Users/nat/.opam/system/lib/perl5:
-PWD=/Volumes/Source/srcO/MulleObjC-master
-SHELL=/bin/bash
+PWD=/home/src/srcS/mulle-env
 SHLVL=1
-SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.YrEMJV1DUq/Listeners
-TERM=xterm-color
-TERM_PROGRAM=Apple_Terminal
-TERM_PROGRAM_VERSION=388.1.1
-TERM_SESSION_ID=852D5E60-9A1B-43E0-A3D4-BC61BCD9134E
-TMPDIR=/var/folders/jb/svqk0p3n73j46c3hfj_4fn3r0000xv/T/
-USER=nat
-XPC_FLAGS=0x0
-XPC_SERVICE_NAME=0
 _=/usr/bin/env
-__CF_USER_TEXT_ENCODING=0x3BB:0x0:0x3
 ```
 
-and this is inside **mulle-env**
+mulle-env adds a few environment variables back to the environment, like
+LOGNAME or SSH_AUTH_SOCK, so that an interactive shell keeps functioning like
+one would expect to. You can see the effect for yourself with:
 
 ```
-DISPLAY=/private/tmp/com.apple.launchd.gKyY8aVeiV/org.macosforge.xquartz:0
-HOME=/Volumes/Users/nat
-LOGNAME=nat
-MULLE_HOSTNAME=myhost
-MULLE_UNAME=darwin
-MULLE_VIRTUAL_ROOT=/Volumes/Source/srcO/MulleObjC-master
-PATH=/Volumes/Source/srcO/MulleObjC-master/bin
-PS1=\u@\h[MulleObjC-master] \W$
-PWD=/Volumes/Source/srcO/MulleObjC-master
-SHLVL=2
-TERM=xterm-color
-TMPDIR=/var/folders/jb/svqk0p3n73j46c3hfj_4fn3r0000xv/T/
-USER=nat
-_=/Volumes/Source/srcO/MulleObjC-master/bin/env
+mulle-sde init -d /tmp/xxx
+mulle-sde -d /tmp/xxx -c env
 ```
 
-Notice the absence of most environment variables and see how restricted the
-`PATH` has become.
+This environment can be modified by reading a profile file 
+`.mulle-env/share/environment.sh`. With this file new environment variables,
+especially PATH and aliases can be defined. Usually you do not manually edit
+this files, but use mulle-env commands and mulle-env plugins to customize the
+environment to your liking.
 
 
 ## Prepare a directory to use mulle-env

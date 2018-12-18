@@ -42,21 +42,21 @@ main()
 
    log_verbose "----- #1 PASSED -----"
 
-   value="`run_mulle_env environment --scope plugin get BAR`"
-   if [ "${value}" != "bar" ]
-   then
-      fail "Initial value not found"
-   fi
-
-   log_verbose "----- #2 PASSED -----"
-
-   value="`run_mulle_env environment --global get BAR`"
-   if [ ! -z "${value}" ]
-   then
-      fail "Initial value found in wrong scope"
-   fi
-
-   log_verbose "----- #3 PASSED -----"
+#   value="`run_mulle_env environment --global get BAR`"
+#   if [ ! -z "${value}" ]
+#   then
+#      fail "Initial value found in wrong scope"
+#   fi
+#
+#   log_verbose "----- #2 PASSED -----"
+#
+#   value="`run_mulle_env environment --scope plugin get BAR`"
+#   if [ "${value}" != "bar" ]
+#   then
+#      fail "Initial value not found"
+#   fi
+#
+#   log_verbose "----- #3 PASSED -----"
 
 
    log_info "----- ALL PASSED -----"

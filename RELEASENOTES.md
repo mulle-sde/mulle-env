@@ -1,3 +1,15 @@
+# 1.0.0
+
+* -D is ignored on init with warning now
+* mulle-env doesnt climb to a parent environment by default anymore
+* make mulle-env as a command available in the subshell (developer)
+* also expose `MULLE_HOSTNAME` because its used in mulle-sde so much
+* added the long missing environment remove command and add some tests too
+* finally move mulle.sh plugin to mulle-sde, where it belongs
+* redo the way script mode is invoked to fix redirection problem
+* plugins can now be easily installed via /share and custom plugin path
+
+
 ## 0.17.0
 
 * use `r_` functions of mulle-bashfunctions 1.8.0
