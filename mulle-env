@@ -653,11 +653,13 @@ ${C_INFO}Fixes:
 }
 
 
-find_best_environment()
+r_find_best_environment()
 {
-   log_entry "find_best_environment" "$@"
+   log_entry "r_find_best_environment" "$@"
 
    local start="$1"
+   local search="$2"
+   local useclimb="$3"
 
    local directory
    local best
@@ -675,17 +677,32 @@ find_best_environment()
       # find one, we latch onto it
       if [ "${directory}" = "/" ]
       then
-         echo "${best}"
+         RVAL="${best}"
          return
       fi
 
       # use globbing
       if [ -f "${directory}/".mulle-env/share/environment.sh ]
       then
-         log_info "Using the superior mulle-env environment at \
+         if [ "${search}" != 'YES' ]
+         then
+            log_info "Using the superior mulle-env environment at \
 ${C_RESET_BOLD}${directory}${C_INFO}.
-Suppress this behaviour with the flag \"--no-search\"."
+Suppress this behaviour with the flag \"-N\" or permanently suppress on a
+per environment basis with:
+   ${C_RESET_BOLD}mulle-env tweak stay"
+         fi
+
          best="${directory}"
+
+         if [ "${useclimb}" = 'YES' ]
+         then
+            if [ ! -f "${directory}/".mulle-env/etc/climb ]
+            then
+               RVAL="${best}"
+               return
+            fi
+         fi
       fi
    done
 }
@@ -761,10 +778,30 @@ _default_setup_environment()
    log_entry "_default_setup_environment" "$@"
 
    local directory="${1:-${PWD}}"
+   local search="$2"
+   local searchbydefault="$3"
 
-   if [ "${OPTION_SEARCH}" = 'YES' ]
+   local useclimb
+   local dosearch
+
+   useclimb="YES"
+   if [ "${search}" = 'YES' ]
    then
-      directory="`find_best_environment "${PWD}"`"
+      useclimb="NO"
+   fi
+
+   dosearch="${search}"
+   if [ "${search}" = 'DEFAULT' -a "${searchbydefault}" = "YES" ]
+   then
+      dosearch="YES"
+   fi
+
+   if [ "${dosearch}" = 'YES' ]
+   then
+      local RVAL
+
+      r_find_best_environment "${PWD}" "${search}" "${useclimb}"
+      directory="${RVAL}"
    fi
 
    [ ! -d "${directory}" ] && fail "${directory} does not exist (init it first)"
@@ -847,6 +884,7 @@ _run_subshell()
    # directory is where we are supposed to execute
    local directory
 
+
    callerdirectory="${MULLE_EXECUTABLE_PWD}"
 
    if [ ! -z "${OPTION_DIRECTORY}" ]
@@ -856,11 +894,6 @@ _run_subshell()
       if [ -z "${arg}" ]
       then
          directory="${callerdirectory}"
-         if [ "${OPTION_SEARCH}" = "DEFAULT" ]
-         then
-            OPTION_SEARCH='YES'
-         fi
-
       else
          directory="$arg"
       fi
@@ -892,7 +925,7 @@ _run_subshell()
       fi
    fi
 
-   _default_setup_environment "${directory}"
+   _default_setup_environment "${directory}" "${OPTION_SEARCH}" "NO"
 
    [ ! -d "${MULLE_ENV_DIR}" ] && fail "No environment found in \
 \"${directory}\". Use \`mulle-env init\` to initialize it."
@@ -1279,16 +1312,16 @@ main()
             OPTION_STYLE="$1"
          ;;
 
-         --search)
+         -N|--no-search)
+            OPTION_SEARCH='NO'
+         ;;
+
+         -S|--search)
             OPTION_SEARCH='YES'
          ;;
 
          --uppercase-only)
             OPTION_IDENTIFIERCASE='UPPERCASE_ONLY'
-         ;;
-
-         -N|--no-search)
-            OPTION_SEARCH='NO'
          ;;
 
          --)
@@ -1335,7 +1368,7 @@ main()
          # shellcheck source=src/mulle-env-environment.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
 
-         _default_setup_environment "${PWD}"
+         _default_setup_environment "${PWD}" "${OPTION_SEARCH}" "NO"
          env_environment_main "$@"
          return $?
       ;;
@@ -1401,10 +1434,31 @@ wild"
          # shellcheck source=src/mulle-env-tool.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
 
-         _default_setup_environment "${PWD}"
+         _default_setup_environment "${PWD}" "${OPTION_SEARCH}" "NO"
          env_tool_main "$@"
          return $?
       ;;
+
+      tweak)
+         # shellcheck source=src/mulle-env-environment.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
+
+         _default_setup_environment "${PWD}" "${OPTION_SEARCH}" "NO"
+         mkdir_if_missing "${PWD}/.mulle-env/etc/tweak"
+         redirect_exekutor "${PWD}/.mulle-env/etc/tweak/$1" echo "intentionally blank"
+         return $?
+      ;;
+
+      untweak)
+         # shellcheck source=src/mulle-env-environment.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
+
+         _default_setup_environment "${PWD}" "${OPTION_SEARCH}" "NO"
+         remove_file_if_present "${PWD}/.mulle-env/etc/tweak/$1"
+         rmdir_if_empty "${PWD}/.mulle-env/etc/tweak"
+         return $?
+      ;;
+
 
       toolstyles)
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1

@@ -162,7 +162,7 @@ print_none_include_environment_sh()
    log_entry "print_none_include_environment_sh" "$@"
 
    cat <<EOF
-# Top/down order of inclusion. Left overrides right if present.
+# Top/down order of inclusion.
 # Keep these files (except environment-custom.sh) clean off manual edits so
 # that mulle-env can read and set environment variables.
 #
@@ -170,7 +170,7 @@ print_none_include_environment_sh()
 # --------------------------------------|--------------------
 #                                       | environment-plugin.sh
 # environment-global.sh                 |
-# environment-os-\${MULLE_UNAME}.sh      | environment-os-\${MULLE_UNAME}.sh
+# environment-os-\${MULLE_UNAME}.sh      |
 # environment-host-\${MULLE_HOSTNAME}.sh |
 # environment-user-\${USER}.sh           |
 # environment-custom.sh                 |
@@ -194,16 +194,11 @@ then
 fi
 
 #
-# "os-" can be written by extensions also
+# "os-" user settings
 #
 if [ -f "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
 then
    . "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh"
-else
-   if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
-   then
-      . "\${MULLE_ENV_SHARE_DIR}/environment-os-\${MULLE_UNAME}.sh"
-   fi
 fi
 
 #

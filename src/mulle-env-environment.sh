@@ -59,7 +59,7 @@ Usage:
    platform (os). See \`${MULLE_USAGE_NAME} environment scope help\` for more
    information about scopes.
 
-   Speciying no scope invokes the "DEFAULT" scope, which has special semantics
+   Specifying no scope invokes the "DEFAULT" scope, which has special semantics
    depending on the command used. See each commands usage info for specifics.
 
 Example:
@@ -206,10 +206,10 @@ Usage:
    the user setting will override a setting in host, os, global etc.
 
 Scopes:
-   plugin             : only used by mulle-env
+   plugin             : only used by mulle-env plugins
    project            : set by mulle-sde on init
    extension          : set by mulle-sde extensions
-   global             : global user defined settings
+   global             : global settings (user defined)
    os-<platform>      : platform specific settings (user defined)
    host-<hostname>    : host specific settings (user defined)
    user-<username>    : user specific settings (user defined)
@@ -1772,7 +1772,7 @@ env_environment_main()
       shift
    done
 
-   local cmd="$1"
+   local cmd="${1:-list}"
    [ $# -ne 0 ] && shift
 
    [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
