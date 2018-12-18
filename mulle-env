@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="1.0.0"
+MULLE_ENV_VERSION="1.0.1"
 
 #
 # The default for first time mulle-env
@@ -1459,8 +1459,15 @@ wild"
          return $?
       ;;
 
+      plugins-path)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
 
-      toolstyles)
+         r_plugin_searchpath
+         echo "${RVAL}"
+         return
+      ;;
+
+      toolstyles|plugins|show)
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
 
          env_all_plugin_names

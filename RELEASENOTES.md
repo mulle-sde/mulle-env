@@ -1,3 +1,7 @@
+### 1.0.1
+
+* fix wrong plugin search path, add plugins-path command
+
 # 1.0.0
 
 * -D is ignored on init with warning now

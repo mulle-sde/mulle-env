@@ -70,7 +70,7 @@ mulle-sde init -d /tmp/xxx
 mulle-sde -d /tmp/xxx -c env
 ```
 
-This environment can be modified by reading a profile file 
+This environment is modified by reading a profile file 
 `.mulle-env/share/environment.sh`. With this file new environment variables,
 especially PATH and aliases can be defined. Usually you do not manually edit
 this files, but use mulle-env commands and mulle-env plugins to customize the

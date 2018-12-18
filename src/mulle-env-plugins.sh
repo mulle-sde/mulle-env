@@ -34,12 +34,27 @@ MULLE_ENV_PLUGINS_SH="included"
 
 r_plugin_searchpath()
 {
-   r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/../share/mulle-env/plugins"
-   r_colon_concat "${RVAL}" \
-                  "${MULLE_ENV_LIBEXEC_DIR}/plugins"
-   r_colon_concat "${MULLE_ENV_PLUGIN_PATH}" "${RVAL}"
+	local searchpath
+	local sharedir
 
-   log_debug "plugin searchpath: ${RVAL}"
+	searchpath="${MULLE_ENV_PLUGIN_PATH}"
+
+	#
+	# add wherever we are that share directory
+	# i.e.  /usr/libexec/mulle-env -> /usr/share/mulle-env
+	#
+   r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/../../share"
+   sharedir="${RVAL}"
+
+   r_colon_concat "${searchpath}" "${sharedir}/mulle-env/plugins"
+   searchpath="${RVAL}"
+
+   # builtin plugins last
+   r_colon_concat "${searchpath}" "${MULLE_ENV_LIBEXEC_DIR}/plugins"
+   searchpath="${RVAL}"
+
+   log_debug "plugin searchpath: ${searchpath}"
+   RVAL="${searchpath}"
 }
 
 
