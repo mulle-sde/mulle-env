@@ -152,12 +152,9 @@ main()
       installer_fail "\"${prefix}\" does not exist"
    fi
 
-   local bin
-   local libexec
-   local directory
 
    directory="`dirname -- "$0"`"
-   cd "${directory}" || installer_fail "Could not cd to \"$directory\" ($PWD)" 
+   cd "${directory}" || installer_fail "Could not cd to \"$directory\" ($PWD)"
    cd .. || installer_fail "Could not cd to \"..\" ($PWD)"  # compensate for installer being in bin
 
    if [ ! -x mulle-env ]
@@ -168,7 +165,13 @@ main()
    PROJECT_VERSION="`./mulle-env version`"
    [ -z "${PROJECT_VERSION}" ] && echo "tragisches versagen" >&2 && exit 1
 
+   local bin
+   local libexec
+   local share
+   local directory
+
    bin="${prefix}/bin"
+   share=="${prefix}/share/mulle-env"
    libexec="${prefix}/libexec/mulle-env"
 
    if [ ! -d "${bin}" ]
@@ -181,6 +184,11 @@ main()
       mkdir -p "${libexec}" || installer_fail "could not create ${libexec}"
    fi
 
+   if [ ! -d "${share}" ]
+   then
+      mkdir -p "${share}" || installer_fail "could not create ${share}"
+   fi
+
    install -m "${mode}" "mulle-env" "${bin}/mulle-env" || exit 1
    printf "install: ${C_MAGENTA}${C_BOLD}%s${C_RESET}\n" "${bin}/mulle-env" >&2
    install -m "${mode}" "mudo" "${bin}/mudo" || exit 1
@@ -188,7 +196,6 @@ main()
 
    for i in src/mulle*
    do
-      mkdir -p "${libexec}" 2> /dev/null
       install -v -m "${mode}" "${i}" "${libexec}" || exit 1
    done
 
@@ -199,6 +206,9 @@ main()
       mkdir -p "${PLUGIN_DIR}" 2> /dev/null
       install -v -m "${mode}" "${i}" "${PLUGIN_DIR}" || exit 1
    done
+
+   PLUGIN_DIR="${share}/plugins"
+   install -v -m "${mode}" "src/PLUGIN_README.md" "${share}" || exit 1
 }
 
 main "$@"

@@ -1,3 +1,7 @@
+### 1.0.5
+
+* provide plugins directory for external plugins
+
 ### 1.0.4
 
 * add plugin-searchpath and plugin-installpath commands
