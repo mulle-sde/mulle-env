@@ -1,3 +1,7 @@
+### 1.0.2
+
+* debug installer for mulle-env
+
 ### 1.0.1
 
 * fix wrong plugin search path, add plugins-path command
