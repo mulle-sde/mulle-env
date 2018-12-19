@@ -201,14 +201,15 @@ main()
 
 
    PLUGIN_DIR="${libexec}/plugins"
+   mkdir -p "${PLUGIN_DIR}" 2> /dev/null
    for i in src/plugins/*.sh
    do
-      mkdir -p "${PLUGIN_DIR}" 2> /dev/null
       install -v -m "${mode}" "${i}" "${PLUGIN_DIR}" || exit 1
    done
 
    PLUGIN_DIR="${share}/plugins"
-   install -v -m "${mode}" "src/PLUGIN_README.md" "${share}" || exit 1
+   mkdir -p "${PLUGIN_DIR}" 2> /dev/null
+   install -v -m "${mode}" "src/PLUGIN_README.md" "${PLUGIN_DIR}" || exit 1
 }
 
 main "$@"

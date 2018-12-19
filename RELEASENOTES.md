@@ -1,3 +1,7 @@
+### 1.0.7
+
+* fix plugins path in installer
+
 ### 1.0.6
 
 * fix typo in installer :/
