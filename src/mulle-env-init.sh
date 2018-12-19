@@ -80,10 +80,7 @@ custom_environment_init()
 #   [ -z "${MULLE_ENV_ENVIRONMENT_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh"
 
    #
-   # use custom environment values to set plugin environment
-   # more or less to keep user expectations up with regards to
-   # flags. Can't set it in global though. They will be clobbered
-   # by an upgrade
+   # use custom environment values to set environment
    #
    set -f; IFS="
 "
@@ -91,13 +88,7 @@ custom_environment_init()
    do
       set +f; IFS="${DEFAULT_IFS}"
 
-      key="${keyvalue%%=*}"
-      value="${keyvalue#*=\'}"
-      value="${value%\'}"
-
-      log_warning "Manually defined environment variable \"${key}\" will not be used"
-
-#      env_environment_set_main "global" "${key}" "${value}" "no comment" || exit 1
+      eval "export ${keyvalue}"
    done
    set +f; IFS="${DEFAULT_IFS}"
 }
@@ -168,6 +159,14 @@ env_init_main()
    done
 
    [ "$#" -eq 0 ] || fail "Superflous arguments $*"
+
+   #
+   # command line parameters added via -D will just be exported here
+   # for orthogonality so they don't get lost, but they won't be persisted
+   # in any way
+   #
+   custom_environment_init
+
 
    local envfile
    local envincludefile
@@ -312,9 +311,6 @@ env_init_main()
 
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"
-
-   # useless IMO
-   custom_environment_init
 
    # we create this last, if its present than the init ran through
    log_verbose "Creating \"${versionfile}\""

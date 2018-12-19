@@ -1,3 +1,7 @@
+### 1.0.3
+
+* use -D defines as environment during init
+
 ### 1.0.2
 
 * debug installer for mulle-env
