@@ -1,3 +1,7 @@
+### 1.0.6
+
+* fix typo in installer :/
+
 ### 1.0.5
 
 * provide plugins directory for external plugins
