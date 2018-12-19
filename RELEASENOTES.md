@@ -1,3 +1,7 @@
+### 1.0.4
+
+* add plugin-searchpath and plugin-installpath commands
+
 ### 1.0.3
 
 * use -D defines as environment during init

@@ -32,8 +32,21 @@
 MULLE_ENV_PLUGINS_SH="included"
 
 
+r_plugin_installpath()
+{
+   log_entry "r_plugin_installpath"
+
+   # remove libexec/mulle-env add share
+   r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/../../share/mulle-env/plugins"
+
+   log_debug "plugin installpath: ${RVAL}"
+}
+
+
 r_plugin_searchpath()
 {
+   log_entry "r_plugin_searchpath"
+
 	local searchpath
 	local sharedir
 
@@ -43,14 +56,24 @@ r_plugin_searchpath()
 	# add wherever we are that share directory
 	# i.e.  /usr/libexec/mulle-env -> /usr/share/mulle-env
 	#
-   r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/../../share"
-   sharedir="${RVAL}"
-
-   r_colon_concat "${searchpath}" "${sharedir}/mulle-env/plugins"
+   r_plugin_installpath
+   r_colon_concat "${searchpath}" "${RVAL}"
    searchpath="${RVAL}"
 
+   #
+   # fix for homebrew on os x, where mulle-sde should install into
+   # /usr/local/share
+   #
+   case "${MULLE_UNAME}" in
+      darwin)
+         r_colon_concat "${searchpath}" "/usr/local/share/mulle-env/plugins"
+         searchpath="${RVAL}"
+      ;;
+   esac
+
    # builtin plugins last
-   r_colon_concat "${searchpath}" "${MULLE_ENV_LIBEXEC_DIR}/plugins"
+   r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/plugins"
+   r_colon_concat "${searchpath}" "${RVAL}"
    searchpath="${RVAL}"
 
    log_debug "plugin searchpath: ${searchpath}"

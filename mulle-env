@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="1.0.3"
+MULLE_ENV_VERSION="1.0.4"
 
 #
 # The default for first time mulle-env
@@ -95,7 +95,7 @@ Commands:
    tool          : manage subshell tools
    toolstyles    : list available tool styles (including plugins)
    upgrade       : upgrade a subshell to a newer mulle-env version
-   uname         : return the ${MULLE_USAGE_NAME} specfic uname
+   uname         : return the ${MULLE_USAGE_NAME} specific uname
    version       : return the ${MULLE_USAGE_NAME} version
    --            : enter the subshell
 
@@ -1459,10 +1459,18 @@ wild"
          return $?
       ;;
 
-      plugins-path)
+      plugin-searchpath)
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
 
          r_plugin_searchpath
+         echo "${RVAL}"
+         return
+      ;;
+
+      plugin-installpath)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         r_plugin_installpath
          echo "${RVAL}"
          return
       ;;
