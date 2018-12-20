@@ -32,6 +32,10 @@
 MULLE_ENV_PLUGINS_SH="included"
 
 
+#
+# the main problem is brew, as brew symlinks to the folder
+# but we need to get the source of the symlinks folder
+#
 r_plugin_installdir()
 {
    log_entry "r_plugin_installdir"
@@ -43,15 +47,13 @@ r_plugin_installdir()
    then
       case "${MULLE_ENV_LIBEXEC_DIR}" in
          */src)
-            RVAL="${MULLE_ENV_LIBEXEC_DIR}"
+            RVAL="/tmp/share/mulle-env/plugins"
             return
          ;;
       esac
    fi
 
-   # remove libexec/mulle-env add share
-   r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/../../share/mulle-env/plugins"
-
+   r_simplified_path "$0/../../share/mulle-env/plugins"
    log_debug "plugin install directory: ${RVAL}"
 }
 
