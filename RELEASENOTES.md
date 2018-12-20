@@ -1,3 +1,7 @@
+### 1.0.9
+
+* fix tool placement, recognize src `MULLE_ENV_LIBEXEC_DIR`
+
 ### 1.0.8
 
 * install-dir instead of installpath

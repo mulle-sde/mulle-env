@@ -36,6 +36,19 @@ r_plugin_installdir()
 {
    log_entry "r_plugin_installdir"
 
+   local dev="${1:-YES}"
+
+   # dev support
+   if [ "${dev}" = 'YES' ]
+   then
+      case "${MULLE_ENV_LIBEXEC_DIR}" in
+         */src)
+            RVAL="${MULLE_ENV_LIBEXEC_DIR}"
+            return
+         ;;
+      esac
+   fi
+
    # remove libexec/mulle-env add share
    r_simplified_path "${MULLE_ENV_LIBEXEC_DIR}/../../share/mulle-env/plugins"
 

@@ -243,10 +243,12 @@ _mulle_tool_add_file()
       redirect_append_exekutor "${toolsfile}" echo "${tool}"
    fi
 
-
    local bindir
+   local vardir
 
-   bindir="${MULLE_ENV_DIR}/bin"
+   vardir="${MULLE_ENV_DIR}/var"
+   bindir="${vardir}/${MULLE_HOSTNAME}/bin"
+
    mkdir_if_missing "${bindir}"
 
    local dstfile
