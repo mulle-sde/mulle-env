@@ -1,3 +1,7 @@
+### 1.0.8
+
+* install-dir instead of installpath
+
 ### 1.0.7
 
 * fix plugins path in installer

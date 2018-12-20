@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="1.0.7"
+MULLE_ENV_VERSION="1.0.8"
 
 #
 # The default for first time mulle-env
@@ -1387,6 +1387,16 @@ wild"
          return 0
       ;;
 
+      install-dir)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         r_plugin_installdir
+
+         log_info "Plugin installation directory"
+         echo "${RVAL}"
+         return
+      ;;
+
       reinit)
 
          local style
@@ -1430,12 +1440,29 @@ wild"
          return $?
       ;;
 
+      searchpath)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         log_info "Plugin searchpath"
+
+         r_plugin_searchpath
+         echo "${RVAL}"
+         return
+      ;;
+
       tool)
          # shellcheck source=src/mulle-env-tool.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
 
          _default_setup_environment "${PWD}" "${OPTION_SEARCH}" "NO"
          env_tool_main "$@"
+         return $?
+      ;;
+
+      toolstyles|plugins|show)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         env_all_plugin_names
          return $?
       ;;
 
@@ -1449,6 +1476,11 @@ wild"
          return $?
       ;;
 
+      uname)
+         echo "${MULLE_UNAME}"
+         return 0
+      ;;
+
       untweak)
          # shellcheck source=src/mulle-env-environment.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
@@ -1457,34 +1489,6 @@ wild"
          remove_file_if_present "${PWD}/.mulle-env/etc/tweak/$1"
          rmdir_if_empty "${PWD}/.mulle-env/etc/tweak"
          return $?
-      ;;
-
-      plugin-searchpath)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
-
-         r_plugin_searchpath
-         echo "${RVAL}"
-         return
-      ;;
-
-      plugin-installpath)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
-
-         r_plugin_installpath
-         echo "${RVAL}"
-         return
-      ;;
-
-      toolstyles|plugins|show)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
-
-         env_all_plugin_names
-         return $?
-      ;;
-
-      uname)
-         echo "${MULLE_UNAME}"
-         return 0
       ;;
 
       upgrade)
