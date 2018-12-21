@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="1.0.10"
+MULLE_ENV_VERSION="1.0.11"
 
 #
 # The default for first time mulle-env
@@ -983,6 +983,19 @@ _run_subshell()
    local env_flag
 
    env_flag="-i"
+
+   case "${MULLE_UNAME}" in
+      mingw*)
+         case "${style}" in
+            */wild)
+            ;;
+
+            *)
+               style="${style%/*}/wild"
+               log_info "On ${MULLE_UNAME} only ${style} is possible"
+            ;;
+      esac
+   esac
 
    case "${style}" in
       */wild)

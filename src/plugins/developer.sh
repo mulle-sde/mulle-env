@@ -118,14 +118,6 @@ env_setup_developer_tools()
 {
    log_entry "env_setup_developer_tools" "$@"
 
-   env_setup_minimal_tools "$@"
-}
-
-
-env_setup_developer_tools()
-{
-   log_entry "env_setup_developer_tools" "$@"
-
    local bindir="$1"
    local libexecdir="$2"
 
@@ -138,8 +130,11 @@ env_setup_developer_tools()
    # checked yet)
    #
    (
-      env_link_mulle_tool "mulle-bashfunctions-env" "${bindir}" "${libexecdir}" "library" &&
-      env_link_mulle_tool "mulle-env"               "${bindir}" "${libexecdir}"
+      env_link_mulle_tool "mulle-bashfunctions-env" "${bindir}"  \
+                                                    "${libexecdir}" \
+                                                    "library" &&
+      env_link_mulle_tool "mulle-env"               "${bindir}" \
+                                                    "${libexecdir}"
    ) || return 1
 }
 

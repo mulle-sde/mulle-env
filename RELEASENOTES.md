@@ -1,3 +1,7 @@
+### 1.0.11
+
+* mingw can only do wild, as it has no symlinks
+
 ### 1.0.10
 
 * use /tmp in developer mode
