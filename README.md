@@ -2,6 +2,8 @@
 
 🌳 Virtual environment for Unix
 
+![Last version](https://img.shields.io/github/tag/mulle-sde/mulle-env.svg)
+
 **mulle-env** provides a virtual environment as an interactive bash shell.
 Developing inside the mulle-env shell protects you from the following
 common mistakes:
