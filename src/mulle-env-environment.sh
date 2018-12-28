@@ -1215,7 +1215,7 @@ merge_awk_filter()
 {
    local awkcode
 
-   awkcode='{ left=substr( $0, 0, index( $0, "=") - 1); \
+   awkcode='{ left=substr( $0, 1, index( $0, "=") - 1); \
 right=substr( $0, index( $0, "=") + 1); \
 value[ left] = right }; \
 END{for(i in value) \

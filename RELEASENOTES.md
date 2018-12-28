@@ -1,3 +1,7 @@
+### 1.0.17
+
+* ... and fix awk
+
 ### 1.0.16
 
 * fix awk for mawk, which dont like substr index 0
