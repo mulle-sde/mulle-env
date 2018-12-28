@@ -112,6 +112,13 @@ print_developer_optional_tools_sh()
    log_entry "print_developer_optional_tools_sh" "$@"
 
    print_minimal_optional_tools_sh "$@"
+
+   OPTIONAL_DEVELOPER_BINARIES="ed
+emacs
+nano
+vi"
+
+   echo "${OPTIONAL_DEVELOPER_BINARIES}"
 }
 
 

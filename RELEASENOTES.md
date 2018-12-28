@@ -1,3 +1,7 @@
+### 1.0.13
+
+* reinstate ed and vi as optional developer tools
+
 ### 1.0.12
 
 * remove command, ed and vi from developer tools
