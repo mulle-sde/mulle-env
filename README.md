@@ -1,4 +1,6 @@
-# mulle-env, 🌳 Virtual environment for Unix
+# mulle-env
+
+🌳 Virtual environment for Unix
 
 **mulle-env** provides a virtual environment as an interactive bash shell.
 Developing inside the mulle-env shell protects you from the following
@@ -70,7 +72,7 @@ mulle-sde init -d /tmp/xxx
 mulle-sde -d /tmp/xxx -c env
 ```
 
-This environment is modified by reading a profile file 
+This environment is modified by reading a profile file
 `.mulle-env/share/environment.sh`. With this file new environment variables,
 especially PATH and aliases can be defined. Usually you do not manually edit
 this files, but use mulle-env commands and mulle-env plugins to customize the

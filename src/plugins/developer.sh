@@ -71,16 +71,18 @@ print_developer_tools_sh()
 #
 # somewhat arbitrarily hand-picked. Rule of thumb: if a mulle script uses
 # it, it's in here for sure (like base64 by mulle-sourcetree)
+# on a bare minimum ubuntu, the following commands are not there:
+#  ed, vi
+#
+# command is a bash builtin
 #
    EXPECTED_DEVELOPER_BINARIES="awk
 basename
 base64
 bash
 clear
-command
 cut
 dirname
-ed
 egrep
 env
 expr
@@ -98,7 +100,6 @@ tail
 test
 tr
 uuidgen
-vi
 wc
 which"
 

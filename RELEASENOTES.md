@@ -1,3 +1,7 @@
+### 1.0.12
+
+* remove command, ed and vi from developer tools
+
 ### 1.0.11
 
 * mingw can only do wild, as it has no symlinks
