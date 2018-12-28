@@ -1,3 +1,7 @@
+### 1.0.14
+
+* fix wrong optionality filename check
+
 ### 1.0.13
 
 * reinstate ed and vi as optional developer tools
