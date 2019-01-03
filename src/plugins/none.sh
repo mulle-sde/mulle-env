@@ -55,6 +55,11 @@ then
                   PATH=/bin:/usr/bin tr 'A-Z' 'a-z'\`"
    export MULLE_UNAME
 fi
+if [ -z "\${MULLE_HOSTNAME}" ]
+then
+   MULLE_HOSTNAME="\`PATH=/bin:/usr/bin:/sbin:/usr/sbin hostname -s\`"
+   export MULLE_HOSTNAME
+fi
 if [ -z "\${MULLE_VIRTUAL_ROOT}" ]
 then
    MULLE_VIRTUAL_ROOT="\`PATH=/bin:/usr/bin pwd -P\`"
@@ -65,7 +70,7 @@ fi
 #
 # now read in custom envionment (required)
 #
-. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/include-environment.sh"
+. "\${MULLE_VIRTUAL_ROOT}/.mulle/share/env/include-environment.sh"
 
 #
 # basic setup for interactive shells
@@ -99,7 +104,7 @@ case "\${MULLE_SHELL_MODE}" in
 
       # install mulle-env-reload
 
-      alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/include-environment.sh"'
+      alias mulle-env-reload='. "\${MULLE_VIRTUAL_ROOT}/.mulle/share/env/include-environment.sh"'
 
 
       #
@@ -108,7 +113,7 @@ case "\${MULLE_SHELL_MODE}" in
       DEFAULT_IFS="\${IFS}"
       shopt -s nullglob; IFS="
 "
-      for FILENAME in "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/libexec"/*-bash-completion.sh
+      for FILENAME in "\${MULLE_VIRTUAL_ROOT}/.mulle/share/env/libexec"/*-bash-completion.sh
       do
          . "\${FILENAME}"
       done
@@ -123,20 +128,22 @@ case "\${MULLE_SHELL_MODE}" in
       #
       if [ -z "\${NO_MOTD}" ]
       then
-         if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd" ]
+         if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle/etc/env/motd" ]
          then
-            cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/motd"
+            cat "\${MULLE_VIRTUAL_ROOT}/.mulle/etc/env/motd"
          else
-            if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd" ]
+            if [ -f "\${MULLE_VIRTUAL_ROOT}/.mulle/share/env/motd" ]
             then
-               cat "\${MULLE_VIRTUAL_ROOT}/.mulle-env/share/motd"
+               cat "\${MULLE_VIRTUAL_ROOT}/.mulle/share/env/motd"
             fi
          fi
-      else
-         unset NO_MOTD
       fi
    ;;
 esac
+
+# remove some uglies
+unset NO_MOTD
+unset TRACE
 
 EOF
 }
@@ -151,8 +158,8 @@ print_none_include_header_sh()
    echo "Your script needs to setup MULLE_VIRTUAL_ROOT \\
 and MULLE_UNAME properly" >&2  && exit 1
 
-MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/share"
-MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle-env/etc"
+MULLE_ENV_SHARE_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle/share/env"
+MULLE_ENV_ETC_DIR="\${MULLE_VIRTUAL_ROOT}/.mulle/etc/env"
 EOF
 }
 
@@ -166,7 +173,7 @@ print_none_include_environment_sh()
 # Keep these files (except environment-custom.sh) clean off manual edits so
 # that mulle-env can read and set environment variables.
 #
-# .mulle-env/etc                        | .mulle-env/share
+# .mulle/etc/env                        | .mulle/share/env
 # --------------------------------------|--------------------
 #                                       | environment-plugin.sh
 # environment-global.sh                 |
@@ -254,7 +261,6 @@ print_none_environment_aux_sh()
 }
 
 
-
 print_none_auxscopes_sh()
 {
    log_entry "print_none_auxscopes_sh" "$@"
@@ -273,6 +279,7 @@ print_none_tools_sh()
       echo "${OPTION_OTHER_TOOLS}"
    fi
 }
+
 
 print_none_optional_tools_sh()
 {

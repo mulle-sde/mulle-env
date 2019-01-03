@@ -96,8 +96,6 @@ _env_all_plugin_names()
    [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
 
    local searchpath
-   local RVAL
-
    r_plugin_searchpath
    searchpath="${RVAL}"
 
@@ -168,8 +166,6 @@ env_load_plugin()
    local flavor="$1"
 
    local searchpath
-   local RVAL
-
    r_plugin_searchpath
    searchpath="${RVAL}"
 

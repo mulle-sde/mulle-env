@@ -260,8 +260,6 @@ key_values_to_sed()
    local value
    local escaped_value
    local escaped_key
-   local RVAL
-
    IFS="
 "
    while read -r line
@@ -328,8 +326,6 @@ _env_environment_set()
    local escaped_value
    local sed_escaped_value
    local sed_escaped_key
-   local RVAL
-
    r_escaped_sed_pattern "${key}"
    sed_escaped_key="${RVAL}"
    r_escaped_sed_pattern "${value}"
@@ -540,12 +536,12 @@ env_environment_set_main()
       then
          log_warning "Adding unknown scope \"${scope}\" to auxscopes"
 
-         filename="${MULLE_ENV_DIR}/share/auxscopes"
+         filename="${MULLE_ENV_SHARE_DIR}/auxscopes"
          if [ -f "${filename}" ]
          then
             exekutor chmod ug+w "${filename}" 2> /dev/null
          fi
-         redirect_append_exekutor "${MULLE_ENV_DIR}/share/auxscopes" echo "${scope}"
+         redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscopes" echo "${scope}"
          exekutor chmod a-w "${filename}"
 
          RVAL="s" # auxscopes are always share
@@ -801,11 +797,11 @@ _env_environment_sed_get()
 
 r_get_auxscopes()
 {
-   log_entry "r_get_scopes" "$@"
+   log_entry "r_get_auxscopes" "$@"
 
    local auxscopesfile
 
-   auxscopesfile="${MULLE_ENV_DIR}/share/auxscopes"
+   auxscopesfile="${MULLE_ENV_SHARE_DIR}/auxscopes"
    if [ ! -f "${auxscopesfile}" ]
    then
       log_debug "No auxscopes found"
@@ -887,7 +883,7 @@ r_directory_for_scopeprefix()
    RVAL="${MULLE_ENV_ETC_DIR}"
    if [ "${prefix:0:1}" = "s" ]
    then
-      RVAL="${MULLE_ENV_DIR}/share"
+      RVAL="${MULLE_ENV_SHARE_DIR}"
    fi
 }
 
@@ -985,7 +981,7 @@ r_get_existing_scope_files()
          ;;
 
          's:'*)
-            filename="${MULLE_ENV_DIR}/share/environment-${scopename}.sh"
+            filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
             if [ -f "${filename}" ]
             then
                r_add_line "${RVAL}" "${filename}"
@@ -1056,11 +1052,9 @@ env_environment_get_main()
 
    local filename
    local filenames
-   local RVAL
-
    case "${scope}" in
       include)
-         ${getter} "${MULLE_ENV_DIR}/share/include-environment.sh" "${key}"
+         ${getter} "${MULLE_ENV_SHARE_DIR}/include-environment.sh" "${key}"
       ;;
 
       *)
@@ -1172,8 +1166,6 @@ env_environment_remove_main()
 
    local filename
    local filenames
-   local RVAL
-
    if [ "${scope}" = "DEFAULT" ]
    then
       r_get_existing_scope_files "--with-inferiors" "global"
@@ -1252,8 +1244,6 @@ _env_environment_combined_list()
 
    local text
    local contents
-   local RVAL
-
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
@@ -1288,8 +1278,6 @@ _env_environment_combined_list_main()
 
    local filename
    local filenames
-   local RVAL
-
 
    r_get_existing_scope_files "DEFAULT"
    filenames="${RVAL}"
@@ -1314,8 +1302,6 @@ _env_environment_list()
    log_entry "_env_environment_list" "$@"
 
    local scope
-   local RVAL
-
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
@@ -1355,8 +1341,6 @@ USER=\"${USER}\" \
    [ "$#" -eq 0 ] && internal_fail "No environment files specified"
 
    local files
-   local RVAL
-
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
@@ -1387,7 +1371,7 @@ USER=\"${USER}\" \
    # Properly: do `env -i bash -c env` and then remove
    # those lines
    #
-   reval_exekutor "${cmdline}" | rexekutor sed -e '/^PWD=/d' \
+   eval_rexekutor "${cmdline}" | rexekutor sed -e '/^PWD=/d' \
                                                -e '/^_=/d' \
                                                -e '/^SHLVL=/d' \
                                                -e '/^MULLE_UNAME=/d' \
@@ -1495,7 +1479,7 @@ env_environment_list_main()
       ;;
 
       include)
-         "${lister}" "${MULLE_ENV_DIR}/share/include-environment.sh"
+         "${lister}" "${MULLE_ENV_SHARE_DIR}/include-environment.sh"
       ;;
 
       *)
@@ -1523,7 +1507,7 @@ env_environment_list_main()
                ;;
 
                's:'*)
-                 "${lister}" "${MULLE_ENV_DIR}/share/environment-${scopename}.sh"
+                 "${lister}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
                ;;
             esac
          done
@@ -1532,7 +1516,6 @@ env_environment_list_main()
 
    esac
 }
-
 
 
 env_environment_scope_main()
@@ -1613,7 +1596,7 @@ env_environment_scope_main()
       (
          shopt -s nullglob
 
-         rexekutor ls -1 "${MULLE_ENV_DIR}/share"/environment-*.sh \
+         rexekutor ls -1 "${MULLE_ENV_SHARE_DIR}"/environment-*.sh \
                          "${MULLE_ENV_ETC_DIR}"/environment-*.sh \
             | sed '-e s|^.*/environment-\(.*\)\.sh$|\1|'
       ) | LC_ALL=C sort -u | sed -e '/^include/d'
@@ -1632,9 +1615,6 @@ env_environment_scope_main()
    then
       fail "No scopes selected"
    fi
-
-   local scope
-   local filename
 
    if [ "${OPTION_USER_SCOPES}" = 'YES' -a \
         "${OPTION_AUX_SCOPES}" = 'NO' -a \
@@ -1659,6 +1639,9 @@ env_environment_scope_main()
    sharedir="${MULLE_ENV_DIR#${PWD}/}/share"
 
    local scopename
+   local scope
+   local filename
+
    set -f
    IFS="
 "
@@ -1686,18 +1669,20 @@ env_environment_scope_main()
             ;;
          esac
       fi
-      echo "${scopename}" "${filename}"
+      concat "${scopename}" "${filename}" ";"
    done
 
    IFS="${DEFAULT_IFS}"
    set +f
+
+   return 0
 }
 
 
 assert_default_scope()
 {
    [ "${OPTION_SCOPE}" = "DEFAULT" ] || \
-      log_fail "scope has already \been specified as \"${OPTION_SCOPE}\""
+      log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
 }
 
 
@@ -1708,10 +1693,8 @@ env_environment_main()
 {
    log_entry "env_environment_main" "$@"
 
-   [ -z "${MULLE_ENV_DIR}" ] && internal_fail "MULLE_ENV_DIR is empty"
-   [ ! -d "${MULLE_ENV_DIR}" ] && fail "mulle-env init hasn't run here yet ($PWD)"
-
-   MULLE_ENV_ETC_DIR="${MULLE_ENV_ETC_DIR:-${MULLE_ENV_DIR}/etc}"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
+   [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
 
    local OPTION_SCOPE="DEFAULT"
    local infix="_"
@@ -1810,8 +1793,8 @@ env_environment_main()
          local style
          local flavor
 
-         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/etc" \
-                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle-env/share"
+         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle/etc/env" \
+                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle/share/env"
 
          env_init_main --upgrade --style "${style}"
       ;;

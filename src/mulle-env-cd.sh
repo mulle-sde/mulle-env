@@ -32,16 +32,18 @@
 MULLE_ENV_CD_SH="included"
 
 
+#
+# escapes in the direction upwards
+#
 function _env_escapes_environment()
 {
+   local physdir="$1"
+
    if [ -z "${MULLE_VIRTUAL_ROOT}" ]
    then
       return 1
    fi
 
-   local physdir
-
-   physdir="`( builtin cd "$@" 2> /dev/null && pwd -P )`"
    if [ -z "${physdir}" ]
    then
       return 1
@@ -60,6 +62,27 @@ function _env_escapes_environment()
 }
 
 
+#
+#
+#
+function _env_enters_different_environment()
+{
+   local physdir="$1"
+
+   if [ -z "${MULLE_VIRTUAL_ROOT}" ]
+   then
+      return 0
+   fi
+
+   while [ ! -d "${physdir}/.mulle/share/env" ]
+   do
+      physdir="${physdir%/*}"
+   done
+
+   [ "${physdir}" != "${MULLE_VIRTUAL_ROOT}" ]
+}
+
+
 function cd()
 {
    while [ "$#" -ne 0 ]
@@ -67,26 +90,41 @@ function cd()
       case "$1" in
          -f)
             shift
-            builtin cd "$@"
+            builtin cd "$1"
             return $?
          ;;
       esac
       break
    done
 
-   local directory="${1:-${MULLE_VIRTUAL_ROOT}}"
+   local directory="${1}"
+
+   directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
+
+   local physdir
+   local physpwd
+
+   physdir="`( builtin cd "${directory}" 2> /dev/null && pwd -P )`"
+   physpwd="`pwd -P`"
+
+   if ! _env_escapes_environment "${physdir}" ||
+        _env_escapes_environment "${physpwd}"
+   then
+       if ! _env_enters_different_environment "${physdir}"
+       then
+         builtin cd "${directory}"
+         return $?
+      fi
+
+      #
+      # We enter either a subproject or something like ./test or
+      # wildly crazy something like stash/foo
+      #
+   fi
 
    #
    # warn once when stepping out
    #
-   if ! _env_escapes_environment "${directory}" ||
-        _env_escapes_environment "${PWD}"
-   then
-      builtin cd "${directory}"
-      return $?
-   fi
-
-
    local C_RESET
    local C_RED
    local C_BOLD
@@ -95,7 +133,7 @@ function cd()
    C_RED="\033[0;31m"
    C_BOLD="\033[1m"
 
-   if [ ! -d "${directory}/.mulle-env" ]
+   if [ ! -d "${directory}/.mulle/share/env" ]
    then
       printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" is \
 outside of the virtual environment. Leave the shell or override with:
@@ -126,6 +164,13 @@ is a \"${nextstyle}\" environment. Can't switch to wild ones safely."
 
    printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Switching environment to \"${directory}\""
 
+   echo MULLE_VIRTUAL_ROOT="" exec mulle-env "${directory}" >&2
+
+   # restore old path if possible
+   if [ ! -z "${MULLE_OLDPATH}" ]
+   then
+      PATH="${MULLE_OLDPATH}"
+   fi
    MULLE_VIRTUAL_ROOT="" exec mulle-env "${directory}"
 }
 

@@ -75,7 +75,7 @@ mulle-sde -d /tmp/xxx -c env
 ```
 
 This environment is modified by reading a profile file
-`.mulle-env/share/environment.sh`. With this file new environment variables,
+`.mulle/share/env/environment.sh`. With this file new environment variables,
 especially PATH and aliases can be defined. Usually you do not manually edit
 this files, but use mulle-env commands and mulle-env plugins to customize the
 environment to your liking.
@@ -103,7 +103,7 @@ Enter the environment:
 $ mulle-env "project"
 $ ls
 $ echo $PATH
-/tmp/project/.mulle-env/var/<hostname>/bin
+/tmp/project/.mulle/var/env/<hostname>/bin
 $ ls -l $PATH
 total 0
 lrwxrwxrwx 1 nat nat 12 Jan 21 22:28 awk -> /usr/bin/awk
@@ -271,13 +271,13 @@ Use `mulle-env -f init` to overwrite a previous environment.
 
 Tools that you always require can be specified in your home directory as
 `~/.config/mulle-env/tool`. These will be installed in addition to those found
-in `.mulle-env/etc/tool`.
+in `.mulle/etc/env/tool`.
 
 
 #### Specify optionals tools
 
 Tools that are nice to have, but aren't required can be placed into
-`.mulle-env/etc/optionaltool`. A non-required tool does not prevent a subshell
+`.mulle/etc/env/optionaltool`. A non-required tool does not prevent a subshell
 from running.
 
 
@@ -286,7 +286,7 @@ from running.
 If you need some tools only on a certain platform, figure out the platform name
 with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
 `~/.config/mulle-env/tool.${MULLE_UNAME}` or
-`.mulle-env/etc/tool.${MULLE_UNAME}`.
+`.mulle/etc/env/tool.${MULLE_UNAME}`.
 
 Platform specific tool configuration files take precedence over the
 cross-platform ones without the extension.
@@ -296,10 +296,10 @@ cross-platform ones without the extension.
 
 Short of executing `exec zsh` - or whatever the shell flavor du jour is -
 everytime you enter the **mulle-env** subshell, you can add this at the end
-of a `.mulle-env/etc/environment-custom.sh` file:
+of a `.mulle/etc/env/environment-custom.sh` file:
 
 ```
-$ cat <<EOF >> .mulle-env/etc/environment-custom.sh
+$ cat <<EOF >> .mulle/etc/env/environment-custom.sh
 if [ "${LOGNAME}" = "moi"]
 then
    case "${MULLE_SHELL_MODE}" in

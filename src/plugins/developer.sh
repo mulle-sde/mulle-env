@@ -129,8 +129,6 @@ env_setup_developer_tools()
    local bindir="$1"
    local libexecdir="$2"
 
-   [ -z "${directory}" ] && internal_fail "directory is empty"
-
    #
    # Since the PATH is restricted, we need a basic set of tools
    # in directory/bin to get things going

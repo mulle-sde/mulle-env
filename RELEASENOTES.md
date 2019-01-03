@@ -1,3 +1,8 @@
+# 2.0.0
+
+* use common .mulle folder instead of .mulle-env
+
+
 ### 1.0.17
 
 * ... and fix awk

@@ -102,8 +102,6 @@ env_init_main()
    local OPTION_BLURB="DEFAULT"
 
    local directory
-   local RVAL
-
    directory="${PWD}"
 
    while [ $# -ne 0 ]
@@ -178,14 +176,29 @@ env_init_main()
    local optional_toolsfile
    local completionfile
 
-   MULLE_ENV_DIR="${directory}/.mulle-env"
+   MULLE_ENV_SHARE_DIR="${directory}/.mulle/share/env"
 
-   if [ "${OPTION_UPGRADE}" = 'YES' -a ! -d "${MULLE_ENV_DIR}" ]
+   if [ "${OPTION_UPGRADE}" = 'YES' ]
    then
-      fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_DIR}"
+      if ! _r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
+      then
+         fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_SHARE_DIR}/version"
+      fi
+      version="${RVAL}"
+
+      if [ "${version%%.*}" -lt 2 ]
+      then
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-upgrade.sh"
+         env_upgrade_from_v1_to_v2
+      fi
+
+      __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env" \
+                               "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/share/env"
+
+      OPTION_STYLE="${OPTION_STYLE:-${style}}"
    fi
 
-   sharedir="${MULLE_ENV_DIR}/share"
+   sharedir="${MULLE_ENV_SHARE_DIR}"
 
    envfile="${sharedir}/environment.sh"
    envincludefile="${sharedir}/include-environment.sh"
@@ -214,19 +227,12 @@ env_init_main()
       ;;
    esac
 
-   if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
-   then
-      rmdir_safer ".mulle-env/var"
-      # don't throw away share though
+   rmdir_safer ".mulle/var/${MULLE_HOSTNAME}/env"
 
-      # remove some known trouble makers...
-      remove_file_if_present ".mulle-env/etc/style"
-   else
-      if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
-      then
-         log_warning "\"${envfile}\" already exists"
-         return 2
-      fi
+   if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
+   then
+      log_warning "\"${envfile}\" already exists"
+      return 2
    fi
 
    mkdir_if_missing "${sharedir}"

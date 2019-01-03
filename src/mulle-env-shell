@@ -105,10 +105,10 @@ r_make_tmp_in_dir()
 
 r_get_envfile()
 {
-   RVAL="${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}"
-   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle-env/etc/${ENVFILENAME}" ]
+   RVAL="${MULLE_VIRTUAL_ROOT}/.mulle/etc/env/${ENVFILENAME}"
+   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle/etc/env/${ENVFILENAME}" ]
    then
-      RVAL="${MULLE_VIRTUAL_ROOT}/.mulle-env/share/${ENVFILENAME}"
+      RVAL="${MULLE_VIRTUAL_ROOT}/.mulle/share/env/${ENVFILENAME}"
    fi
    if [ ! -f "${RVAL}" ]
    then
@@ -130,8 +130,6 @@ emit_initfile()
    echo "set +o posix"  # turn back to default
 
    local envfile
-   local RVAL
-
    r_get_envfile
    envfile="${RVAL}"
 
@@ -165,8 +163,6 @@ run_script_shell()
 {
    local args
    local envfile
-   local RVAL
-
    r_get_envfile
    envfile="${RVAL}"
 
@@ -198,12 +194,16 @@ run_interactive_shell()
    # check vs bash/dash
    # not sure dash can do this, or does even still exist
    #
-   mkdir -p ".mulle-env/var/tmp" 2> /dev/null
+   local tmpdir
 
-   local RVAL
+   tmpdir=.mulle/var/${MULLE_HOSTNAME}/env/tmp
+
+   mkdir -p "${tmpdir}" 2> /dev/null
+
+
    local initfile
 
-   if ! r_make_tmp_in_dir ".mulle-env/var/tmp"
+   if ! r_make_tmp_in_dir "${tmpdir}"
    then
       _fail "Temporary initfile creation failed"
    fi
