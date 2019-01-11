@@ -62,6 +62,11 @@ EOF
 }
 
 
+#
+# restrict has this problem, that on linux cmake is installed in /bin
+# and everything works find and then you go to darwin where its in
+# /usr/local/bin and things fail
+#
 usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -121,7 +126,7 @@ Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
 Env-style:
    tight         : all environment variables are user defined
    relax         : none + inherit some environment (e.g. SSH_TTY) (default)
-   restrict      : relax + all /bin and /usr/bin tools
+   restrict      : relax + all /bin and /usr/bin tools.
    inherit       : restrict + all PATH tools
    wild          : no restrictions
 
@@ -462,19 +467,6 @@ env_setup_if_needed()
    needs_flavor_update=
    needs_bin_update=
 
-   #
-   # unprotect. Since these dirs are not in .git it should be OK
-   # if the directory is read only
-   #
-   if [ -d "${bindir}" ]
-   then
-      exekutor chmod -R ug+w "${bindir}"
-   fi
-   if [ -d "${libexecdir}" ]
-   then
-      exekutor chmod -R ug+w "${libexecdir}"
-   fi
-
    local callback
 
    #
@@ -570,19 +562,6 @@ check your tool list.
       rval=0
    fi
 
-   #
-   # protect from accidents
-   #
-   if [ -d "${libexecdir}" ]
-   then
-      exekutor chmod -R ugo-w "${libexecdir}"
-   fi
-
-   if [ -d "${bindir}" ]
-   then
-      exekutor chmod -R ugo-w "${bindir}"
-   fi
-
    [ "$rval" -eq 0 ] || exit 1
 }
 
@@ -590,6 +569,29 @@ check your tool list.
 #
 # also check version
 #
+__fail_get_saved_style_flavor()
+{
+   log_entry "__fail_get_saved_style_flavor" "$@"
+
+   local directory="$1"
+
+   r_simplified_absolutepath "${directory}"
+   directory="${RVAL}"
+
+   local userdir
+
+   r_fast_dirname "${directory}"  # ../env
+   r_fast_dirname "${directory}"  # ../${HOSTNAME}
+   r_fast_dirname "${directory}"  # ../var
+   r_fast_dirname "${directory}"  # ../.mulle
+   userdir="${RVAL}"
+
+   fail "No properly setup environment found in candidate project \
+directory \"${userdir}\" as \"${directory}\" or \"${fallback}\" contain no \
+style information."
+}
+
+
 __get_saved_style_flavor()
 {
    log_entry "__get_saved_style_flavor" "$@"
@@ -615,22 +617,10 @@ __get_saved_style_flavor()
 
    if [ -z "${style}" ]
    then
-      r_simplified_absolutepath "${directory}"
-      directory="${RVAL}"
-
-      local userdir
-
-      r_fast_dirname "${directory}"  # ../env
-      r_fast_dirname "${directory}"  # ../${HOSTNAME}
-      r_fast_dirname "${directory}"  # ../var
-      r_fast_dirname "${directory}"  # ../.mulle
-      userdir="${RVAL}"
-
-      fail "No properly setup environment found in candidate project \
-directory \"${userdir}\" as \"${directory}\" or \"${fallback}\" contain no \
-style information."
+      return 1
    fi
    flavor="${style%%/*}"
+   return 0
 }
 
 
@@ -1019,6 +1009,10 @@ _run_subshell()
          *:*)
             url="${arg}"
          ;;
+
+         *)
+            usage "Directory \"${directory}\" not found" # sic
+         ;;
       esac
 
       if [ ! -z "${url}" ]
@@ -1053,7 +1047,10 @@ _run_subshell()
    [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "No environment found in \
 \"${directory}\". Use \`mulle-env init\` to initialize it."
 
-   __get_saved_style_flavor "${vardir}" "${sharedir}"
+   if ! __get_saved_style_flavor "${vardir}" "${sharedir}"
+   then
+      __fail_get_saved_style_flavor "${vardir}"
+   fi
 
    local oldstyle
    local oldflavor
@@ -1448,7 +1445,7 @@ main()
             NO_MOTD='YES'
          ;;
 
-         -s|--style)
+         --style)
             [ $# -eq 1 ] && usage "Missing argument to $1"
             shift
 
@@ -1507,7 +1504,7 @@ main()
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
-         env_init_main "$@"
+         env_init_main --style "${OPTION_STYLE}" "$@"
          return $?
       ;;
 
@@ -1549,9 +1546,15 @@ wild"
 
          local style
          local flavor
+         local directory
+         local fallback
 
-         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle/var/${MULLE_HOSTNAME}/env" \
-                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle/share/env"
+         directory="${MULLE_VIRTUAL_ROOT:-.}/.mulle/var/${MULLE_HOSTNAME}/env"
+         fallback="${MULLE_VIRTUAL_ROOT:-.}/.mulle/share/env"
+         if ! __get_saved_style_flavor "${directory}" "${fallback}"
+         then
+            __fail_get_saved_style_flavor "${directory}"
+         fi
 
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
@@ -1564,13 +1567,18 @@ wild"
       style)
          local style
          local flavor
+
          local directory="$1"
 
          directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
          directory="${directory:-.}"
 
-         __get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
-                                  "${directory}/.mulle/share/env"
+         if ! __get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
+                                       "${directory}/.mulle/share/env"
+         then
+            __fail_get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
+         fi
+
          echo "${style}"
          return 0
       ;;
@@ -1654,14 +1662,15 @@ wild"
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
-         env_init_main --upgrade --style "${style}"
+         env_init_main --upgrade --style "${OPTION_STYLE}"
          return $?
       ;;
 
       v1v2)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-upgrade.sh" || exit 1
+         # shellcheck source=src/mulle-env-migrate.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh" || exit 1
 
-         env_upgrade_from_v1_to_v2
+         env_migrate_from_v1_to_v2
          return $?
       ;;
 
@@ -1669,7 +1678,7 @@ wild"
       ;;
 
       *)
-         OPTION_DIRECTORYP="${cmd}"
+         OPTION_DIRECTORY="${cmd}"
          [ $# -eq 0 ] || usage "Superflous argument \"${arg}\""
       ;;
    esac

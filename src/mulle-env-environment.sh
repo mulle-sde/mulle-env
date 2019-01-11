@@ -1787,18 +1787,6 @@ env_environment_main()
          env_environment_scope_main "$@"
       ;;
 
-      upgrade)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
-
-         local style
-         local flavor
-
-         __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-.}/.mulle/etc/env" \
-                                  "${MULLE_VIRTUAL_ROOT:-.}/.mulle/share/env"
-
-         env_init_main --upgrade --style "${style}"
-      ;;
-
       "")
          env_environment_usage
       ;;

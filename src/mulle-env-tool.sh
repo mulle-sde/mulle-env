@@ -214,10 +214,15 @@ _mulle_tool_add_file()
 
    local style
    local flavor
+   local directory
 
    # defined in mulle_env
-   __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT}/.mulle/etc/env" \
-                            "${MULLE_VIRTUAL_ROOT}/.mulle/share/env"
+   directory="${MULLE_VIRTUAL_ROOT}/.mulle/etc/env"
+   if ! __get_saved_style_flavor "${directory}" \
+                                 "${MULLE_VIRTUAL_ROOT}/.mulle/share/env"
+   then
+      __fail_get_saved_style_flavor "${directory}"
+   fi
 
    case "${style}" in
       */wild|*-inherit)
@@ -265,9 +270,6 @@ _mulle_tool_add_file()
 
    exekutor ln -sf "${executable}" "${bindir}/" || exit 1
 
-   exekutor chmod -f ugo-w "${dstfile}"  || : # see above
-   exekutor chmod ugo-w "${bindir}"
-
    return $rval
 }
 
@@ -293,13 +295,7 @@ _mulle_tool_remove_file()
    local bindir
 
    bindir="${MULLE_ENV_ETC_DIR}/bin"
-
-   if [ -d "${bindir}" ]
-   then
-      exekutor chmod ugo+w "${bindir}" || return 1
-      remove_file_if_present "${bindir}/${tool}" &&
-      exekutor chmod ugo-w "${bindir}"
-   fi
+   remove_file_if_present "${bindir}/${tool}"
 }
 
 

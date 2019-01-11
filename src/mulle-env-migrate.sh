@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_UPGRADE_SH="included"
+MULLE_ENV_MIGRATE_SH="included"
 
 
 env_move_directory()
@@ -91,19 +91,19 @@ env_convert_directory_if_present()
 }
 
 
-env_upgrade_from_v1_to_v2()
+env_migrate_from_v1_to_v2()
 {
-   log_entry "env_upgrade_from_v1_to_v2" "$@"
+   log_entry "env_migrate_from_v1_to_v2" "$@"
 
    if [ ! -d ".mulle-env" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
    then
-      log_warning "There is nothing to upgrade here"
+      log_warning "There is nothing to migrate here"
       return
    fi
 
    if [ -d ".mulle/share/env" ]
    then
-      log_warning "This projects seems to be upgraded already"
+      log_warning "This projects seems to be migrated already"
    fi
 
    MV="mv"

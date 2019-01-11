@@ -85,6 +85,8 @@ function _env_enters_different_environment()
 
 function cd()
 {
+   local wildok
+
    while [ "$#" -ne 0 ]
    do
       case "$1" in
@@ -92,6 +94,11 @@ function cd()
             shift
             builtin cd "$1"
             return $?
+         ;;
+
+         -w)
+            wildok="YES"
+            shift
          ;;
       esac
       break
@@ -156,9 +163,12 @@ the environment style of \"${directory}\". Chickening out."
       ;;
 
       */wild)
-         printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" \
+         if [ -z "${wildok}" ]
+         then
+            printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" \
 is a \"${nextstyle}\" environment. Can't switch to wild ones safely."
-         return 1
+            return 1
+         fi
       ;;
    esac
 

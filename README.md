@@ -103,7 +103,7 @@ Enter the environment:
 $ mulle-env "project"
 $ ls
 $ echo $PATH
-/tmp/project/.mulle/var/env/<hostname>/bin
+/tmp/project/.mulle/var/<hostname>/env/bin
 $ ls -l $PATH
 total 0
 lrwxrwxrwx 1 nat nat 12 Jan 21 22:28 awk -> /usr/bin/awk

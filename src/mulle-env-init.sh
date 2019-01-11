@@ -100,6 +100,7 @@ env_init_main()
 
    local OPTION_OTHER_TOOLS=
    local OPTION_BLURB="DEFAULT"
+   local OPTION_STYLE=""
 
    local directory
    directory="${PWD}"
@@ -126,7 +127,7 @@ env_init_main()
             OPTION_BLURB='NO'
          ;;
 
-         -s|--style)
+         --style)
             [ $# -eq 1 ] && fail "missing argument to $1"
             shift
 
@@ -188,15 +189,21 @@ env_init_main()
 
       if [ "${version%%.*}" -lt 2 ]
       then
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-upgrade.sh"
-         env_upgrade_from_v1_to_v2
+         # shellcheck source=src/mulle-env-migrate.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh"
+         env_migrate_from_v1_to_v2
       fi
 
       __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env" \
                                "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/share/env"
 
       OPTION_STYLE="${OPTION_STYLE:-${style}}"
+      if [ -z "${OPTION_STYLE}" ]
+      then
+         __fail__get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env"
+      fi
    fi
+
 
    sharedir="${MULLE_ENV_SHARE_DIR}"
 
@@ -218,14 +225,16 @@ env_init_main()
 
    __get_user_style_flavor "${OPTION_STYLE}"
    __load_flavor_plugin "${flavor}"
+
    case "${style}" in
       */inherit|*/relax|*/restrict|*/tight|*/wild)
       ;;
 
       *)
-         fail "unknown style \"${style}\""
+         fail "Unknown style \"${style}\""
       ;;
    esac
+   log_verbose "Init style is \"${style}\""
 
    rmdir_safer ".mulle/var/${MULLE_HOSTNAME}/env"
 
@@ -312,7 +321,7 @@ env_init_main()
       mkdir_if_missing "${sharedir}/libexec"
       log_verbose "Installing \"${completionfile}\""
       exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
-             ${completionfile}
+                   ${completionfile}
    fi
 
    log_verbose "Creating \"${stylefile}\""
