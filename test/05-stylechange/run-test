@@ -1,0 +1,80 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+   directory="${directory:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   local value
+
+   run_mulle_env -s init --style none/tight
+   value="`run_mulle_env style`"
+   [ "${value}" != 'none/tight' ] && fail "#1 style not set"
+
+   value="`run_mulle_env -c date 2>/dev/null`"
+   [ ! -z "${value}" ] && fail "#1 date still available"
+
+   log_verbose "----- #1 PASSED -----"
+
+
+   run_mulle_env -s upgrade --style minimal/tight
+   value="`run_mulle_env style`"
+   [ "${value}" != 'minimal/tight' ] && fail "#2 style not set"
+
+   value="`run_mulle_env -c date`"
+   [ -z "${value}" ] && fail "#2 date not available"
+
+   log_verbose "----- #2 PASSED -----"
+
+
+   run_mulle_env -s upgrade --style none/tight
+   value="`run_mulle_env style`"
+   [ "${value}" != 'none/tight' ] && fail "#3 style not set"
+
+   value="`run_mulle_env -c date 2>/dev/null`"
+   [ ! -z "${value}" ] && fail "#3 date still available"
+
+   log_verbose "----- #3 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
+

@@ -100,7 +100,7 @@ env_init_main()
 
    local OPTION_OTHER_TOOLS=
    local OPTION_BLURB="DEFAULT"
-   local OPTION_STYLE=""
+   local OPTION_STYLE="DEFAULT"
 
    local directory
    directory="${PWD}"
@@ -176,6 +176,8 @@ env_init_main()
    local sharedir
    local optional_toolsfile
    local completionfile
+   local style
+   local flavor
 
    MULLE_ENV_SHARE_DIR="${directory}/.mulle/share/env"
 
@@ -194,16 +196,16 @@ env_init_main()
          env_migrate_from_v1_to_v2
       fi
 
-      __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env" \
-                               "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/share/env"
-
-      OPTION_STYLE="${OPTION_STYLE:-${style}}"
-      if [ -z "${OPTION_STYLE}" ]
+      if [ "${OPTION_STYLE}" = 'DEFAULT' ]
       then
-         __fail__get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env"
+         if ! __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env" \
+                                       "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/share/env"
+         then
+            __fail__get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env"
+         fi
+         OPTION_STYLE="${style:-DEFAULT}"
       fi
    fi
-
 
    sharedir="${MULLE_ENV_SHARE_DIR}"
 
@@ -220,10 +222,12 @@ env_init_main()
 
    stylefile="${sharedir}/style"
 
-   local style
-   local flavor
+   if [ "${OPTION_STYLE}" = 'DEFAULT' ]
+   then
+      OPTION_STYLE="${MULLE_ENV_DEFAULT_STYLE}"
+   fi
 
-   __get_user_style_flavor "${OPTION_STYLE}"
+   __get_style_flavor "${OPTION_STYLE}"
    __load_flavor_plugin "${flavor}"
 
    case "${style}" in
@@ -236,8 +240,6 @@ env_init_main()
    esac
    log_verbose "Init style is \"${style}\""
 
-   rmdir_safer ".mulle/var/${MULLE_HOSTNAME}/env"
-
    if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
    then
       log_warning "\"${envfile}\" already exists"
@@ -245,7 +247,7 @@ env_init_main()
    fi
 
    mkdir_if_missing "${sharedir}"
-   find "${sharedir}" -type f -exec chmod ug+w {} \;
+   find "${sharedir}" -type f -exec chmod ug+w {} \; || return 1
 
    # indicate a fresh init by removing a possibly old versionfile
    remove_file_if_present "${versionfile}"
@@ -302,27 +304,24 @@ env_init_main()
       fi
    done
 
-   if [ "${OPTION_UPGRADE}" != 'YES' ]
+   log_verbose "Creating \"${toolsfile}\""
+   if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
    then
-      log_verbose "Creating \"${toolsfile}\""
-      if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
-      then
-         return 1
-      fi
-      redirect_exekutor "${toolsfile}" echo "${text}"
-
-      log_verbose "Creating \"${optional_toolsfile}\""
-      if ! text="`print_${flavor}_optional_tools_sh "${style}" | sort -u`"
-      then
-         return 1
-      fi
-      redirect_exekutor "${optional_toolsfile}" echo "${text}"
-
-      mkdir_if_missing "${sharedir}/libexec"
-      log_verbose "Installing \"${completionfile}\""
-      exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
-                   ${completionfile}
+      return 1
    fi
+   redirect_exekutor "${toolsfile}" echo "${text}"
+
+   log_verbose "Creating \"${optional_toolsfile}\""
+   if ! text="`print_${flavor}_optional_tools_sh "${style}" | sort -u`"
+   then
+      return 1
+   fi
+   redirect_exekutor "${optional_toolsfile}" echo "${text}"
+
+   mkdir_if_missing "${sharedir}/libexec"
+   log_verbose "Installing \"${completionfile}\""
+   exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
+                ${completionfile}
 
    log_verbose "Creating \"${stylefile}\""
    redirect_exekutor "${stylefile}" echo "${style}"

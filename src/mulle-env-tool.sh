@@ -49,6 +49,7 @@ Usage:
 Options:
    --required : restrict command to required tools
    --optional : restrict command to optional tools
+   --share    : use share instead of etc for add/remove
 
 Commands:
    add        : add a tool

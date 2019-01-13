@@ -98,6 +98,8 @@ sort
 stat
 tail
 test
+tee
+touch
 tr
 uuidgen
 wc
@@ -113,9 +115,14 @@ print_developer_optional_tools_sh()
 
    print_minimal_optional_tools_sh "$@"
 
+#
+# xargs is only used by mulle-dispense
+#
    OPTIONAL_DEVELOPER_BINARIES="ed
 emacs
 nano
+tar
+xargs
 vi"
 
    echo "${OPTIONAL_DEVELOPER_BINARIES}"

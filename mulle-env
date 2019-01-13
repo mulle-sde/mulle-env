@@ -105,6 +105,7 @@ Commands:
    environment   : manage subshell environment variables
    envstyles     : list available environment styles
    init          : set up the subshell for the first time
+   clean         : force relink of tools
    subenv        : enter a sub environment
    tool          : manage subshell tools
    toolstyles    : list available tool styles (including plugins)
@@ -602,23 +603,20 @@ __get_saved_style_flavor()
    local filename
 
    # make foo:bar foo/bar for backwards compatibility
-   style=""
    filename="${directory}/style.${LOGNAME:-all}"
-   if [ -f "${filename}" ]
-   then
-      style="`sed -e '/^#/d' -e 's|:|/|g' "${filename}" `"
-   else
-      filename="${fallback}/style"
-      if [ -f "${filename}" ]
-      then
-         style="`sed -e '/^#/d' -e 's|:|/|g' "${filename}" `"
-      fi
-   fi
-
+   style="`sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
    if [ -z "${style}" ]
    then
-      return 1
+      filename="${fallback}/style"
+      style="`sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
+      if [ -z "${style}" ]
+      then
+         log_debug "No previous style found ${filename}"
+         return 1
+      fi
    fi
+   log_fluff "Previous style \"${style}\" found in \"${filename}\""
+
    flavor="${style%%/*}"
    return 0
 }
@@ -658,7 +656,7 @@ __check_version()
 
    case "${version}" in
       "")
-         fail "This is an incomplete environment with no version information."
+         fail "\"${PWD}\" is not a mulle-env environment (no version information found)"
       ;;
 
       0\.*|1\.*)
@@ -681,17 +679,11 @@ ${C_RESET_BOLD}   mulle-env upgrade"
 }
 
 
-__get_user_style_flavor()
+__get_style_flavor()
 {
-   log_entry "__get_user_style_flavor" "$@"
+   log_entry "__get_style_flavor" "$@"
 
-   local option="$1"
-
-   style="${option}"
-   if [ "${style}" = "DEFAULT" ]
-   then
-      style="${MULLE_ENV_DEFAULT_STYLE}"
-   fi
+   style="$1"
    flavor="${style%%/*}"
 }
 
@@ -1011,7 +1003,7 @@ _run_subshell()
          ;;
 
          *)
-            usage "Directory \"${directory}\" not found" # sic
+            usage "Unknown command \"${directory}\"" # sic
          ;;
       esac
 
@@ -1060,7 +1052,7 @@ _run_subshell()
 
    if [ "${OPTION_STYLE}" != "DEFAULT" ]
    then
-      __get_user_style_flavor "${OPTION_STYLE}"
+      __get_style_flavor "${OPTION_STYLE}"
    fi
 
    local inherit_path
@@ -1322,6 +1314,19 @@ define_custom_environment()
 }
 
 
+clean()
+{
+   log_entry "clean" "$@"
+
+   _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+
+   # shellcheck source=src/mulle-env-clean.sh
+   . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh" || fail "failed to load \"${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh\""
+
+   env_clean_main "$@"
+}
+
+
 main()
 {
    # todo rename these to FLAG
@@ -1372,7 +1377,11 @@ main()
             shift
 
             # escape properly for later eval
-            printf -v OPTION_SHELL_COMMAND "%q" "$1"
+            printf -v OPTION_SHELL_COMMAND "%q" "$*"
+            while [ $# -ne 0 ]
+            do
+               shift
+            done
          ;;
 
          -C)
@@ -1500,11 +1509,8 @@ main()
          [ $# -ne 0 ] && shift
       ;;
 
-      init)
-         # shellcheck source=src/mulle-env-init.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
-
-         env_init_main --style "${OPTION_STYLE}" "$@"
+      clean)
+         clean "$@"
          return $?
       ;;
 
@@ -1532,6 +1538,15 @@ wild"
          return 0
       ;;
 
+      init)
+         # shellcheck source=src/mulle-env-init.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
+
+         env_init_main --style "${OPTION_STYLE}" "$@" || return $?
+         clean
+         return $?
+      ;;
+
       install-dir)
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
 
@@ -1551,6 +1566,11 @@ wild"
 
          directory="${MULLE_VIRTUAL_ROOT:-.}/.mulle/var/${MULLE_HOSTNAME}/env"
          fallback="${MULLE_VIRTUAL_ROOT:-.}/.mulle/share/env"
+         r_simplified_absolutepath "${directory}"
+         directory="${RVAL}"
+         r_simplified_absolutepath "${fallback}"
+         fallback="${RVAL}"
+
          if ! __get_saved_style_flavor "${directory}" "${fallback}"
          then
             __fail_get_saved_style_flavor "${directory}"
@@ -1572,6 +1592,8 @@ wild"
 
          directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
          directory="${directory:-.}"
+         r_simplified_absolutepath "${directory}"
+         directory="${RVAL}"
 
          if ! __get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
                                        "${directory}/.mulle/share/env"
@@ -1607,10 +1629,10 @@ wild"
       ;;
 
       tool)
+         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
          # shellcheck source=src/mulle-env-tool.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
 
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
          env_tool_main "$@"
          return $?
       ;;
@@ -1662,11 +1684,12 @@ wild"
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
-         env_init_main --upgrade --style "${OPTION_STYLE}"
+         env_init_main --upgrade --style "${OPTION_STYLE}" "$@" || exit 1
+         clean
          return $?
       ;;
 
-      v1v2)
+      migrate)
          # shellcheck source=src/mulle-env-migrate.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh" || exit 1
 
