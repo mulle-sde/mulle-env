@@ -193,7 +193,7 @@ _mulle_tool_add_file()
    # use mudo to break out of
    # virtual environment
    #
-   executable="`mudo which "${tool}" 2> /dev/null`"
+   executable="`rexekutor mudo which "${tool}" 2> /dev/null`"
    if [ -z "${executable}" ]
    then
       if [ -z "`which "mudo" 2> /dev/null`" ]

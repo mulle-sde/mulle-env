@@ -1,3 +1,8 @@
+### 2.0.1
+
+* don't protect bindir anymore, since its in var now
+* use common .mulle folder instead of .mulle-env
+
 # 2.0.0
 
 * use common .mulle folder instead of .mulle-env
