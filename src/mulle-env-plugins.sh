@@ -53,7 +53,8 @@ r_plugin_installdir()
       esac
    fi
 
-   r_simplified_path "$0/../../share/mulle-env/plugins"
+   r_resolve_symlinks "$0"
+   r_simplified_path "${RVAL}/../../share/mulle-env/plugins"
    log_debug "plugin install directory: ${RVAL}"
 }
 
@@ -76,6 +77,12 @@ r_plugin_searchpath()
    searchpath="${RVAL}"
 
    r_colon_concat "${searchpath}" "${MULLE_SDE_EXTENSION_BASE_PATH}"
+   searchpath="${RVAL}"
+
+   r_colon_concat "${searchpath}" "/usr/local/share/mulle-env/plugins"
+   searchpath="${RVAL}"
+
+   r_colon_concat "${searchpath}" "/usr/share/mulle-env/plugins"
    searchpath="${RVAL}"
 
    # builtin plugins last

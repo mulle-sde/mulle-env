@@ -1,3 +1,7 @@
+### 2.0.2
+
+* resolve plugin installdir path
+
 ### 2.0.1
 
 * don't protect bindir anymore, since its in var now
