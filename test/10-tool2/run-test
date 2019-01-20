@@ -1,0 +1,144 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+   directory="${directory:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   value="`run_mulle_env -s tool2 list | egrep '^mudo$'`"
+   [ "${value}" != 'mudo' ] && fail "#1: not mudo is wrong here"
+
+   value="`run_mulle_env -s tool2 get mudo`"
+   [ "${value}" != 'mudo' ] && fail "#1: no mudo after get is wrong"
+
+   if run_mulle_env tool2 add mudo
+   then
+      fail "#1: Unexpected success of mudo add (should be 2)"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   value="`run_mulle_env -s tool2 list | egrep awk`"
+   [ ! -z "${value}" ] && fail "#1: awk is wrong here"
+
+   if ! run_mulle_env tool2 add awk
+   then
+      fail "#1: Unexpected add failure"
+   fi
+
+   value="`run_mulle_env -s tool2 list | egrep awk`"
+   [ "${value}" != "awk" ] && fail "#2: Not awk is wrong here"
+
+   log_verbose "----- #2 PASSED -----"
+
+   if ! run_mulle_env tool2 --os foobar add ls
+   then
+      fail "#3: Unexpected add failure"
+   fi
+
+   value="`run_mulle_env -s tool2 list os`"
+   [ "${value}" = "foobar"  ] && fail "#3: foobar not known"
+
+   value="`run_mulle_env -s tool2 get ls`"
+   [ ! -z "${value}"  ] && fail "#3: ls only available in foobar"
+
+   value="`run_mulle_env -s tool2 --os foobar get ls`"
+   [ "${value}" != "ls" ] && fail "#3: ls not available in foobar"
+
+   run_mulle_env -s tool2 compile
+   result="`cat .mulle/var/${MULLE_HOSTNAME}/env/tool`"
+   expect="awk
+mudo"
+   [ "${expect}" != "${result}" ] && fail "#3: result ${result} did not match ${expect}"
+
+   log_verbose "----- #3 PASSED -----"
+
+   [ -x ".mulle/var/${MULLE_HOSTNAME}/env/bin/ls" ] && fail "#4: ls already in bin"
+
+   if ! run_mulle_env -s tool2 link
+   then
+      fail fail "#4: link failed unexpectedly"
+   fi
+
+   [ ! -x ".mulle/var/${MULLE_HOSTNAME}/env/bin/awk" ] && fail "#4: awk not in bin"
+   [ -x ".mulle/var/${MULLE_HOSTNAME}/env/bin/ls" ] && fail "#4: ls in bin, but should not be"
+
+   log_verbose "----- #4 PASSED -----"
+
+   if [ -z "`command -v ishouldnotexist`" ]
+   then
+      if ! run_mulle_env tool2 --current add ishouldnotexist
+      then
+         fail "#5: Unexpected add failure"
+      fi
+
+      if run_mulle_env -s tool2 link --compile-if-needed
+      then
+         fail fail "#5: link succeeded unexpectedly"
+      fi
+      log_info "Failed as expected"
+
+      if ! run_mulle_env tool2 --current remove ishouldnotexist
+      then
+         fail "#5: Unexpected remove failure"
+      fi
+
+      if ! run_mulle_env tool2 --current add --optional ishouldnotexist
+      then
+         fail "#5: Unexpected add failure"
+      fi
+
+      if ! run_mulle_env -s tool2 link --compile-if-needed
+      then
+         fail fail "#5: link failed unexpectedly"
+      fi
+
+      [ -e ".mulle/var/${MULLE_HOSTNAME}/env/bin/ishouldnotexist" ] && fail "#5: ishouldnotexist in bin, but should not be"
+
+      log_verbose "----- #5 PASSED -----"
+   fi
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
+

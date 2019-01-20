@@ -1,3 +1,8 @@
+## 2.1.0
+
+* reworked the tool command
+
+
 ### 2.0.2
 
 * resolve plugin installdir path

@@ -421,7 +421,7 @@ env_environment_remove_from_global_subscopes()
 }
 
 
-# todo: set i still too hacky
+# todo: set is still too hacky
 #       and doesn't respect r_get_scopes information
 
 env_environment_set_main()
@@ -537,12 +537,9 @@ env_environment_set_main()
          log_warning "Adding unknown scope \"${scope}\" to auxscopes"
 
          filename="${MULLE_ENV_SHARE_DIR}/auxscopes"
-         if [ -f "${filename}" ]
-         then
-            exekutor chmod ug+w "${filename}" 2> /dev/null
-         fi
+         unprotect_file_if_exists "${filename}"
          redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscopes" echo "${scope}"
-         exekutor chmod a-w "${filename}"
+         protect_file "${filename}"
 
          RVAL="s" # auxscopes are always share
       else
@@ -556,10 +553,7 @@ env_environment_set_main()
 
    if [ "${scopeprefix}" = "s" ]
    then
-      if [ -f "${filename}" ]
-      then
-         exekutor chmod ug+w "${filename}"
-      fi
+      unprotect_file_if_exists "${filename}"
    fi
 
    _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
@@ -573,10 +567,7 @@ env_environment_set_main()
 
    if [ "${scopeprefix}" = "s" ]
    then
-      if [ -f "${filename}" ]
-      then
-         exekutor chmod a-w "${filename}"
-      fi
+      protect_file "${filename}"
    fi
 
    return $rval

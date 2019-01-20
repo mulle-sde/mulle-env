@@ -112,11 +112,15 @@ uname
 }
 
 
-print_minimal_optional_tools_sh()
+env_setup_minimal_tools()
 {
-   log_entry "print_minimal_optional_tools_sh" "$@"
+   log_entry "env_setup_minimal_tools" "$@"
 
-   print_none_optional_tools_sh "$@"
+   env_setup_none_tools "$@"
+
+   # there are no "special" tools to do here
+   # minimal is still an environment, where you don't do mulle stuff
+   # so no mulle-env or mulle-bashfunctions-env here
 }
 
 

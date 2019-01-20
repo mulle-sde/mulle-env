@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.0.2"
+MULLE_ENV_VERSION="2.1.0"
 
 #
 # The default for first time mulle-env
@@ -140,312 +140,341 @@ EOF
 }
 
 
-r_censored_path()
-{
-   log_entry "r_censored_path" "$@"
-
-   local i
-   local j
-
-   RVAL=""
-
-   set -f ; IFS=":"
-   for i in $*
-   do
-      for j in ${RESTRICTED_PATH}
-      do
-         set +f ; IFS="${DEFAULT_IFS}"
-
-         if [ "$i" = "$j" ]
-         then
-            r_colon_concat "${RVAL}" "${i}"
-         fi
-
-         set -f ; IFS=":"
-      done
-   done
-
-   set +f ; IFS="${DEFAULT_IFS}"
-}
-
-
 #
-# since all mulle- tools are uniform, this is easy.
-# If it's a library, we need to strip off -env from
-# the toolname for the libraryname. Also libexec is versionized
-# so add the version. The dstbindir/dstlibexecdir is in .mulle directly
+# start:     starting directory
+# search:    NONE (useless) NEAREST, SUPERIOR, DEFAULT
+# useclimb:
 #
-env_link_mulle_tool()
+r_find_best_environment()
 {
-   log_entry "env_link_mulle_tool" "$@"
+   log_entry "r_find_best_environment" "$@"
 
-   local toolname="$1"
-   local dstbindir="$2"
-   local dstlibexecdir="$3"
-   local copystyle="${4:-tool}"
-   local optional="$5"
-
-   if [ -e "${bindir}/${toolname}" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
-   then
-      log_fluff "Mulle tool \"${toolname}\" already present"
-      return
-   fi
-
-   #
-   # these dependencies should be there, but just check
-   #
-   local exefile
-
-   #
-   # TODO: might need to modify PATH if our .mulle/bin is part of it
-   #       which can happen if we are called from another environment
-   #
-   exefile="`command -v "${toolname}" `"
-   if [ -z "${exefile}" ]
-   then
-      if [ "${optional}" != 'optional' ]
-      then
-         fail "${toolname} not in PATH"
-      fi
-      return 0
-   fi
-
-   # doing it like this renames "src" to $toolname
-
-   local srclibexecdir
-   local parentdir
-   local srclibname
-
-   srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
-   r_fast_dirname "${srclibdir}"
-   srclibexecdir="${RVAL}"
-   r_fast_basename "${srclibdir}"
-   srclibname="${RVAL}"
-
-   local dstbindir
-   local dstexefile
-   local dstlibname
-
-   dstlibname="${toolname}"
-   dstexefile="${dstbindir}/${toolname}"
-   mkdir_if_missing "${dstbindir}"
-
-   if [ "${copystyle}" = "library" ]
-   then
-      local version
-
-      version="`"${exefile}" version `" || exit 1
-      dstlibname="`sed 's/-env$//' <<< "${toolname}" `"
-      dstlibdir="${dstlibexecdir}/${dstlibname}/${version}"
-   else
-      dstlibdir="${dstlibexecdir}/${dstlibname}"
-   fi
-
-   # remove previous symlinks or files
-   remove_file_if_present "${dstexefile}"
-   if [ -d "${dstlibdir}" ]
-   then
-      rmdir_safer "${dstlibdir}"
-   else
-      remove_file_if_present "${dstlibdir}"
-   fi
-
-   if [ "${OPTION_COPY_MULLE_TOOL}" = 'YES' ]
-   then
-      mkdir_if_missing "${dstlibdir}"
-
-      ( cd "${srclibdir}" ; tar cf - . ) | \
-      ( cd "${dstlibdir}" ; tar xf -  )
-
-      mkdir_if_missing "${dstbindir}"
-
-      log_fluff "Copying \"${dstexefile}\""
-
-      exekutor cp "${exefile}" "${dstexefile}" &&
-      exekutor chmod 755 "${dstexefile}"
-      return $?
-   fi
-
-   mkdir_if_missing "${dstbindir}"
-   mkdir_parent_if_missing "${dstlibdir}" > /dev/null
-
-   log_fluff "Creating symlink \"${dstexefile}\""
-
-   exekutor ln -s -f "${exefile}" "${dstexefile}"
-   exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}"
-}
-
-
-env_link_other_tool()
-{
-   log_entry "env_link_other_tool" "$@"
-
-   local toolname="$1"
-   local bindir="$2"
-   local isrequired="$3"
-
-   #
-   # when stepping back and forth from environments, it may be that
-   # we have the proper symlink already, but we don't have the PATH anymore
-   # so lets check first that a link exists
-   #
-   if [ -e "${bindir}/${toolname}" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
-   then
-      log_fluff "Tool \"${toolname}\" already present"
-      return
-   fi
-
-   local filename
-
-   filename="`command -v "${toolname}" `"
-   case "${filename}" in
-      "")
-         if [ "${isrequired}" = 'YES' ]
-         then
-            fail "Required tool \"${toolname}\" not found"
-         fi
-
-         log_fluff "\"${toolname}\" not found, but it's optional"
-         return 1
-      ;;
-
-      #
-      # the idea here is to keep the mulle tools in a local state
-      # until upgrade, unaffected by other projects
-      #
-      /*/mulle-*-*-*)
-         if [ "${OPTION_COPY_MULLE_TOOL}" = 'YES' ]
-         then
-            log_fluff "Copying mulle script \"${bindir}/${toolname}\""
-
-            exekutor cp -a "${filename}" "${bindir}"
-            return $?
-         fi
-      ;;
-
-      /*)
-      ;;
-
-      *)
-         log_fluff "Skipping builtin \"${filename}\""
-         return
-      ;;
-   esac
-
-   log_fluff "Creating symlink \"${bindir}/${toolname}\""
-
-   exekutor ln -sf "${filename}" "${bindir}"
-}
-
-
-env_link_other_tools()
-{
-   log_entry "env_link_other_tools" "$@"
-
-   local toolnames="$1"
-   local bindir="$2"
-   local isrequired="$3"
-
-   local toolname
-
-   local bindir
-
-   mkdir_if_missing "${bindir}"
-
-   set -f ; IFS="
-"
-   for toolname in ${toolnames}
-   do
-      set +f ; IFS="${DEFAULT_IFS}"
-
-      if [ -z "${toolname}" ]
-      then
-         continue
-      fi
-
-      env_link_other_tool "${toolname}" "${bindir}" "${isrequired}"
-   done
-
-   set +f ; IFS="${DEFAULT_IFS}"
-
-   rmdir_if_empty "${bindir}"
-}
-
-
-find_tool_file()
-{
-   local name="$1"; shift
+   local start="$1"
+   local searchmode="$2"
 
    local directory
-   local filename
+   local best
+   local warn
+   local searchfile
 
-   set -o noglob;  IFS="
-"
-   for directory in "$@"
+   best="${start}"
+   r_absolutepath "${start}"
+   directory="${RVAL}"  # paranoia
+
+   warn='NO'
+
+   while :
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
-
-      filename="${directory}/${name}.${MULLE_UNAME}"
-      [ -f "${filename}" ] && echo "${filename}" && return
-
-      filename="${directory}/${name}"
-      [ -f "${filename}" ] && echo "${filename}" && return
-   done
-   set + noglob; IFS="${DEFAULT_IFS}"
-}
-
-
-env_other_tool_files()
-{
-   log_entry "env_other_tool_files" "$@"
-
-   local directory="$1"
-
-   [ -z "${directory}" ] && internal_fail "directory must not be empty"
-
-   if [ ! -z "${HOME}" ]
-   then
-      find_tool_file "tool" "${HOME}/.config"
-      find_tool_file "optionaltool" "${HOME}/.config"
-   fi
-
-   find_tool_file "tool" "${MULLE_ENV_ETC_DIR}" "${MULLE_ENV_SHARE_DIR}"
-   find_tool_file "optionaltool" "${MULLE_ENV_ETC_DIR}" "${MULLE_ENV_SHARE_DIR}"
-}
-
-
-env_setup_other_tools()
-{
-   log_entry "env_setup_other_tools" "$@"
-
-   local toolfiles="$1"
-   local bindir="$2"
-
-   local tools
-   local toolfile
-
-   set -f ; IFS="
-"
-   for toolfile in ${toolfiles}
-   do
-      set +f ; IFS="${DEFAULT_IFS}"
-
-      if tools="`cat "${toolfile}" `"
+      searchfile="${directory}/.mulle/share/env/environment.sh"
+      if [ -f "${searchfile}" ]
       then
-         case "${toolfile}" in
-            optional*|*/optional*)
-               env_link_other_tools "${tools}" "${bindir}" 'NO'
+         log_debug "Found \"${searchfile}"
+
+         case "${searchmode}" in
+            NEAREST)
+               RVAL="${directory}"
+               return
+            ;;
+
+            PARENT)
+               if [ ! -z "${best}" ]
+               then
+                  RVAL="${directory}"
+                  return
+               fi
+            ;;
+
+            SUPERIOR)
+               log_debug "Keep looking past \"${directory}\""
+            ;;
+
+            DEFAULT)
+               if [ -f "${directory}/.mulle/share/env/defer" -o \
+                    -f "${directory}/.mulle/etc/env/defer" ]
+               then
+                  log_debug "\"${directory}\" is defering with tweak \"defer\""
+               else
+                  RVAL="${directory}"
+                  return
+               fi
             ;;
 
             *)
-               env_link_other_tools "${tools}" "${bindir}" 'YES'
+               internal_fail "unknown searchmode \"${searchmode}\""
             ;;
          esac
+         best="${directory}"
+      else
+         log_debug "Did not find \"${searchfile}\""
+      fi
+
+      r_fast_dirname "${directory}"
+      directory="${RVAL}"
+
+      # look for .mulle/share/env/*/environment.sh going up to root, if we
+      # find one, we latch onto it
+      if [ "${directory}" = "/" ]
+      then
+         RVAL="${best}"
+         return
       fi
    done
-   set +f ; IFS="${DEFAULT_IFS}"
 
-   return 0
+   if [ "${warn}" = 'YES' ]
+   then
+      log_info "Using the superior mulle-env environment at \
+${C_RESET_BOLD}${best}${C_INFO}.
+Suppress this behaviour with the flag \"-N\" or permanently suppress on a
+per environment basis with:
+   ${C_RESET_BOLD}mulle-env tweak subproject"
+
+   fi
+
+   log_debug "Accept as superior"
+   RVAL="${best}"
+}
+
+
+_setup_environment()
+{
+   log_entry "_setup_environment" "$@"
+
+   local directory="$1"
+   local setroot="$2"
+
+   [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME not set"
+
+   local physicaldir
+
+   physicaldir="`physicalpath "${directory}" `"
+   [ ! -d "${physicaldir}" ] && internal_fail "physicalpath failed"
+   [ "${physicaldir}" = "/" ] && fail "Running in / which is not supported"
+
+   if [ "${setroot}" = 'YES' ]
+   then
+      MULLE_VIRTUAL_ROOT="${physicaldir}"
+   fi
+
+   MULLE_ENV_VAR_DIR="${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env"
+   MULLE_ENV_SHARE_DIR="${physicaldir}/.mulle/share/env"
+   MULLE_ENV_ETC_DIR="${physicaldir}/.mulle/etc/env"
+
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+   then
+      log_trace2 "MULLE_VIRTUAL_ROOT  set to \"${MULLE_VIRTUAL_ROOT}\""
+      log_trace2 "MULLE_ENV_ETC_DIR   set to \"${MULLE_ENV_ETC_DIR}\""
+      log_trace2 "MULLE_ENV_SHARE_DIR set to \"${MULLE_ENV_SHARE_DIR}\""
+      log_trace2 "MULLE_ENV_VAR_DIR   set to \"${MULLE_ENV_VAR_DIR}\""
+   fi
+}
+
+
+_default_setup_environment()
+{
+   log_entry "_default_setup_environment" "$@"
+
+   local directory="${1:-${PWD}}"
+   local searchmode="$2"
+   local setroot="${3:-YES}"
+
+   r_find_best_environment "${directory}" "${searchmode}"
+   directory="${RVAL}"
+   log_fluff "Environment directory determined to be \"${directory}\""
+
+   [ ! -d "${directory}" ] && fail "${directory} does not exist (init it first)"
+
+   _setup_environment "${directory}" "${setroot}"
+}
+
+#
+# smallish library of functions
+#
+
+protect_file()
+{
+   log_entry "protect_file" "$@"
+
+   local filename="$1"
+
+   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   then
+      exekutor chmod -f a-w "${filename}" || exit 1
+   fi
+}
+
+
+protect_file_if_exists()
+{
+   log_entry "protect_file" "$@"
+
+   local filename="$1"
+
+   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   then
+      if [ -e "${filename}" ]
+      then
+         exekutor chmod -f a-w "${filename}" || exit 1
+      fi
+   fi
+}
+
+
+unprotect_file_if_exists()
+{
+   log_entry "unprotect_file_if_exists" "$@"
+
+   local filename="$1"
+
+   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   then
+      if [ -e "${filename}" ]
+      then
+         exekutor chmod -f ug+w "${filename}"
+      fi
+   fi
+}
+
+unprotect_dir_if_exists()
+{
+   log_entry "unprotect_dir_if_exists" "$@"
+
+   local directory="$1"
+
+   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   then
+      if [ -d "${directory}" ]
+      then
+         exekutor chmod -f ug+wX "${directory}"
+      fi
+   fi
+}
+
+
+#
+# tool support
+#
+__get_tool_filepath()
+{
+   local extension="${1:-.${MULLE_UNAME}}"
+
+   _filepath="${MULLE_ENV_SHARE_DIR}/tool\
+:${MULLE_ENV_SHARE_DIR}/tool${extension}\
+:${MULLE_ENV_ETC_DIR}/tool\
+:${MULLE_ENV_ETC_DIR}/tool${extension}"
+}
+
+
+_env_tool2_status()
+{
+   log_entry "_env_tool2_status" "$@"
+
+   local compile
+
+   local _filepath
+
+   __get_tool_filepath
+
+   log_debug "Checking if compile is needed with: ${_filepath}"
+
+   local compile
+   local anymatch
+
+   anymatch='NO'
+   compile='NO'
+
+   IFS=":"
+   for file in ${_filepath}
+   do
+      IFS="${DEFAULT_IFS}"
+
+      if [ ! -f "${file}" ]
+      then
+         log_debug "\"${file}\" does not exist"
+         continue
+      fi
+
+      # make same date force recompile, because we can't be sure then
+      if [ "${MULLE_ENV_VAR_DIR}/tool" -nt "${file}" ]
+      then
+         log_debug "\"${file}\" is not newer than \"${MULLE_ENV_VAR_DIR}/tool\""
+      else
+         log_fluff "Compile is needed because \"${file}\" has edits"
+         compile='YES'
+      fi
+      anymatch='YES'
+   done
+   IFS="${DEFAULT_IFS}"
+
+   if [ "${compile}" = 'NO' ]
+   then
+      if [ "${anymatch}" = 'YES' -o -f "${MULLE_ENV_VAR_DIR}/tool" ]
+      then
+         return 0
+      fi
+      return 2
+   fi
+
+   return 1
+}
+
+
+#
+# dealing with styles and flavors and their changes
+#
+_r_get_saved_version()
+{
+   log_entry "_r_get_saved_version" "$@"
+
+   local sharedir="$1"
+   local fallbackroot="$2"
+
+   RVAL="`grep -v '^#' "${sharedir}/version" 2> /dev/null`"
+   if [ "${RVAL}" = "" ]
+   then
+      # old location
+      RVAL="`grep -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
+   fi
+
+   [ "${RVAL}" != "" ]
+}
+
+
+__check_version()
+{
+   log_entry "__check_version" "$@"
+
+   if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
+   then
+      return
+   fi
+
+   local version
+
+   _r_get_saved_version "$@"
+   version="${RVAL}"
+
+   case "${version}" in
+      "")
+         fail "\"${PWD}\" is not a mulle-env environment (no version information found)"
+      ;;
+
+      0\.*|1\.*)
+         # incompatible change of -c execution, otherwise try to support
+         # and make this a warning
+         fail "This environment with version ${version} is too old for
+mulle-env ${MULLE_ENV_VERSION}.
+${C_INFO}You can upgrade to ${MULLE_ENV_VERSION} with:
+${C_RESET_BOLD}   cd \"${MULLE_VIRTUAL_ROOT}\"
+${C_RESET_BOLD}   mulle-env upgrade"
+      ;;
+
+      2\.*)
+      ;;
+
+      *)
+         fail "This environment requires a newer mulle-env version >= ${version}"
+      ;;
+   esac
 }
 
 
@@ -453,7 +482,7 @@ env_setup_if_needed()
 {
    log_entry "env_setup_if_needed" "$@"
 
-   local cachedir="$1"
+   local directory="$1"
    local bindir="$2"
    local libexecdir="$3"
    local style="$4"
@@ -463,10 +492,9 @@ env_setup_if_needed()
 
    local needs_flavor_update
    local needs_bin_update
-   local needs_bin_update2
 
-   needs_flavor_update=
-   needs_bin_update=
+   needs_flavor_update='NO'
+   needs_bin_update='DEFAULT'
 
    local callback
 
@@ -475,9 +503,9 @@ env_setup_if_needed()
    #
    if [ "${style}" != "${oldstyle}" ]
    then
-      rmdir_safer "${cachedir}"
       rmdir_safer "${bindir}"
       rmdir_safer "${libexecdir}"
+      needs_bin_update='YES'
    fi
 
    if [ "${flavor}" != "${oldflavor}" ]
@@ -488,56 +516,23 @@ check your tool list.
    ${C_RESET_BOLD} mulle-env tool list"
    fi
 
-   callback="env_${flavor}_tools_need_update"
-   if [ "`type -t "${callback}"`" = "function" ]
+   if [ "${needs_bin_update}" = 'DEFAULT' ]
    then
-      if ${callback} "${directory}"
+      if _env_tool2_status
       then
-         log_fluff "Flavor \"${flavor}\" needs update"
-         needs_flavor_update='YES'
+         needs_bin_update='NO'
       else
-         log_fluff "Flavor \"${flavor}\" is up-to-date"
+         needs_bin_update='YES'
       fi
    fi
 
-   local toolfile
-   local oldhost
-   local uptodatefile
-   local myhost
-
-   uptodatefile="${cachedir}/tools-updated"
-
-   oldhost="`cat "${uptodatefile}" 2> /dev/null`"
-
-   if [ ! -z "${oldhost}" -a "${oldhost}" != "${myhost}" ]
+   if [ "${needs_bin_update}" = 'YES' ]
    then
-      log_fluff "Regenerating tools as the host has changed"
+      [ -z "${MULLE_ENV_TOOL2_SH}" ] && \
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool2.sh"
 
-      if [ -f "${uptodatefile}" ]
-      then
-         remove_file_if_present "${uptodatefile}"
-      fi
-   fi
-
-   IFS="
-"
-   for toolfile in `env_other_tool_files "${directory}"`
-   do
-      IFS="${DEFAULT_IFS}"
-
-      if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' -a -f "${toolfile}" ] || \
-         [ "${toolfile}" -nt "${uptodatefile}" ]
-      then
-         log_fluff "Tools \"${toolfile}\" needs update"
-         needs_bin_update="`add_line "${needs_bin_update}" "${toolfile}" `"
-      fi
-   done
-   IFS="${DEFAULT_IFS}"
-
-   local rval
-
-   if [ ! -z "${needs_bin_update}" -o ! -z "${needs_flavor_update}" ]
-   then
+      env_tool2_link --compile \
+                     --bindir "${bindir}" || exit 1
       (
          local callback
 
@@ -546,24 +541,8 @@ check your tool list.
          then
             ${callback} "${bindir}" "${libexecdir}" || exit 1
          fi
-
-         if [ ! -z "${needs_bin_update}" ]
-         then
-            env_setup_other_tools "${needs_bin_update}" "${bindir}"
-
-            log_fluff "Writing \"${uptodatefile}\""
-
-            mkdir_if_missing "${cachedir}" &&
-            redirect_exekutor "${uptodatefile}" date
-         fi
       )
-      rval=$?
-   else
-      log_verbose "Nothing needs to be updated"
-      rval=0
    fi
-
-   [ "$rval" -eq 0 ] || exit 1
 }
 
 
@@ -622,62 +601,6 @@ __get_saved_style_flavor()
 }
 
 
-_r_get_saved_version()
-{
-   log_entry "_r_get_saved_version" "$@"
-
-   local sharedir="$1"
-   local fallbackroot="$2"
-
-   RVAL="`grep -v '^#' "${sharedir}/version" 2> /dev/null`"
-   if [ "${RVAL}" = "" ]
-   then
-      # old location
-      RVAL="`grep -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
-   fi
-
-   [ "${RVAL}" != "" ]
-}
-
-
-__check_version()
-{
-   log_entry "__check_version" "$@"
-
-   if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
-   then
-      return
-   fi
-
-   local version
-
-   _r_get_saved_version "$@"
-   version="${RVAL}"
-
-   case "${version}" in
-      "")
-         fail "\"${PWD}\" is not a mulle-env environment (no version information found)"
-      ;;
-
-      0\.*|1\.*)
-         # incompatible change of -c execution, otherwise try to support
-         # and make this a warning
-         fail "This environment with version ${version} is too old for
-mulle-env ${MULLE_ENV_VERSION}.
-${C_INFO}You can upgrade to ${MULLE_ENV_VERSION} with:
-${C_RESET_BOLD}   cd \"${MULLE_VIRTUAL_ROOT}\"
-${C_RESET_BOLD}   mulle-env upgrade"
-      ;;
-
-      2\.*)
-      ;;
-
-      *)
-         fail "This environment requires a newer mulle-env version >= ${version}"
-      ;;
-   esac
-}
-
 
 __get_style_flavor()
 {
@@ -713,106 +636,9 @@ ${C_INFO}Fixes:
       fi
       return 1
    else
+      log_fluff "Env plugin \"${flavor}\" loaded"
    	log_verbose "Using plugin ${C_MAGENTA}${C_BOLD}${flavor}"
    fi
-}
-
-
-#
-# start:     starting directory
-# search:    NONE (useless) NEAREST, SUPERIOR, DEFAULT
-# useclimb:
-#
-r_find_best_environment()
-{
-   log_entry "r_find_best_environment" "$@"
-
-   local start="$1"
-   local searchmode="$2"
-
-   local directory
-   local best
-   local warn
-   local searchfile
-
-   best="${start}"
-   r_absolutepath "${start}"
-   directory="${RVAL}"  # paranoia
-
-   warn='NO'
-
-   while :
-   do
-      searchfile="${directory}/.mulle/share/env/environment.sh"
-      if [ -f "${searchfile}" ]
-      then
-         log_debug "Found \"${searchfile}"
-
-         case "${searchmode}" in
-            NEAREST)
-               log_debug "Accept as default"
-               RVAL="${directory}"
-               return
-            ;;
-
-            PARENT)
-               if [ ! -z "${best}" ]
-               then
-                  log_debug "Accept as default"
-                  RVAL="${directory}"
-                  return
-               fi
-            ;;
-
-            SUPERIOR)
-               log_debug "Keep looking past \"${directory}\""
-            ;;
-
-            DEFAULT)
-               if [ -f "${directory}/.mulle/share/env/defer" -o \
-                    -f "${directory}/.mulle/etc/env/defer" ]
-               then
-                  log_debug "\"${directory}\" is defering with tweak \"defer\""
-               else
-                  log_debug "Accept as default"
-                  RVAL="${directory}"
-                  return
-               fi
-            ;;
-
-            *)
-               internal_fail "unknown searchmode \"${searchmode}\""
-            ;;
-         esac
-         best="${directory}"
-      else
-         log_debug "Did not find \"${searchfile}\""
-      fi
-
-      r_fast_dirname "${directory}"
-      directory="${RVAL}"
-
-      # look for .mulle/share/env/*/environment.sh going up to root, if we
-      # find one, we latch onto it
-      if [ "${directory}" = "/" ]
-      then
-         RVAL="${best}"
-         return
-      fi
-   done
-
-   if [ "${warn}" = 'YES' ]
-   then
-      log_info "Using the superior mulle-env environment at \
-${C_RESET_BOLD}${best}${C_INFO}.
-Suppress this behaviour with the flag \"-N\" or permanently suppress on a
-per environment basis with:
-   ${C_RESET_BOLD}mulle-env tweak subproject"
-
-   fi
-
-   log_debug "Accept as superior"
-   RVAL="${best}"
 }
 
 
@@ -859,51 +685,32 @@ r_apply_flavor_to_runpath()
 }
 
 
-_setup_environment()
+r_censored_path()
 {
-   log_entry "_setup_environment" "$@"
+   log_entry "r_censored_path" "$@"
 
-   local directory="$1"
+   local i
+   local j
 
-   [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME not set"
+   RVAL=""
 
-   local physicaldir
+   set -f ; IFS=":"
+   for i in $*
+   do
+      for j in ${RESTRICTED_PATH}
+      do
+         set +f ; IFS="${DEFAULT_IFS}"
 
-   physicaldir="`physicalpath "${directory}" `"
-   [ ! -d "${physicaldir}" ] && internal_fail "physicalpath failed"
-   [ "${physicaldir}" = "/" ] && fail "Running in / which is not supported"
+         if [ "$i" = "$j" ]
+         then
+            r_colon_concat "${RVAL}" "${i}"
+         fi
 
-   MULLE_VIRTUAL_ROOT="${physicaldir}"
+         set -f ; IFS=":"
+      done
+   done
 
-   if [ "${MULLE_VIRTUAL_ROOT}" != "${PWD}" ]
-   then
-      log_verbose "MULLE_VIRTUAL_ROOT set to \"${MULLE_VIRTUAL_ROOT}\""
-   fi
-
-   MULLE_ENV_VAR_DIR="${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env"
-   MULLE_ENV_SHARE_DIR="${physicaldir}/.mulle/share/env"
-   MULLE_ENV_ETC_DIR="${physicaldir}/.mulle/etc/env"
-
-   log_fluff "MULLE_ENV_ETC_DIR set to \"${MULLE_ENV_ETC_DIR}\""
-   log_fluff "MULLE_ENV_SHARE_DIR set to \"${MULLE_ENV_SHARE_DIR}\""
-   log_fluff "MULLE_ENV_VAR_DIR set to \"${MULLE_ENV_VAR_DIR}\""
-}
-
-
-_default_setup_environment()
-{
-   log_entry "_default_setup_environment" "$@"
-
-   local directory="${1:-${PWD}}"
-   local searchmode="$2"
-
-   r_find_best_environment "${directory}" "${searchmode}"
-   directory="${RVAL}"
-   log_fluff "Environment directory determined to be \"${directory}\""
-
-   [ ! -d "${directory}" ] && fail "${directory} does not exist (init it first)"
-
-   _setup_environment "${directory}"
+   set +f ; IFS="${DEFAULT_IFS}"
 }
 
 
@@ -1128,16 +935,14 @@ _run_subshell()
       */restrict|*/tight|*/relax)
          local bindir
          local libexecdir
-         local cachedir
 
          [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME \
 undefined (old mulle-bashfunctions)"
 
-         cachedir="${vardir}/cache"
          bindir="${vardir}/bin"
          libexecdir="${vardir}/libexec"
 
-         env_setup_if_needed "${cachedir}" \
+         env_setup_if_needed "${directory}" \
                              "${bindir}" \
                              "${libexecdir}" \
                              "${style}" \
@@ -1258,8 +1063,6 @@ undefined (old mulle-bashfunctions)"
 
 assert_valid_environment_key()
 {
-   log_entry "assert_valid_environment_key" "$@"
-
    local key="$1"
 
    local identifier
@@ -1339,6 +1142,7 @@ main()
    local MULLE_FLAG_MAGNUM_FORCE=
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCHMODE="DEFAULT"
+   local OPTION_PROTECT_SHARE="DEFAULT"
 
    local MULLE_TRACE
    local MULLE_FLAG_EXEKUTOR_DRY_RUN
@@ -1453,6 +1257,14 @@ main()
 
          --no-motd)
             NO_MOTD='YES'
+         ;;
+
+         --protect)
+            OPTION_PROTECT_SHARE='YES'
+         ;;
+
+         --no-protect)
+            OPTION_PROTECT_SHARE='NO'
          ;;
 
          --style)
@@ -1630,11 +1442,13 @@ wild"
       ;;
 
       tool)
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
-         # shellcheck source=src/mulle-env-tool.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
+         # do not set MULLE_VIRTUAL_ROOT if not already set
+         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}" 'NO'
 
-         env_tool_main "$@"
+         # shellcheck source=src/mulle-env-tool.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool2.sh" || exit 1
+
+         env_tool2_main "$@"
          return $?
       ;;
 
@@ -1687,14 +1501,6 @@ wild"
 
          env_init_main --upgrade --style "${OPTION_STYLE}" "$@" || exit 1
          clean
-         return $?
-      ;;
-
-      migrate)
-         # shellcheck source=src/mulle-env-migrate.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh" || exit 1
-
-         env_migrate_from_v1_to_v2
          return $?
       ;;
 

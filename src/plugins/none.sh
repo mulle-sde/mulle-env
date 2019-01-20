@@ -58,7 +58,7 @@ fi
 if [ -z "\${MULLE_HOSTNAME}" ]
 then
    MULLE_HOSTNAME="\`PATH=/bin:/usr/bin:/sbin:/usr/sbin hostname -s\`"
-   if [ "${MULLE_HOSTNAME:0:1}" = '.' ]
+   if [ "\${MULLE_HOSTNAME:0:1}" = '.' ]
    then
       MULLE_HOSTNAME="_${MULLE_HOSTNAME}"
    fi
@@ -271,6 +271,14 @@ print_none_auxscopes_sh()
 }
 
 
+env_setup_none_tools()
+{
+   log_entry "env_setup_none_tools" "$@"
+
+   # there are no "special" tools to do here
+}
+
+
 # callback
 print_none_tools_sh()
 {
@@ -281,17 +289,6 @@ print_none_tools_sh()
    if [ ! -z "${OPTION_OTHER_TOOLS}" ]
    then
       echo "${OPTION_OTHER_TOOLS}"
-   fi
-}
-
-
-print_none_optional_tools_sh()
-{
-   log_entry "print_none_optional_tools_sh" "$@"
-
-   if [ ! -z "${OPTION_OTHER_OPTIONAL_TOOLS}" ]
-   then
-      echo "${OPTION_OTHER_OPTIONAL_TOOLS}"
    fi
 }
 

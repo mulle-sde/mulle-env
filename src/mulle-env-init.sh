@@ -166,7 +166,6 @@ env_init_main()
    #
    custom_environment_init
 
-
    local envfile
    local envincludefile
    local auxscopesfile
@@ -217,7 +216,6 @@ env_init_main()
    auxscopesfile="${sharedir}/auxscopes"
 
    toolsfile="${sharedir}/tool"
-   optional_toolsfile="${sharedir}/optionaltool"
    versionfile="${sharedir}/version"
 
    stylefile="${sharedir}/style"
@@ -247,7 +245,11 @@ env_init_main()
    fi
 
    mkdir_if_missing "${sharedir}"
-   find "${sharedir}" -type f -exec chmod ug+w {} \; || return 1
+
+   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   then
+      find "${sharedir}" -type f -exec chmod ug+w {} \; || return 1
+   fi
 
    # indicate a fresh init by removing a possibly old versionfile
    remove_file_if_present "${versionfile}"
@@ -311,13 +313,6 @@ env_init_main()
    fi
    redirect_exekutor "${toolsfile}" echo "${text}"
 
-   log_verbose "Creating \"${optional_toolsfile}\""
-   if ! text="`print_${flavor}_optional_tools_sh "${style}" | sort -u`"
-   then
-      return 1
-   fi
-   redirect_exekutor "${optional_toolsfile}" echo "${text}"
-
    mkdir_if_missing "${sharedir}/libexec"
    log_verbose "Installing \"${completionfile}\""
    exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
@@ -331,7 +326,10 @@ env_init_main()
    redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
 
    # chowning the directory is bad for git
-   find "${sharedir}" -type f -exec chmod a-w {} \;
+   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   then
+      find "${sharedir}" -type f -exec chmod a-w {} \;
+   fi
 
    if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
    then

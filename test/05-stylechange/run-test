@@ -37,7 +37,6 @@ main()
 
    log_verbose "----- #1 PASSED -----"
 
-
    run_mulle_env -s upgrade --style minimal/tight
    value="`run_mulle_env style`"
    [ "${value}" != 'minimal/tight' ] && fail "#2 style not set"

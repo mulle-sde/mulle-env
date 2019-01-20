@@ -76,7 +76,7 @@ print_developer_tools_sh()
 #
 # command is a bash builtin
 #
-   EXPECTED_DEVELOPER_BINARIES="awk
+   DEVELOPER_BINARIES="awk
 basename
 base64
 bash
@@ -103,29 +103,14 @@ touch
 tr
 uuidgen
 wc
-which"
+which
+ed;optional
+emacs;optional
+nano;optional
+xargs;optional
+vi;optional"
 
-   echo "${EXPECTED_DEVELOPER_BINARIES}"
-}
-
-
-print_developer_optional_tools_sh()
-{
-   log_entry "print_developer_optional_tools_sh" "$@"
-
-   print_minimal_optional_tools_sh "$@"
-
-#
-# xargs is only used by mulle-dispense
-#
-   OPTIONAL_DEVELOPER_BINARIES="ed
-emacs
-nano
-tar
-xargs
-vi"
-
-   echo "${OPTIONAL_DEVELOPER_BINARIES}"
+   echo "${DEVELOPER_BINARIES}"
 }
 
 
@@ -135,6 +120,8 @@ env_setup_developer_tools()
 
    local bindir="$1"
    local libexecdir="$2"
+
+   env_setup_minimal_tools "$@"
 
    #
    # Since the PATH is restricted, we need a basic set of tools
