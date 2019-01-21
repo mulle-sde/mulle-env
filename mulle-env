@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.1.1"
+MULLE_ENV_VERSION="2.1.2"
 
 #
 # The default for first time mulle-env
@@ -483,12 +483,18 @@ env_setup_if_needed()
    log_entry "env_setup_if_needed" "$@"
 
    local directory="$1"
-   local bindir="$2"
-   local libexecdir="$3"
+   local vardir="$2"
+   local sharedir="$3"
    local style="$4"
    local flavor="$5"
    local oldstyle="$6"
    local oldflavor="$7"
+
+   local bindir
+   local libexecdir
+
+   bindir="${vardir}/bin"
+   libexecdir="${vardir}/libexec"
 
    local needs_flavor_update
    local needs_bin_update
@@ -532,11 +538,13 @@ check your tool list.
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool2.sh"
 
       local text
+      local toolsfile
 
+      toolsfile="${sharedir}/tool"
       log_verbose "Creating \"${toolsfile}\""
       if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
       then
-         exit 1
+         fail "Tool install of \"${flavor}\" failed"
       fi
       redirect_exekutor "${toolsfile}" echo "${text}"
 
@@ -550,7 +558,7 @@ check your tool list.
          then
             ${callback} "${bindir}" "${libexecdir}" || exit 1
          fi
-      )
+      ) || exit 1
    fi
 }
 
@@ -942,24 +950,20 @@ _run_subshell()
 
    case "${style}" in
       */restrict|*/tight|*/relax)
-         local bindir
-         local libexecdir
 
          [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME \
 undefined (old mulle-bashfunctions)"
 
-         bindir="${vardir}/bin"
-         libexecdir="${vardir}/libexec"
 
          env_setup_if_needed "${directory}" \
-                             "${bindir}" \
-                             "${libexecdir}" \
+                             "${vardir}" \
+                             "${sharedir}" \
                              "${style}" \
                              "${flavor}" \
                              "${oldstyle}" \
                              "${oldflavor}"
 
-         r_colon_concat "${runpath}" "${bindir}"
+         r_colon_concat "${runpath}" "${vardir}/bin"
          runpath="${RVAL}"
          r_concat "${s}" "MULLE_OLDPATH='${PATH}'"
          s="${RVAL}"
@@ -1002,7 +1006,7 @@ undefined (old mulle-bashfunctions)"
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
-      log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" ($MULLE_VIRTUAL_ROOT})"
+      log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" (${MULLE_VIRTUAL_ROOT})"
       mode="SCRIPT"
    else
       log_verbose "Starting shell ${env_flag} ($MULLE_VIRTUAL_ROOT})"

@@ -169,11 +169,9 @@ env_init_main()
    local envfile
    local envincludefile
    local auxscopesfile
-   local toolsfile
    local stylefile
    local versionfile
    local sharedir
-   local optional_toolsfile
    local completionfile
    local style
    local flavor
@@ -215,7 +213,6 @@ env_init_main()
    completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
    auxscopesfile="${sharedir}/auxscopes"
 
-   toolsfile="${sharedir}/tool"
    versionfile="${sharedir}/version"
 
    stylefile="${sharedir}/style"

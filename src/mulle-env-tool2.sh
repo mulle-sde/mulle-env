@@ -304,8 +304,9 @@ env_link_mulle_tool()
    mkdir_parent_if_missing "${dstlibdir}" > /dev/null
 
    log_fluff "Creating symlink \"${dstexefile}\""
-
    exekutor ln -s -f "${exefile}" "${dstexefile}"
+
+   log_fluff "Creating symlink \"${dstlibdir}\""
    exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}"
 }
 
