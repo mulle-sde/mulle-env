@@ -195,7 +195,7 @@ env_init_main()
          if ! __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env" \
                                        "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/share/env"
          then
-            __fail__get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env"
+            __fail_get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env"
          fi
          OPTION_STYLE="${style:-DEFAULT}"
       fi

@@ -1,3 +1,7 @@
+### 2.2.2
+
+* fix wrong error function call
+
 ### 2.2.1
 
 * remove optionaltool on migration
