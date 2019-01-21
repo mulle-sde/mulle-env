@@ -265,9 +265,9 @@ print_none_environment_aux_sh()
 }
 
 
-print_none_auxscopes_sh()
+print_none_auxscope_sh()
 {
-   log_entry "print_none_auxscopes_sh" "$@"
+   log_entry "print_none_auxscope_sh" "$@"
 }
 
 

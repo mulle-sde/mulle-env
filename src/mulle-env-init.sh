@@ -168,31 +168,28 @@ env_init_main()
 
    local envfile
    local envincludefile
-   local auxscopesfile
+   local auxscopefile
    local stylefile
    local versionfile
    local sharedir
    local completionfile
+   local toolfile
    local style
    local flavor
 
    MULLE_ENV_SHARE_DIR="${directory}/.mulle/share/env"
 
+   sharedir="${MULLE_ENV_SHARE_DIR}"
+   envfile="${sharedir}/environment.sh"
+
+   if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
+   then
+      log_warning "\"${envfile}\" already exists"
+      return 2
+   fi
+
    if [ "${OPTION_UPGRADE}" = 'YES' ]
    then
-      if ! _r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
-      then
-         fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_SHARE_DIR}/version"
-      fi
-      version="${RVAL}"
-
-      if [ "${version%%.*}" -lt 2 ]
-      then
-         # shellcheck source=src/mulle-env-migrate.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh"
-         env_migrate_from_v1_to_v2
-      fi
-
       if [ "${OPTION_STYLE}" = 'DEFAULT' ]
       then
          if ! __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env" \
@@ -204,24 +201,10 @@ env_init_main()
       fi
    fi
 
-   sharedir="${MULLE_ENV_SHARE_DIR}"
-
-   envfile="${sharedir}/environment.sh"
-   envincludefile="${sharedir}/include-environment.sh"
-
-   pluginfile="${sharedir}/environment-plugin.sh"
-   completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
-   auxscopesfile="${sharedir}/auxscopes"
-
-   versionfile="${sharedir}/version"
-
-   stylefile="${sharedir}/style"
-
    if [ "${OPTION_STYLE}" = 'DEFAULT' ]
    then
       OPTION_STYLE="${MULLE_ENV_DEFAULT_STYLE}"
    fi
-
    __get_style_flavor "${OPTION_STYLE}"
    __load_flavor_plugin "${flavor}"
 
@@ -235,23 +218,45 @@ env_init_main()
    esac
    log_verbose "Init style is \"${style}\""
 
-   if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
-   then
-      log_warning "\"${envfile}\" already exists"
-      return 2
-   fi
-
-   mkdir_if_missing "${sharedir}"
-
    if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
    then
-      find "${sharedir}" -type f -exec chmod ug+w {} \; || return 1
+      if [ -d "${sharedir}" ]
+      then
+         find "${sharedir}" -type f -exec chmod ug+w {} \; || return 1
+      fi
    fi
+
+   # need proper flavor for migration
+   if [ "${OPTION_UPGRADE}" = 'YES' ]
+   then
+      if ! _r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
+      then
+         fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_SHARE_DIR}/version"
+      fi
+      version="${RVAL}"
+
+      # shellcheck source=src/mulle-env-migrate.sh
+      . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh"
+      env_migrate "${version}" "${MULLE_ENV_VERSION}" "${flavor}"
+   fi
+
+   envincludefile="${sharedir}/include-environment.sh"
+
+   pluginfile="${sharedir}/environment-plugin.sh"
+   completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
+   auxscopefile="${sharedir}/auxscope"
+   toolfile="${sharedir}/tool-plugin"
+   versionfile="${sharedir}/version"
+
+   stylefile="${sharedir}/style"
+
 
    # indicate a fresh init by removing a possibly old versionfile
    remove_file_if_present "${versionfile}"
 
    log_verbose "Creating \"${envfile}\""
+
+   mkdir_if_missing "${sharedir}"
 
    local text
 
@@ -261,11 +266,11 @@ env_init_main()
    fi
    redirect_exekutor "${envfile}" echo "${text}"
 
-   text="`print_${flavor}_auxscopes_sh "${style}" `"
+   text="`print_${flavor}_auxscope_sh "${style}" `"
    if [ ! -z "${text}" ]
    then
-      log_verbose "Creating \"${auxscopesfile}\""
-      redirect_exekutor "${auxscopesfile}" echo "${text}"
+      log_verbose "Creating \"${auxscopefile}\""
+      redirect_exekutor "${auxscopefile}" echo "${text}"
    fi
 
    log_verbose "Creating \"${envincludefile}\""
@@ -302,6 +307,13 @@ env_init_main()
          redirect_exekutor "${pluginosfile}" echo "${text}"
       fi
    done
+
+   log_verbose "Creating \"${toolfile}\""
+   if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
+   then
+      fail "Tool install of \"${flavor}\" failed"
+   fi
+   redirect_exekutor "${toolfile}" echo "${text}"
 
    mkdir_if_missing "${sharedir}/libexec"
    log_verbose "Installing \"${completionfile}\""

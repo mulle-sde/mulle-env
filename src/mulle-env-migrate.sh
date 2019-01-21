@@ -91,6 +91,20 @@ env_convert_directory_if_present()
 }
 
 
+env_rename_file_if_present()
+{
+   log_entry "env_rename_file_if_present" "$@"
+
+   local srcfile="$1"
+   local dstfile="$2"
+
+   [ ! -f "${srcfile}" ] && return 2
+
+   r_mkdir_parent_if_missing "${dstfile}"
+   exekutor mv -f "${srcfile}" "${dstfile}"
+}
+
+
 env_migrate_from_v1_to_v2()
 {
    log_entry "env_migrate_from_v1_to_v2" "$@"
@@ -209,4 +223,51 @@ env_migrate_from_v1_to_v2()
    fi
 
    rmdir_safer ".mulle-env"
+}
+
+
+env_migrate_from_v2_0_to_v2_2()
+{
+   log_entry "env_migrate_from_v2_0_to_v2_2" "$@"
+
+   remove_file_if_present ".mulle/share/env/tool"
+   remove_file_if_present ".mulle/share/env/tool.darwin"
+   remove_file_if_present ".mulle/share/env/tool.freebsd"
+   remove_file_if_present ".mulle/share/env/tool.linux"
+
+   env_rename_file_if_present .mulle/share/env/auxscopes .mulle/share/env/auxscope
+}
+
+
+env_migrate()
+{
+   log_entry "env_migrate" "$@"
+
+   local oldversion="$1"
+   local version="$2"
+   local flavor="$3"
+
+   local oldmajor
+   local oldminor
+
+   oldmajor="${oldversion%%.*}"
+   oldminor="${oldversion#*.}"
+   oldminor="${oldminor%%.*}"
+
+   local major
+   local minor
+
+   major="${version%%.*}"
+   minor="${minor#*.}"
+   minor="${minor%%.*}"
+
+   if [ "${oldmajor}" -lt 2 ]
+   then
+      env_migrate_from_v1_to_v2
+   fi
+
+   if [ "${oldmajor}" -eq 2 -a "${major}" -eq 2 -a "${oldminor}" -lt 2 ]
+   then
+      env_migrate_from_v2_0_to_v2_2
+   fi
 }

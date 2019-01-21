@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.1.2"
+MULLE_ENV_VERSION="2.2.0"
 
 #
 # The default for first time mulle-env
@@ -355,12 +355,50 @@ unprotect_dir_if_exists()
 #
 __get_tool_filepath()
 {
-   local extension="${1:-.${MULLE_UNAME}}"
+   local os="$1"
 
-   _filepath="${MULLE_ENV_SHARE_DIR}/tool\
-:${MULLE_ENV_SHARE_DIR}/tool${extension}\
+   if [ -z "${os}" -o "${os}" = "DEFAULT" ]
+   then
+      _filepath="${MULLE_ENV_SHARE_DIR}/tool-plugin\
+:${MULLE_ENV_SHARE_DIR}/tool-extension\
+:${MULLE_ENV_ETC_DIR}/tool"
+   else
+      _filepath="${MULLE_ENV_SHARE_DIR}/tool-plugin\
+:${MULLE_ENV_SHARE_DIR}/tool-plugin.${os}\
+:${MULLE_ENV_SHARE_DIR}/tool-extension\
+:${MULLE_ENV_SHARE_DIR}/tool-extension.${os}\
 :${MULLE_ENV_ETC_DIR}/tool\
-:${MULLE_ENV_ETC_DIR}/tool${extension}"
+:${MULLE_ENV_ETC_DIR}/tool.${os}"
+   fi
+}
+
+
+r_get_existing_tool_filepath()
+{
+   log_entry "r_get_existing_tool_filepath" "$@"
+
+   local _filepath
+
+   __get_tool_filepath "$@"
+
+   local file
+
+   RVAL=""
+   IFS=":"
+
+   for file in ${_filepath}
+   do
+      IFS="${DEFAULT_IFS}"
+
+      if [ ! -f "${file}" ]
+      then
+         log_debug "\"${file}\" does not exist"
+         continue
+      fi
+
+      r_colon_concat "${RVAL}" "${file}"
+   done
+   IFS="${DEFAULT_IFS}"
 }
 
 
@@ -368,11 +406,10 @@ _env_tool2_status()
 {
    log_entry "_env_tool2_status" "$@"
 
-   local compile
+   local filepath
 
-   local _filepath
-
-   __get_tool_filepath
+   r_get_existing_tool_filepath "${MULLE_UNAME}"
+   filepath="${RVAL}"
 
    log_debug "Checking if compile is needed with: ${_filepath}"
 
@@ -383,15 +420,9 @@ _env_tool2_status()
    compile='NO'
 
    IFS=":"
-   for file in ${_filepath}
+   for file in ${filepath}
    do
       IFS="${DEFAULT_IFS}"
-
-      if [ ! -f "${file}" ]
-      then
-         log_debug "\"${file}\" does not exist"
-         continue
-      fi
 
       # make same date force recompile, because we can't be sure then
       if [ "${MULLE_ENV_VAR_DIR}/tool" -nt "${file}" ]
@@ -537,17 +568,6 @@ check your tool list.
       [ -z "${MULLE_ENV_TOOL2_SH}" ] && \
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool2.sh"
 
-      local text
-      local toolsfile
-
-      toolsfile="${sharedir}/tool"
-      log_verbose "Creating \"${toolsfile}\""
-      if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
-      then
-         fail "Tool install of \"${flavor}\" failed"
-      fi
-      redirect_exekutor "${toolsfile}" echo "${text}"
-
       env_tool2_link --compile \
                      --bindir "${bindir}" || exit 1
       (
@@ -616,7 +636,6 @@ __get_saved_style_flavor()
    flavor="${style%%/*}"
    return 0
 }
-
 
 
 __get_style_flavor()
@@ -903,10 +922,6 @@ _run_subshell()
       fi
    fi
 
-   local s
-
-   s=""
-
    local env_flag
 
    env_flag="-i"
@@ -948,6 +963,8 @@ _run_subshell()
       ;;
    esac
 
+   local s
+
    case "${style}" in
       */restrict|*/tight|*/relax)
 
@@ -965,8 +982,8 @@ undefined (old mulle-bashfunctions)"
 
          r_colon_concat "${runpath}" "${vardir}/bin"
          runpath="${RVAL}"
-         r_concat "${s}" "MULLE_OLDPATH='${PATH}'"
-         s="${RVAL}"
+
+         s="MULLE_OLDPATH='${PATH}'"
       ;;
    esac
 

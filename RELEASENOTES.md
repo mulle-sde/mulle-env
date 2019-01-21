@@ -1,3 +1,8 @@
+## 2.2.0
+
+* proper tool migration to 2.2
+
+
 ### 2.1.2
 
 * fix plentfiful regressions

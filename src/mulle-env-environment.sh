@@ -534,14 +534,14 @@ env_environment_set_main()
    then
       if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
       then
-         log_warning "Adding unknown scope \"${scope}\" to auxscopes"
+         log_warning "Adding unknown scope \"${scope}\" to auxscope"
 
-         filename="${MULLE_ENV_SHARE_DIR}/auxscopes"
+         filename="${MULLE_ENV_SHARE_DIR}/auxscope"
          unprotect_file_if_exists "${filename}"
-         redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscopes" echo "${scope}"
+         redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" echo "${scope}"
          protect_file "${filename}"
 
-         RVAL="s" # auxscopes are always share
+         RVAL="s" # auxscope are always share
       else
          fail "Unknown scope \"${scope}\""
       fi
@@ -790,19 +790,19 @@ r_get_auxscopes()
 {
    log_entry "r_get_auxscopes" "$@"
 
-   local auxscopesfile
+   local auxscopefile
 
-   auxscopesfile="${MULLE_ENV_SHARE_DIR}/auxscopes"
-   if [ ! -f "${auxscopesfile}" ]
+   auxscopefile="${MULLE_ENV_SHARE_DIR}/auxscope"
+   if [ ! -f "${auxscopefile}" ]
    then
-      log_debug "No auxscopes found"
+      log_debug "No auxscope file found"
       return 1
    fi
    # eval it to resolve USER and so on
    local tmp
    local aux_scope
 
-   tmp="`rexekutor egrep -v '^#' "${auxscopesfile}"`"
+   tmp="`rexekutor egrep -v '^#' "${auxscopefile}"`"
    log_debug "aux_scopes: ${tmp}"
 
    RVAL=

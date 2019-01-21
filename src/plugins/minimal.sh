@@ -54,9 +54,9 @@ print_minimal_environment_aux_sh()
 }
 
 
-print_minimal_auxscopes_sh()
+print_minimal_auxscope_sh()
 {
-   log_entry "print_minimal_auxscopes_sh" "$@"
+   log_entry "print_minimal_auxscope_sh" "$@"
 }
 
 

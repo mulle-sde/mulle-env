@@ -49,10 +49,11 @@ Usage:
    You can not manage tools from the inside of a virtual environment.
 
 Options:
-   --common   : specify this command for the common toolset only
-   --current  : specify this command for the current OS (default)
-   --os <os>  : specify this command for the specified OS, e.g. darwin
-   --share    : use share instead of etc for add/remove
+   --common    : specify this command for the common toolset only
+   --current   : specify this command for the current OS (default)
+   --os <os>   : specify this command for the specified OS, e.g. darwin
+   --plugin    : use plugin scope instead of etc for add/remove
+   --extension : use extension scope instead of etc for/add remove
 
 Commands:
    add        : add a tool
@@ -116,15 +117,20 @@ env_tool2_list_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} tool list <domain>
+   ${MULLE_USAGE_NAME} tool list [options] <domains>
 
-   List stuff.
+   List various kind of things.
+   stuff for the specified OS. The default OS is the current one which
+   is ${MULLE_UNAME}.
+
+Options:
+   --no-csv   : don't output in CSV format
+   --no-color : don't colorize
 
 Domains:
-   os        : list specified OS
-   files     : list toolfiles
-   tools     : list tools that are specified to be installed
-   installed : list installed tools
+   file       : list files
+   tool       : list tools (default)
+   os         : list specified OS
 
 EOF
    exit 1
@@ -154,54 +160,6 @@ EOF
 # <tool>
 # <tool>;remove
 # <tool>;optional
-
-r_colon_concat_if_exists()
-{
-   local searchpath="$1"
-   local filename="$2"
-
-   if [ -f "${filename}" ]
-   then
-      log_debug "\"${filename}\" added"
-      r_colon_concat "${searchpath}" "${filename}"
-   else
-      log_debug "\"${filename}\" does not exist"
-   fi
-}
-
-
-r_toolfile_concat_if_exists()
-{
-   local path="$1"
-   local filename="$2"
-   local extension="$3"
-
-   r_colon_concat_if_exists "${path}" "${filename}"
-   if [ ! -z "${extension}" ]
-   then
-      r_colon_concat_if_exists "${RVAL}" "${filename}${extension}"
-   fi
-}
-
-
-r_tool_files()
-{
-   log_entry "r_tool_files" "$@"
-
-   local extension="$1"
-
-   RVAL=
-
-   r_toolfile_concat_if_exists "${RVAL}" "${MULLE_ENV_SHARE_DIR}/tool" "${extension}"
-   if [ ! -z "${HOME}" ]
-   then
-      r_toolfile_concat_if_exists "${RVAL}" "${HOME}/.config/mulle-env/tool" "${extension}"
-   fi
-   r_toolfile_concat_if_exists "${RVAL}" "${MULLE_ENV_ETC_DIR}/tool" "${extension}"
-
-   log_debug "toolfiles: ${RVAL}"
-}
-
 
 #
 # since all mulle- tools are uniform, this is easy.
@@ -355,6 +313,62 @@ r_env_tool2_oslist()
 }
 
 
+r_env_tool2_scoped_get()
+{
+   log_entry "r_env_tool2_scoped_get" "$@"
+
+   local scope="$1"
+   local os="$2"
+   local tool="$3"
+
+   local extension
+
+   if [ -z "${os}" -o "${os}" = "DEFAULT" ]
+   then
+      extension=""
+   else
+      extension=".${os}"
+   fi
+
+   case "${scope}" in
+      'plugin')
+         if r_env_tool2_get "${tool}" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}"
+         then
+            return 0
+         fi
+      ;;
+
+      'extension')
+         if r_env_tool2_get "${tool}" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-extension" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-extension${extension}"
+         then
+            return 0
+         fi
+      ;;
+
+      *)
+         if r_env_tool2_get "${tool}" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-extension" \
+                            "${MULLE_ENV_SHARE_DIR}/tool-extension${extension}" \
+                            "${MULLE_ENV_ETC_DIR}/tool" \
+                            "${MULLE_ENV_ETC_DIR}/tool${extension}"
+         then
+            return 0
+         fi
+      ;;
+   esac
+
+   return 1
+}
+
+
 env_tool2_add()
 {
    log_entry "env_tool2_add" "$@"
@@ -369,6 +383,7 @@ env_tool2_add()
    local OPTION_COMPILE_LINK='DEFAULT'
    local OPTION_REMOVE='NO'
    local OPTION_CSV='NO'
+   local OPTION_IF_MISSING='NO'
 
    while :
    do
@@ -379,6 +394,10 @@ env_tool2_add()
 
          -o|--optional|--no-required)
             OPTION_OPTIONALITY="YES"
+         ;;
+
+         --if-missing)
+            OPTION_IF_MISSING="YES"
          ;;
 
          --csv)
@@ -455,23 +474,10 @@ env_tool2_add()
    local exists
 
    exists='NO'
-   if [ "${scope}" = 'share' ]
+
+   if r_env_tool2_scoped_get "${scope}" "${os}" "${tool}"
    then
-      if r_env_tool2_get "${tool}" \
-                         "${MULLE_ENV_SHARE_DIR}/tool" \
-                         "${MULLE_ENV_SHARE_DIR}/tool${extension}"
-      then
-         exists='YES'
-      fi
-   else
-      if r_env_tool2_get "${tool}" \
-                         "${MULLE_ENV_SHARE_DIR}/tool" \
-                         "${MULLE_ENV_SHARE_DIR}/tool${extension}" \
-                         "${MULLE_ENV_ETC_DIR}/tool" \
-                         "${MULLE_ENV_ETC_DIR}/tool${extension}"
-      then
-         exists='YES'
-      fi
+      exists='YES'
    fi
 
    case "${mark}" in
@@ -486,6 +492,10 @@ env_tool2_add()
       *)
          if [ "${exists}" = 'YES' ]
          then
+            if [ "${OPTION_IF_MISSING}" = 'YES' ]
+            then
+               return 0
+            fi
             fail "\"${tool}\" is already installed"
          fi
       ;;
@@ -497,8 +507,8 @@ env_tool2_add()
    fi
 
    case "${scope}" in
-      share)
-         tool_filename="${MULLE_ENV_SHARE_DIR}/tool${extension}"
+      plugin|extension)
+         tool_filename="${MULLE_ENV_SHARE_DIR}/tool-${scope}${extension}"
          unprotect_file_if_exists "${tool_filename}"
          redirect_append_exekutor "${tool_filename}" echo "${tool}"
          protect_file "${tool_filename}"
@@ -582,7 +592,7 @@ env_tool2_compile()
 
    local _filepath
 
-   __get_tool_filepath
+   __get_tool_filepath "${MULLE_UNAME}"
 
 
    local lines
@@ -650,9 +660,13 @@ r_env_tool2_get()
    local lines
    local result
    local i
+   local previous
 
    for file in "$@"
    do
+      [ "${file}" = "${previous}" ] && continue
+      previous="${file}"
+
       [ ! -f "${file}" ]  && continue
 
       lines="`egrep -v '^#' "${file}" | egrep "^${tool}$|^${tool};" `"
@@ -724,38 +738,11 @@ env_tool2_get()
 
    [ -z "${tool}" ] && env_tool2_get_usage "missing tool name"
 
-   local extension
-
-   if [ "${scope}" = 'YES' ]
-   then
-      if [ -z "${extension}" ]
-      then
-         r_env_tool2_get "${tool}" \
-                           "${MULLE_ENV_SHARE_DIR}/tool"
-      else
-         r_env_tool2_get "${tool}" \
-                           "${MULLE_ENV_SHARE_DIR}/tool" \
-                           "${MULLE_ENV_SHARE_DIR}/tool${extension}"
-      fi
-   else
-      if [ -z "${extension}" ]
-      then
-         r_env_tool2_get "${tool}" \
-                           "${MULLE_ENV_SHARE_DIR}/tool" \
-                           "${MULLE_ENV_ETC_DIR}/tool"
-      else
-         r_env_tool2_get "${tool}" \
-                           "${MULLE_ENV_SHARE_DIR}/tool" \
-                           "${MULLE_ENV_SHARE_DIR}/tool${extension}" \
-                           "${MULLE_ENV_ETC_DIR}/tool" \
-                           "${MULLE_ENV_ETC_DIR}/tool${extension}"
-      fi
-   fi
-
-   if [ -z "${RVAL}" ]
+   if ! r_env_tool2_scoped_get "${scope}" "${os}" "${tool}"
    then
       return 1
    fi
+
    echo "${RVAL}"
 }
 
@@ -954,7 +941,9 @@ env_tool2_link()
 _list_tool_file()
 {
    local filename="$1"
-   local color="${2:-YES}"
+   local color="$2"
+   local csv="$3"
+   local builtin="$4"
 
    local toolline
    local toolname
@@ -962,6 +951,7 @@ _list_tool_file()
 
    local color_start
    local color_end
+   local printmark
 
    IFS="
 "
@@ -973,58 +963,64 @@ _list_tool_file()
 
       IFS=";" read -r toolname mark <<< "${toolline}"
 
-      case "${mark}" in
-         optional)
-            isrequired='NO'
-         ;;
-
-         remove)
-            operation="unlink"
-         ;;
-      esac
+      printmark=""
+      if [ "${csv}" = 'YES' -a ! -z "${mark}" ]
+      then
+         printmark=";${mark}"
+      fi
 
       if [ "${color}" = 'YES' ]
       then
          color_start="${C_RESET}"
          color_end="${C_RESET}"
 
-
          local filename
 
-         filename="`command -v "${toolname}" `"
-         case "${filename}" in
-            /*)
-               if [ -x "${MULLE_ENV_VAR_DIR}/bin/${toolname}" ]
-               then
-                  if [ operation = "unlink" ]
-                  then
-                     color_start="${C_MAGENTA}"
-                  else
-                     color_start="${C_GREEN}"
-                  fi
-               else
-                  if [ operation = "unlink" ]
+         if [ "${mark}" != "remove" ]
+         then
+            filename="`command -v "${toolname}" `"
+            case "${filename}" in
+               /*)
+                  if [ -x "${MULLE_ENV_VAR_DIR}/bin/${toolname}" ]
                   then
                      color_start="${C_GREEN}"
                   else
-                     if [ operation = "optional" ]
+                     if [ "${mark}" = "optional" ]
                      then
                         color_start="${C_YELLOW}"
                      else
-                        color_start="${C_RED}"
+                        color_start="${C_RED}${C_BOLD}"
                      fi
                   fi
-               fi
-            ;;
+               ;;
 
-            *)
-               color_start="${C_RESET}"    # builtin
-            ;;
-         esac
+               "")
+                  if [ "${mark}" = "optional" ]
+                  then
+                     color_start="${C_RED}"
+                  else
+                     color_start="${C_RED}"
+                  fi
+               ;;
 
+               *)
+                  color_start="${C_GREEN}${C_BOLD}"    # builtin
+
+                  if [ "${csv}" = 'YES' -a "${builtin}" = 'YES' ]
+                  then
+                     if [ -z "${printmark}" ]
+                     then
+                        printmark=";builtin"
+                     else
+                        printmark=",builtin"
+                     fi
+                  fi
+               ;;
+            esac
+         fi
       fi
 
-      printf '%b%s%b\n' "${color_start}" "${toolname}" "${color_end}"
+      printf '%b%s%b%s\n' "${color_start}" "${toolname}${printmark}" "${color_end}"
    done
    IFS="${DEFAULT_IFS}"
    echo
@@ -1035,11 +1031,14 @@ _env_tool2_list()
 {
    log_entry "_env_tool2_list" "$@"
 
-   local extension="$1"
+   local os="$1"
+   local color="$2"
+   local csv="$3"
+   local builtin="$4"
 
    local toolfiles
 
-   r_tool_files "${extension}"
+   r_get_existing_tool_filepath "${os}"
    toolfiles="${RVAL}"
 
    local file
@@ -1061,7 +1060,7 @@ _env_tool2_list()
 
       log_info "${directory}/${name}"
 
-      _list_tool_file "${file}" "${color}"
+      _list_tool_file "${file}" "${color}" "${csv}" "${builtin}"
 
    done
 
@@ -1077,8 +1076,10 @@ env_tool2_list()
    [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
 
    local OPTION_COLOR="YES"
+   local OPTION_CSV="YES"
+   local OPTION_BUILTIN="YES"
 
-   local extension="$1" ; shift
+   local os="$1" ; shift
 
    while :
    do
@@ -1087,12 +1088,24 @@ env_tool2_list()
             env_tool2_list_usage
          ;;
 
-         -*)
-            env_tool2_list_usage "Unknown option \"$1\""
+         --no-color)
+            OPTION_COLOR='NO'
          ;;
 
-         --no-color)
-            OPTION_COLOR="NO"
+         --csv)
+            OPTION_CSV='YES'
+         ;;
+
+         --no-csv)
+            OPTION_CSV='NO'
+         ;;
+
+         --no-builtin)
+            OPTION_BUILTIN='NO'
+         ;;
+
+         -*)
+            env_tool2_list_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1103,10 +1116,9 @@ env_tool2_list()
       shift
    done
 
-
    case "$1" in
-      files)
-         r_tool_files "${extension}"
+      file|files)
+         r_get_existing_tool_filepath "${os}"
          echo "${RVAL}"
       ;;
 
@@ -1116,8 +1128,8 @@ env_tool2_list()
          return 0
       ;;
 
-      ""|tools)
-         _env_tool2_list "${extension}" "{OPTION_COLOR}"
+      ""|tool|tools)
+         _env_tool2_list "${os}" "${OPTION_COLOR}" "${OPTION_CSV}" "${OPTION_BUILTIN}"
       ;;
 
       *)
@@ -1176,8 +1188,8 @@ env_tool2_main()
             env_tool2_usage
          ;;
 
-         --share)
-            OPTION_SCOPE="share"
+         --plugin|--extension)
+            OPTION_SCOPE="${1:2}"
          ;;
 
          --common)
@@ -1207,30 +1219,14 @@ env_tool2_main()
       shift
    done
 
-   local extension
-
-   case "${OPTION_OS}" in
-      "DEFAULT")
-         extension=""
-      ;;
-
-      "")
-         extension=""
-      ;;
-
-      *)
-         extension=".${OPTION_OS}"
-      ;;
-   esac
-
    local cmd="$1"
 
    case "${cmd}" in
       add)
          shift
-         env_tool2_add  "${OPTION_SCOPE}" \
-                        "${OPTION_OS:-DEFAULT}" \
-                        "$@"
+         env_tool2_add "${OPTION_SCOPE}" \
+                       "${OPTION_OS}" \
+                       "$@"
       ;;
 
       compile)
@@ -1242,7 +1238,7 @@ env_tool2_main()
       get)
          shift
          env_tool2_get "${OPTION_SCOPE}"\
-                       "${extension}" \
+                       "${OPTION_OS}" \
                        "$@"
       ;;
 
@@ -1255,15 +1251,15 @@ env_tool2_main()
       list)
          shift
 
-         env_tool2_list "${extension}" \
-                          "$@"
+         env_tool2_list "${OPTION_OS}" \
+                        "$@"
       ;;
 
       remove)
          shift
 
          env_tool2_add "${OPTION_SCOPE}" \
-                       "${OPTION_OS:-DEFAULT}" \
+                       "${OPTION_OS}" \
                        --remove \
                        "$@"
       ;;
