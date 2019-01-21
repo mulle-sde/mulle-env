@@ -1,3 +1,7 @@
+### 2.2.1
+
+* remove optionaltool on migration
+
 ## 2.2.0
 
 * proper tool migration to 2.2

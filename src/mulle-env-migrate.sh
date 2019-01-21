@@ -234,6 +234,10 @@ env_migrate_from_v2_0_to_v2_2()
    remove_file_if_present ".mulle/share/env/tool.darwin"
    remove_file_if_present ".mulle/share/env/tool.freebsd"
    remove_file_if_present ".mulle/share/env/tool.linux"
+   remove_file_if_present ".mulle/share/env/optionaltool"
+   remove_file_if_present ".mulle/share/env/optionaltool.darwin"
+   remove_file_if_present ".mulle/share/env/optionaltool.freebsd"
+   remove_file_if_present ".mulle/share/env/optionaltool.linux"
 
    env_rename_file_if_present .mulle/share/env/auxscopes .mulle/share/env/auxscope
 }
