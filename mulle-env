@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.2.2"
+MULLE_ENV_VERSION="2.2.3"
 
 #
 # The default for first time mulle-env
@@ -1026,7 +1026,7 @@ undefined (old mulle-bashfunctions)"
       log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" (${MULLE_VIRTUAL_ROOT})"
       mode="SCRIPT"
    else
-      log_verbose "Starting shell ${env_flag} ($MULLE_VIRTUAL_ROOT})"
+      log_verbose "Starting shell ${env_flag} (${MULLE_VIRTUAL_ROOT})"
       mode="INTERACTIVE"
    fi
 

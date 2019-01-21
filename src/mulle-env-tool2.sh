@@ -661,6 +661,7 @@ r_env_tool2_get()
    local result
    local i
    local previous
+   local foundfile
 
    for file in "$@"
    do
@@ -680,6 +681,7 @@ r_env_tool2_get()
             ;;
 
             *)
+               foundfile="${file}"
                result="$i"
             ;;
          esac
@@ -695,7 +697,7 @@ r_env_tool2_get()
       return 1
    fi
 
-   log_debug "Found \"$i\""
+   log_debug "Found \"$i\" in \"${foundfile}\""
    RVAL="${result}"
 }
 

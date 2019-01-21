@@ -661,7 +661,7 @@ _env_environment_get()
       log_fluff "\"${filename}\" does not exist"
       return 1
    fi
-   log_verbose "Reading ${C_RESET_BOLD}${filename}"
+   log_fluff "Reading \"${filename}\""
 
    assert_valid_environment_key "${key}"
 
@@ -725,7 +725,7 @@ _env_environment_eval_get()
       return 1
    fi
 
-   log_verbose "Reading ${C_RESET_BOLD}${filename}"
+   log_fluff "Reading \"${filename}\""
 
    local  value
 
@@ -759,7 +759,7 @@ _env_environment_sed_get()
       return 1
    fi
 
-   log_verbose "Reading ${C_RESET_BOLD}${filename}"
+   log_fluff "Reading \"${filename}\""
 
    value="`rexekutor env -i MULLE_VIRTUAL_ROOT="${MULLE_VIRTUAL_ROOT}" \
                             MULLE_UNAME="${MULLE_UNAME}" \

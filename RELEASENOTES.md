@@ -1,3 +1,7 @@
+### 2.2.3
+
+* improved verbosity when logging
+
 ### 2.2.2
 
 * fix wrong error function call
