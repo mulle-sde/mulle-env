@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.1.0"
+MULLE_ENV_VERSION="2.1.1"
 
 #
 # The default for first time mulle-env
@@ -530,6 +530,15 @@ check your tool list.
    then
       [ -z "${MULLE_ENV_TOOL2_SH}" ] && \
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool2.sh"
+
+      local text
+
+      log_verbose "Creating \"${toolsfile}\""
+      if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
+      then
+         exit 1
+      fi
+      redirect_exekutor "${toolsfile}" echo "${text}"
 
       env_tool2_link --compile \
                      --bindir "${bindir}" || exit 1
@@ -1127,7 +1136,8 @@ clean()
    _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
 
    # shellcheck source=src/mulle-env-clean.sh
-   . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh" || fail "failed to load \"${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh\""
+   . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh" \
+      || fail "failed to load \"${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh\""
 
    env_clean_main "$@"
 }

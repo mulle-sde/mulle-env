@@ -306,13 +306,6 @@ env_init_main()
       fi
    done
 
-   log_verbose "Creating \"${toolsfile}\""
-   if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
-   then
-      return 1
-   fi
-   redirect_exekutor "${toolsfile}" echo "${text}"
-
    mkdir_if_missing "${sharedir}/libexec"
    log_verbose "Installing \"${completionfile}\""
    exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \

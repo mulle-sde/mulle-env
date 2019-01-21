@@ -1,3 +1,7 @@
+### 2.1.1
+
+* fix plugin tools not being reconsidered after init
+
 ## 2.1.0
 
 * reworked the tool command
