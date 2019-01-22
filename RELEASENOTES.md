@@ -1,3 +1,7 @@
+### 2.2.4
+
+* fix incomplete subshell entry
+
 ### 2.2.3
 
 * improved verbosity when logging

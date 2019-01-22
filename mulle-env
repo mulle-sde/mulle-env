@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.2.3"
+MULLE_ENV_VERSION="2.2.4"
 
 #
 # The default for first time mulle-env
@@ -568,8 +568,6 @@ check your tool list.
       [ -z "${MULLE_ENV_TOOL2_SH}" ] && \
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool2.sh"
 
-      env_tool2_link --compile \
-                     --bindir "${bindir}" || exit 1
       (
          local callback
 
@@ -579,6 +577,16 @@ check your tool list.
             ${callback} "${bindir}" "${libexecdir}" || exit 1
          fi
       ) || exit 1
+
+      if ! (
+         env_tool2_link --compile \
+                        --bindir "${bindir}"
+      )
+      then
+         # force needs_bin_update on next update
+         remove_file_if_present "${MULLE_ENV_VAR_DIR}/tool"
+         exit 1
+      fi
    fi
 }
 

@@ -180,7 +180,7 @@ env_link_mulle_tool()
    if [ -e "${bindir}/${toolname}" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
    then
       log_fluff "Mulle tool \"${toolname}\" already present"
-      return
+      return 0
    fi
 
    #
@@ -247,7 +247,7 @@ env_link_mulle_tool()
       mkdir_if_missing "${dstlibdir}"
 
       ( cd "${srclibdir}" ; tar cf - . ) | \
-      ( cd "${dstlibdir}" ; tar xf -  )
+      ( cd "${dstlibdir}" ; tar xf -  ) || exit 1
 
       mkdir_if_missing "${dstbindir}"
 
@@ -262,10 +262,10 @@ env_link_mulle_tool()
    mkdir_parent_if_missing "${dstlibdir}" > /dev/null
 
    log_fluff "Creating symlink \"${dstexefile}\""
-   exekutor ln -s -f "${exefile}" "${dstexefile}"
+   exekutor ln -s -f "${exefile}" "${dstexefile}" || exit 1
 
    log_fluff "Creating symlink \"${dstlibdir}\""
-   exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}"
+   exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}" || exit 1
 }
 
 
@@ -525,7 +525,7 @@ env_tool2_add()
    then
       if [ "${OPTION_COMPILE_LINK}" != 'DEFAULT' -o ! -z "${MULLE_VIRTUAL_ROOT}" ]
       then
-         log_debug "compile an link as : OPTION_COMPILE_LINK is \"${OPTION_COMPILE_LINK}\" and MULLE_VIRTUAL_ROOT is \"${MULLE_VIRTUAL_ROOT}\""
+         log_debug "compile and link as : OPTION_COMPILE_LINK is \"${OPTION_COMPILE_LINK}\" and MULLE_VIRTUAL_ROOT is \"${MULLE_VIRTUAL_ROOT}\""
          env_tool2_link --compile-if-needed
       fi
    fi
@@ -646,7 +646,7 @@ env_tool2_compile()
    IFS="${DEFAULT_IFS}"
 
    mkdir_if_missing "${MULLE_ENV_VAR_DIR}"
-   redirect_exekutor "${MULLE_ENV_VAR_DIR}/tool" sort <<< "${result}"
+   redirect_exekutor "${MULLE_ENV_VAR_DIR}/tool" sort <<< "${result}" || exit 1
 }
 
 
@@ -765,7 +765,7 @@ env_tool2_link_tool()
    if [ -e "${bindir}/${toolname}" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
    then
       log_fluff "Tool \"${toolname}\" already present"
-      return
+      return 0
    fi
 
    local filename
@@ -779,7 +779,7 @@ env_tool2_link_tool()
          fi
 
          log_fluff "\"${toolname}\" not found, but it's optional"
-         return 1
+         return 0
       ;;
 
       #
@@ -791,8 +791,8 @@ env_tool2_link_tool()
          then
             log_fluff "Copying mulle script \"${bindir}/${toolname}\""
 
-            exekutor cp -a "${filename}" "${bindir}/"
-            return $?
+            exekutor cp -a "${filename}" "${bindir}/" || exit 1
+            return 0
          fi
       ;;
 
@@ -808,7 +808,7 @@ env_tool2_link_tool()
 
    log_fluff "Creating symlink \"${bindir}/${toolname}\""
 
-   exekutor ln -sf "${filename}" "${bindir}/"
+   exekutor ln -sf "${filename}" "${bindir}/" || exit 1
 }
 
 
@@ -821,7 +821,7 @@ env_tool2_unlink_tool()
 
    log_fluff "Removing \"${bindir}/${toolname}\""
 
-   exekutor rm -f "${bindir}/${toolname}"
+   exekutor rm -f "${bindir}/${toolname}" || exit 1
 }
 
 
@@ -919,7 +919,7 @@ env_tool2_link()
 
    if [ "${compile}" = 'YES' ]
    then
-      env_tool2_compile ${compile_flags}  || return 1
+      env_tool2_compile ${compile_flags}
    fi
 
    local toolfile
