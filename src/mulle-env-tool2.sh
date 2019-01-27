@@ -711,7 +711,7 @@ env_tool2_get()
    [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
 
    local scope="$1" ; shift
-   local extension="$1" ; shift
+   local os="$1" ; shift
 
    while :
    do
@@ -770,7 +770,13 @@ env_tool2_link_tool()
 
    local filename
 
-   filename="`command -v "${toolname}" `"
+   if [ ! -z "${MULLE_OLDPATH}" ]
+   then
+      PATH="${MULLE_OLDPATH}" filename="`command -v "${toolname}" `"
+   else
+      filename="`command -v "${toolname}" `"
+   fi
+
    case "${filename}" in
       "")
          if [ "${isrequired}" = 'YES' ]
@@ -1239,7 +1245,7 @@ env_tool2_main()
 
       get)
          shift
-         env_tool2_get "${OPTION_SCOPE}"\
+         env_tool2_get "${OPTION_SCOPE}" \
                        "${OPTION_OS}" \
                        "$@"
       ;;

@@ -190,12 +190,31 @@ env_init_main()
 
    if [ "${OPTION_UPGRADE}" = 'YES' ]
    then
+      local mulle_dir="${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle"
+      local old_mulleenv_dir="${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle-env"
+
       if [ "${OPTION_STYLE}" = 'DEFAULT' ]
       then
-         if ! __get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env" \
-                                       "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/share/env"
+         if ! __get_saved_style_flavor "${mulle_dir}/etc/env" \
+                                       "${mulle_dir}/share/env"
          then
-            __fail_get_saved_style_flavor "${MULLE_VIRTUAL_ROOT:-${PWD}}/.mulle/etc/env"
+
+            # old directories
+            if [ ! -d "${mulle_dir}" ]
+            then
+               if [ -d "${old_mulleenv_dir}" ]
+               then
+                  if ! __get_saved_style_flavor "${old_mulleenv_dir}/etc" \
+                                                "${old_mulleenv_dir}/share"
+                  then
+                     fail "Could not retrieve style from old .mulle-env directory"
+                  fi
+               fi
+               log_warning "Can not determine style of (${MULLE_VIRTUAL_ROOT:-${PWD}})"
+            else
+               __fail_get_saved_style_flavor "${mulle_dir}/etc/env" \
+                                             "${mulle_dir}/share/env"
+            fi
          fi
          OPTION_STYLE="${style:-DEFAULT}"
       fi
@@ -262,32 +281,33 @@ env_init_main()
 
    if ! text="`print_${flavor}_startup_sh "${style}" `"
    then
-      return 1
+      fail "Plugin \"${flavor}\" failed in startup"
    fi
-   redirect_exekutor "${envfile}" echo "${text}"
+
+   redirect_exekutor "${envfile}" echo "${text}" || exit 1
 
    text="`print_${flavor}_auxscope_sh "${style}" `"
    if [ ! -z "${text}" ]
    then
       log_verbose "Creating \"${auxscopefile}\""
-      redirect_exekutor "${auxscopefile}" echo "${text}"
+      redirect_exekutor "${auxscopefile}" echo "${text}" || exit 1
    fi
 
    log_verbose "Creating \"${envincludefile}\""
    if ! text="`print_${flavor}_include_sh "${style}" `"
    then
-      return 1
+      fail "Plugin \"${flavor}\" failed in include"
    fi
-   redirect_exekutor "${envincludefile}" echo "${text}"
+   redirect_exekutor "${envincludefile}" echo "${text}" || exit 1
 
    log_verbose "Creating \"${pluginfile}\""
    if ! text="`print_${flavor}_environment_aux_sh "${style}" `"
    then
-      return 1
+      fail "Plugin \"${flavor}\" failed in environment_aux"
    fi
    if [ ! -z "${text}" ]
    then
-      redirect_exekutor "${pluginfile}" echo "${text}"
+      redirect_exekutor "${pluginfile}" echo "${text}" || exit 1
    fi
 
    # add more os flavors later
@@ -302,9 +322,9 @@ env_init_main()
          log_verbose "Creating \"${pluginosfile}\""
          if ! text="`${callback} "${style}" `"
          then
-            return 1
+            fail "Plugin \"${flavor}\" failed in environment os"
          fi
-         redirect_exekutor "${pluginosfile}" echo "${text}"
+         redirect_exekutor "${pluginosfile}" echo "${text}" || exit 1
       fi
    done
 
@@ -313,7 +333,7 @@ env_init_main()
    then
       fail "Tool install of \"${flavor}\" failed"
    fi
-   redirect_exekutor "${toolfile}" echo "${text}"
+   redirect_exekutor "${toolfile}" echo "${text}" || exit 1
 
    mkdir_if_missing "${sharedir}/libexec"
    log_verbose "Installing \"${completionfile}\""
@@ -321,11 +341,11 @@ env_init_main()
                 ${completionfile}
 
    log_verbose "Creating \"${stylefile}\""
-   redirect_exekutor "${stylefile}" echo "${style}"
+   redirect_exekutor "${stylefile}" echo "${style}" || exit 1
 
    # we create this last, if its present than the init ran through
    log_verbose "Creating \"${versionfile}\""
-   redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}"
+   redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}" || exit 1
 
    # chowning the directory is bad for git
    if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]

@@ -52,7 +52,7 @@ env_move_directory()
    else
       r_fast_dirname "${dstdir}"
       mkdir_if_missing "${RVAL}"
-      exekutor ${MV:-mv} "${srcdir}" "${dstdir}"
+      exekutor ${MV:-mv} "${srcdir}" "${dstdir}" || exit 1
    fi
 }
 

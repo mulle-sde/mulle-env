@@ -1,3 +1,7 @@
+### 2.2.5
+
+* improved upgrade experience when little things go wrong
+
 ### 2.2.4
 
 * fix incomplete subshell entry

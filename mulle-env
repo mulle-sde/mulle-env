@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.2.4"
+MULLE_ENV_VERSION="2.2.5"
 
 #
 # The default for first time mulle-env
@@ -599,6 +599,7 @@ __fail_get_saved_style_flavor()
    log_entry "__fail_get_saved_style_flavor" "$@"
 
    local directory="$1"
+   local fallback="$2"
 
    r_simplified_absolutepath "${directory}"
    directory="${RVAL}"
@@ -611,9 +612,16 @@ __fail_get_saved_style_flavor()
    r_fast_dirname "${directory}"  # ../.mulle
    userdir="${RVAL}"
 
-   fail "No properly setup environment found in candidate project \
+   if [ -z "${fallback}" ]
+   then
+      fail "No properly setup environment found in candidate project \
+directory \"${userdir}\" as \"${directory}\" contains no \
+style information."
+   else
+      fail "No properly setup environment found in candidate project \
 directory \"${userdir}\" as \"${directory}\" or \"${fallback}\" contain no \
 style information."
+   fi
 }
 
 
@@ -895,7 +903,7 @@ _run_subshell()
 
    if ! __get_saved_style_flavor "${vardir}" "${sharedir}"
    then
-      __fail_get_saved_style_flavor "${vardir}"
+      __fail_get_saved_style_flavor "${vardir}" "${sharedir}"
    fi
 
    local oldstyle
@@ -1425,7 +1433,7 @@ wild"
 
          if ! __get_saved_style_flavor "${directory}" "${fallback}"
          then
-            __fail_get_saved_style_flavor "${directory}"
+            __fail_get_saved_style_flavor "${directory}" "${fallback}"
          fi
 
          # shellcheck source=src/mulle-env-init.sh
@@ -1450,7 +1458,8 @@ wild"
          if ! __get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
                                        "${directory}/.mulle/share/env"
          then
-            __fail_get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
+            __fail_get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
+                                          "${directory}/.mulle/share/env"
          fi
 
          echo "${style}"
