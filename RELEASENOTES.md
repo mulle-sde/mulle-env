@@ -1,3 +1,7 @@
+### 2.2.6
+
+* tool defaults to list command, fix protect problem
+
 ### 2.2.5
 
 * improved upgrade experience when little things go wrong

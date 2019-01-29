@@ -772,7 +772,7 @@ env_tool2_link_tool()
 
    if [ ! -z "${MULLE_OLDPATH}" ]
    then
-      PATH="${MULLE_OLDPATH}" filename="`command -v "${toolname}" `"
+      filename="`PATH="${MULLE_OLDPATH}" command -v "${toolname}" `"
    else
       filename="`command -v "${toolname}" `"
    fi
@@ -1228,44 +1228,38 @@ env_tool2_main()
    done
 
    local cmd="$1"
+   if [ ! -z "${cmd}" ]
+   then
+      shift
+   fi
 
-   case "${cmd}" in
+   case "${cmd:-list}" in
       add)
-         shift
          env_tool2_add "${OPTION_SCOPE}" \
                        "${OPTION_OS}" \
                        "$@"
       ;;
 
       compile)
-         shift
-
          env_tool2_compile "$@"
       ;;
 
       get)
-         shift
          env_tool2_get "${OPTION_SCOPE}" \
                        "${OPTION_OS}" \
                        "$@"
       ;;
 
       link)
-         shift
-
          env_tool2_link "$@"
       ;;
 
       list)
-         shift
-
          env_tool2_list "${OPTION_OS}" \
                         "$@"
       ;;
 
       remove)
-         shift
-
          env_tool2_add "${OPTION_SCOPE}" \
                        "${OPTION_OS}" \
                        --remove \
@@ -1273,14 +1267,7 @@ env_tool2_main()
       ;;
 
       status)
-         shift
-
          env_tool2_status "$@"
-      ;;
-
-
-      "")
-         env_tool2_usage
       ;;
 
       *)
