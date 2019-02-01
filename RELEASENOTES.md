@@ -1,3 +1,7 @@
+### 2.2.7
+
+* fix another protection problem
+
 ### 2.2.6
 
 * tool defaults to list command, fix protect problem

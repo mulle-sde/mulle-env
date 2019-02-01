@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.2.6"
+MULLE_ENV_VERSION="2.2.7"
 
 #
 # The default for first time mulle-env
@@ -314,8 +314,10 @@ protect_file_if_exists()
       if [ -e "${filename}" ]
       then
          exekutor chmod -f a-w "${filename}" || exit 1
+         return 0
       fi
    fi
+   return 1
 }
 
 
@@ -323,7 +325,11 @@ protect_dir_if_exists()
 {
    log_entry "protect_dir_if_exists" "$@"
 
-   protect_file_if_exists "$@"
+   if protect_file_if_exists "$@"
+   then
+      # write protect all files
+      find "$1" ! -type d -exec chmod a-w {} \;
+   fi
 }
 
 
