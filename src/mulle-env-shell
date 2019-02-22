@@ -355,8 +355,6 @@ main()
    # Clean some environment variables set by
    # mulle-bashfunctions
    #
-   unset MULLE_USER_PWD
-
    local BASH
 
    BASH="`command -v "bash"`"

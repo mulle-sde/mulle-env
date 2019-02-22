@@ -54,6 +54,12 @@ env_move_directory()
       mkdir_if_missing "${RVAL}"
       exekutor ${MV:-mv} "${srcdir}" "${dstdir}" || exit 1
    fi
+
+   #
+   # When we migrate unprotect the files for future edits
+   # at the end the protection is re-done by init
+   #
+   exekutor chmod -R ug+wX "${dstdir}"
 }
 
 

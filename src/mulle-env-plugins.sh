@@ -112,8 +112,7 @@ _env_all_plugin_names()
    IFS=":"
    for directory in ${searchpath}
    do
-      IFS="
-"
+      IFS=$'\n'
       for pluginpath in `ls -1 "${directory}"/*.sh 2> /dev/null`
       do
          basename -- "${pluginpath}" .sh

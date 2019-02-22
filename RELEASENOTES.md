@@ -1,3 +1,13 @@
+## 2.3.0
+
+requires mulle-bashfunctions 1.11.0
+
+* proper environment get
+* proper sed replacement escape support
+* fix some more protection problems
+* fix problems when rsyncing projects across platforms
+
+
 ### 2.2.7
 
 * fix another protection problem

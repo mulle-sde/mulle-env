@@ -506,20 +506,28 @@ env_tool2_add()
       tool="${tool};${mark}"
    fi
 
+   local rval
+
+   rval=0
+
    case "${scope}" in
       plugin|extension)
          tool_filename="${MULLE_ENV_SHARE_DIR}/tool-${scope}${extension}"
-         unprotect_file_if_exists "${tool_filename}"
+         unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
          redirect_append_exekutor "${tool_filename}" echo "${tool}"
-         protect_file "${tool_filename}"
+         rval=$?
+         protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
       ;;
 
       *)
          mkdir_if_missing "${MULLE_ENV_ETC_DIR}"
          tool_filename="${MULLE_ENV_ETC_DIR}/tool${extension}"
          redirect_append_exekutor "${tool_filename}" echo "${tool}"
+         rval=$?
       ;;
    esac
+
+   [ $rval -ne 0 ] && exit 1
 
    if [ "${OPTION_COMPILE_LINK}" != 'NO' ]
    then
@@ -611,8 +619,7 @@ env_tool2_compile()
 
       lines="`rexekutor egrep -v '^#' "${file}"`"
 
-      set -f; IFS="
-"
+      set -f; IFS=$'\n'
       local i
 
       for i in ${lines}
@@ -671,8 +678,7 @@ r_env_tool2_get()
       [ ! -f "${file}" ]  && continue
 
       lines="`egrep -v '^#' "${file}" | egrep "^${tool}$|^${tool};" `"
-   set -f; IFS="
-"
+   set -f; IFS=$'\n'
       for i in ${lines}
       do
          case "${i}" in
@@ -772,6 +778,7 @@ env_tool2_link_tool()
 
    if [ ! -z "${MULLE_OLDPATH}" ]
    then
+      # same as mudo
       filename="`PATH="${MULLE_OLDPATH}" command -v "${toolname}" `"
    else
       filename="`command -v "${toolname}" `"
@@ -846,8 +853,7 @@ env_tool2_link_tools()
 
    mkdir_if_missing "${bindir}"
 
-   set -f ; IFS="
-"
+   set -f ; IFS=$'\n'
    for toolline in ${toollines}
    do
       set +f ; IFS="${DEFAULT_IFS}"
@@ -961,8 +967,7 @@ _list_tool_file()
    local color_end
    local printmark
 
-   IFS="
-"
+   IFS=$'\n'
    for toolline in `egrep -v '^#' "${filename}"`
    do
       IFS="${DEFAULT_IFS}"
@@ -1233,11 +1238,27 @@ env_tool2_main()
       shift
    fi
 
+
+   local rval
+   local bindir
+   local libexecdir
+
+   bindir="${MULLE_ENV_VAR_DIR}/bin"
+   libexecdir="${MULLE_ENV_VAR_DIR}/libexec"
+
    case "${cmd:-list}" in
       add)
-         env_tool2_add "${OPTION_SCOPE}" \
-                       "${OPTION_OS}" \
-                       "$@"
+         unprotect_dir_if_exists "${bindir}"
+         unprotect_dir_if_exists "${libexecdir}"
+         (
+            env_tool2_add "${OPTION_SCOPE}" \
+                          "${OPTION_OS}" \
+                          "$@"
+         )
+         rval=$?
+         protect_dir_if_exists "${bindir}"
+         protect_dir_if_exists "${libexecdir}"
+         return $rval
       ;;
 
       compile)
@@ -1251,7 +1272,15 @@ env_tool2_main()
       ;;
 
       link)
-         env_tool2_link "$@"
+         unprotect_dir_if_exists "${bindir}"
+         unprotect_dir_if_exists "${libexecdir}"
+         (
+            env_tool2_link "$@"
+         )
+         rval=$?
+         protect_dir_if_exists "${bindir}"
+         protect_dir_if_exists "${libexecdir}"
+         return $rval
       ;;
 
       list)
@@ -1260,10 +1289,18 @@ env_tool2_main()
       ;;
 
       remove)
-         env_tool2_add "${OPTION_SCOPE}" \
-                       "${OPTION_OS}" \
-                       --remove \
-                       "$@"
+         unprotect_dir_if_exists "${bindir}"
+         unprotect_dir_if_exists "${libexecdir}"
+         (
+            env_tool2_add "${OPTION_SCOPE}" \
+                          "${OPTION_OS}" \
+                          --remove \
+                          "$@"
+         )
+         rval=$?
+         protect_dir_if_exists "${bindir}"
+         protect_dir_if_exists "${libexecdir}"
+         return $rval
       ;;
 
       status)

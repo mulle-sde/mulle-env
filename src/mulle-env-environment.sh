@@ -216,7 +216,8 @@ Scopes:
 
 Options:
    --all              : show also plugin, project and extension scopes
-   --filename         : emit filename of the scope file
+   --output-filename  : emit filename of the scope file
+
 EOF
    exit 1
 }
@@ -231,8 +232,7 @@ key_values_to_command()
    local escaped_value
    local escaped_key
 
-   IFS="
-"
+   IFS=$'\n'
    while read -r line
    do
       IFS="${DEFAULT_IFS}"
@@ -260,8 +260,7 @@ key_values_to_sed()
    local value
    local escaped_value
    local escaped_key
-   IFS="
-"
+   IFS=$'\n'
    while read -r line
    do
       IFS="${DEFAULT_IFS}"
@@ -276,7 +275,7 @@ key_values_to_sed()
 
       r_escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"
       escaped_key="${RVAL}"
-      r_escaped_sed_pattern "${value}"
+      r_escaped_sed_replacement "${value}"
       escaped_value="${RVAL}"
 
       # escape quotes for "eval line"
@@ -293,12 +292,6 @@ key_values_to_sed()
 #
 # Set
 #
-escaped_doublequotes()
-{
-   sed 's/"/\\"/g' <<< "${1}"
-}
-
-
 _env_environment_set()
 {
    log_entry "_env_environment_set" "$@"
@@ -308,7 +301,11 @@ _env_environment_set()
    local value="$3"
    local comment="$4"
 
+   #
    # put quotes around it if needed
+   # we don't want to escape ${X} since this is supposed to expand
+   # except when presented as '${X}'
+   #
    case "${value}" in
       ""|\"\")
          value=""
@@ -318,17 +315,18 @@ _env_environment_set()
       ;;
 
       *)
-         escaped_value="`escaped_doublequotes "${value}"`"
-         value="\"${escaped_value}\""
+         r_escaped_doublequotes "${value}"
+         value="\"${RVAL}\""
       ;;
    esac
 
    local escaped_value
    local sed_escaped_value
    local sed_escaped_key
+
    r_escaped_sed_pattern "${key}"
    sed_escaped_key="${RVAL}"
-   r_escaped_sed_pattern "${value}"
+   r_escaped_sed_replacement "${value}"
    sed_escaped_value="${RVAL}"
 
    case "${MULLE_SHELL_MODE}" in
@@ -346,13 +344,13 @@ shell environment"
       if [ -f "${filename}" ]
       then
          log_fluff "${filename} does not exist"
-         return 1
+         return 2
       fi
 
       if ! _env_file_defines_key "${filename}" "${key}"
       then
          log_fluff "${key} does not exist in ${filename}"
-         return 1
+         return 2
       fi
 
       inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
@@ -382,7 +380,7 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
 
    if [ -z "${value}" -a "${OPTION_ADD_EMPTY}" = 'NO' ]
    then
-      return
+      return 0
    fi
 
    local text
@@ -472,103 +470,110 @@ env_environment_set_main()
       shift
    done
 
-   local key="$1"
-   local value="$2"
-   local comment="$3"
-
-   [ -z "${key}" ] && env_environment_set_usage "empty key"
-
-   assert_valid_environment_key "${key}"
-
-   if [ "${OPTION_ADD}" = 'YES' ]
+   # unprotect files
+   if [ "${OPTION_PROTECT}" != 'NO' -a -d "${MULLE_ENV_SHARE_DIR}" ]
    then
-      local prev
-      local oldvalue
+      exekutor find "${MULLE_ENV_SHARE_DIR}" -type f -exec chmod ug+w {} \;
+   fi
 
-      prev="`env_environment_get_main "${scope}" "${key}"`"
-      log_debug "Previous value is \"${prev}\""
+   (
+      local key="$1"
+      local value="$2"
+      local comment="$3"
 
-      case "${value}" in
-         *:*)
+      [ -z "${key}" ] && env_environment_set_usage "empty key"
+
+      assert_valid_environment_key "${key}"
+
+      if [ "${OPTION_ADD}" = 'YES' ]
+      then
+         local prev
+         local oldvalue
+
+         prev="`env_environment_get_main "${scope}" "${key}"`"
+         log_debug "Previous value is \"${prev}\""
+
+         case "${value}" in
+            *:*)
             fail "${value} contains :, which is not possible for addition \
 (can not be escaped either)"
-         ;;
-      esac
+            ;;
+         esac
 
-      set -f; IFS="${OPTION_SEPARATOR}"
+         set -f; IFS="${OPTION_SEPARATOR}"
 
-      for oldvalue in ${prev}
-      do
+         for oldvalue in ${prev}
+         do
+            set +f; IFS="${DEFAULT_IFS}"
+            if [ "${oldvalue}" = "${value}" ]
+            then
+               log_fluff "\"${value}\" already set"
+               return 0
+            fi
+         done
+
          set +f; IFS="${DEFAULT_IFS}"
-         if [ "${oldvalue}" = "${value}" ]
-         then
-            log_fluff "\"${value}\" already set"
-            return
-         fi
-      done
 
-      set +f; IFS="${DEFAULT_IFS}"
-
-      r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
-      value="${RVAL}"
-   fi
-
-   local filename
-
-#   log_verbose "Use \`mulle-env-reload\` to get the actual value in your shell"
-
-   log_debug "Environment scope \"${scope}\" set $key=\"${value}\""
-
-   if [ "${scope}" = 'DEFAULT' ]
-   then
-      filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
-      _env_environment_set "${filename}" "${key}" "${value}" "${comment}" &&
-      env_environment_remove_from_global_subscopes "${key}"
-      return $?
-   fi
-
-   local scopeprefix
-   local rval
-
-   if ! r_scopeprefix_for_scope "${scope}"
-   then
-      if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
-      then
-         log_warning "Adding unknown scope \"${scope}\" to auxscope"
-
-         filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-         unprotect_file_if_exists "${filename}"
-         redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" echo "${scope}"
-         protect_file "${filename}"
-
-         RVAL="s" # auxscope are always share
-      else
-         fail "Unknown scope \"${scope}\""
+         r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
+         value="${RVAL}"
       fi
-   fi
-   scopeprefix="${RVAL}"
 
-   r_directory_for_scopeprefix "${scopeprefix}"
-   filename="${RVAL}/environment-${scope}.sh"
+      local filename
 
-   if [ "${scopeprefix}" = "s" ]
+   #   log_verbose "Use \`mulle-env-reload\` to get the actual value in your shell"
+
+      log_debug "Environment scope \"${scope}\" set $key=\"${value}\""
+
+      if [ "${scope}" = 'DEFAULT' ]
+      then
+         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
+         _env_environment_set "${filename}" "${key}" "${value}" "${comment}" &&
+         env_environment_remove_from_global_subscopes "${key}"
+         return $?
+      fi
+
+      local scopeprefix
+      local rval
+
+      if ! r_scopeprefix_for_scope "${scope}"
+      then
+         if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
+         then
+            log_warning "Adding unknown scope \"${scope}\" to auxscope"
+
+            filename="${MULLE_ENV_SHARE_DIR}/auxscope"
+            redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" echo "${scope}"
+
+            RVAL="s" # auxscope are always share
+         else
+            fail "Unknown scope \"${scope}\""
+         fi
+      fi
+      scopeprefix="${RVAL}"
+
+      r_directory_for_scopeprefix "${scopeprefix}"
+      filename="${RVAL}/environment-${scope}.sh"
+
+      _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
+      rval=$?
+
+      if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+      then
+         log_trace2 "filename : ${filename}"
+         cat "${filename}" >&2
+      fi
+
+      return $rval
+   )
+   rval=$?
+
+   # protect files only, chmoding the share directory is bad for git
+   if [ "${OPTION_PROTECT}" != 'NO' ]
    then
-      unprotect_file_if_exists "${filename}"
+      exekutor find "${MULLE_ENV_SHARE_DIR}" -type f -exec chmod a-w {} \;
    fi
 
-   _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
-   rval="$?"
-
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "filename : ${filename}"
-      cat "${filename}" >&2
-   fi
-
-   if [ "${scopeprefix}" = "s" ]
-   then
-      protect_file "${filename}"
-   fi
+   [ $rval -eq 1 ] && exit 1
 
    return $rval
 }
@@ -661,6 +666,7 @@ _env_environment_get()
       log_fluff "\"${filename}\" does not exist"
       return 1
    fi
+
    log_fluff "Reading \"${filename}\""
 
    assert_valid_environment_key "${key}"
@@ -713,8 +719,8 @@ _env_environment_eval_get()
 {
    log_entry "_env_environment_eval_get" "$@"
 
-   local filename="$1"
-   local key="$2"
+   local filename="$1"; shift
+   local key="$1"; shift
 
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT not set up"
    [ -z "${MULLE_UNAME}" ] && internal_fail "MULLE_UNAME not set up"
@@ -727,17 +733,31 @@ _env_environment_eval_get()
 
    log_fluff "Reading \"${filename}\""
 
-   local  value
+   local value
+   local cmd
 
-   value="`rexekutor env -i MULLE_VIRTUAL_ROOT="${MULLE_VIRTUAL_ROOT}" \
-                            MULLE_UNAME="${MULLE_UNAME}" \
-                            "${BASH}" -c ". '${filename}' ; echo \\\$${key}"`"
-   if [ -z "${value}" ]
+   while [ $# -ne 0 ]
+   do
+      r_concat "${cmd}" ". '$1' ;"
+      cmd="${RVAL}"
+      shift
+   done
+
+   r_concat "${cmd}" ". '${filename}' ;"
+   r_concat "${RVAL}" "echo \${${key}}"
+   cmd="${RVAL}"
+
+   value="`eval_rexekutor env -i "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
+                                 "MULLE_UNAME='${MULLE_UNAME}'" \
+                                 '${BASH}' -c "'${cmd}'" `"
+   if [ ! -z "${value}" ]
    then
-      _env_file_defines_key "${filename}" "${key}"
-      return $?
+      echo "$value"
+      return 0
    fi
-   echo "$value"
+
+   _env_file_defines_key "${filename}" "${key}"
+   return $?
 }
 
 
@@ -745,29 +765,11 @@ _env_environment_sed_get()
 {
    log_entry "_env_environment_sed_get" "$@"
 
-   local filename="$1"
-   local key="$2"
-
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT not set up"
-   [ -z "${MULLE_UNAME}" ] && internal_fail "MULLE_UNAME not set up"
-
    local value
 
-   if [ ! -f "${filename}" ]
+   if ! value="`_env_environment_eval_get "$@"`"
    then
-      log_fluff "\"${filename}\" does not exist"
       return 1
-   fi
-
-   log_fluff "Reading \"${filename}\""
-
-   value="`rexekutor env -i MULLE_VIRTUAL_ROOT="${MULLE_VIRTUAL_ROOT}" \
-                            MULLE_UNAME="${MULLE_UNAME}" \
-                            "${BASH}" -c ". '${filename}' ; echo \\\$${key}"`"
-   if [ -z "${value}" ]
-   then
-      _env_file_defines_key "${filename}" "${key}"
-      return $?
    fi
 
    local escaped_key
@@ -775,7 +777,7 @@ _env_environment_sed_get()
 
    r_escaped_sed_pattern "${OPTION_SED_KEY_PREFIX}${key}${OPTION_SED_KEY_SUFFIX}"
    escaped_key="${RVAL}"
-   r_escaped_sed_pattern "${value}"
+   r_escaped_sed_replacement "${value}"
    escaped_value="${RVAL}"
 
    # escape quotes for "eval line"
@@ -796,6 +798,7 @@ r_get_auxscopes()
    if [ ! -f "${auxscopefile}" ]
    then
       log_debug "No auxscope file found"
+      RVAL=
       return 1
    fi
    # eval it to resolve USER and so on
@@ -807,8 +810,7 @@ r_get_auxscopes()
 
    RVAL=
 
-   set -f; IFS="
-"
+   set -f; IFS=$'\n'
    for aux_scope in ${tmp}
    do
       IFS="${DEFAULT_IFS}"; set +f
@@ -862,6 +864,8 @@ e:user-${USER}"
 
    r_add_line "${env_scopes}" "${aux_scopes}"
    r_add_line "${RVAL}" "${user_scopes}"
+
+   log_debug "scopes: ${RVAL}"
 }
 
 
@@ -894,8 +898,7 @@ r_scopeprefix_for_scope()
 
    local i
 
-   set -f; IFS="
-"
+   set -f; IFS=$'\n'
    for i in ${scopes}
    do
       IFS="${DEFAULT_IFS}"; set +f
@@ -916,12 +919,17 @@ r_get_existing_scope_files()
    log_entry "r_existing_scope_files" "$@"
 
    local OPTION_INFERIORS='NO'
+   local OPTION_REVERSE='NO'
 
    while :
    do
       case "$1" in
          --with-inferiors)
             OPTION_INFERIORS='YES'
+         ;;
+
+         --reverse)
+            OPTION_REVERSE='YES'
          ;;
 
          *)
@@ -931,24 +939,23 @@ r_get_existing_scope_files()
       shift
    done
 
-   local scope="$1"
-
    local scopes
 
    r_get_scopes
    scopes="${RVAL}"
 
-   RVAL=""
+   log_debug "scopes: ${scopes}"
 
    local i
    local scopename
    local filename
    local skipcheck
+   local filenames
 
+   filenames=""
    skipcheck='NO'
 
-   set -f; IFS="
-"
+   set -f; IFS=$'\n'
    for i in ${scopes}
    do
       IFS="${DEFAULT_IFS}"; set +f
@@ -961,26 +968,33 @@ r_get_existing_scope_files()
          continue
       fi
 
+      filename=
       skipcheck="${OPTION_INFERIORS}"
       case "${i}" in
          'e:'*)
             filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
-            if [ -f "${filename}" ]
-            then
-               r_add_line "${RVAL}" "${filename}"
-            fi
          ;;
 
          's:'*)
             filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-            if [ -f "${filename}" ]
-            then
-               r_add_line "${RVAL}" "${filename}"
-            fi
          ;;
       esac
+
+      if [ -f "${filename}" ]
+      then
+         if [ "${OPTION_REVERSE}" = 'YES' ]
+         then
+            r_add_line "${filename}" "${filenames}"
+         else
+            r_add_line "${filenames}" "${filename}"
+         fi
+         filenames="${RVAL}"
+      fi
    done
    IFS="${DEFAULT_IFS}"; set +f
+
+   log_debug "filenames: ${filenames}"
+   RVAL="${filenames}"
 }
 
 
@@ -992,6 +1006,7 @@ env_environment_get_main()
 
    local infix="_"
    local getter
+   local reverse="--reverse"
 
    getter="_env_environment_get"
 
@@ -1004,10 +1019,12 @@ env_environment_get_main()
 
          --output-eval)
             getter="_env_environment_eval_get"
+            reverse=""
          ;;
 
          --output-sed)
             getter="_env_environment_sed_get"
+            reverse=""
          ;;
 
          --sed-key-prefix)
@@ -1039,34 +1056,49 @@ env_environment_get_main()
    [ "$#" -ne 1 ]  && env_environment_get_usage "wrong number of arguments \"$*\""
 
    local key="$1"
+
    [ -z "${key}" ] && fail "empty key"
 
    local filename
    local filenames
+
    case "${scope}" in
       include)
          ${getter} "${MULLE_ENV_SHARE_DIR}/include-environment.sh" "${key}"
-      ;;
-
-      *)
-         r_get_existing_scope_files "${scope}"
-         filenames="${RVAL}"
-
-         set -f ; IFS="
-"
-         for filename in ${filenames}
-         do
-            set +f; IFS="${DEFAULT_IFS}"
-            if ${getter} "${filename}" "${key}"
-            then
-               return
-            fi
-         done
-         set +f; IFS="${DEFAULT_IFS}"
-
-         return 1
+         return
       ;;
    esac
+
+   r_get_existing_scope_files ${reverse} "${scope}"
+   filenames="${RVAL}"
+
+   local rval
+   local value
+   local prevfiles
+
+   rval=1
+   set -f ; IFS=$'\n'
+   for filename in ${filenames}
+   do
+      set +f; IFS="${DEFAULT_IFS}"
+      if value="`eval ${getter} "'${filename}'" "'${key}'" "${prevfiles}"`"
+      then
+         rval=0
+         if [ ! -z "${reverse}" ]
+         then
+            echo "${value}"
+            return $rval
+         fi
+      fi
+
+      r_concat "${prevfiles}" "'${filename}'"
+      prevfiles="${RVAL}"
+   done
+   set +f; IFS="${DEFAULT_IFS}"
+
+   [ "${rval}" -eq 0 ] && echo "${value}"
+
+   return $rval
 }
 
 
@@ -1169,8 +1201,7 @@ env_environment_remove_main()
    local rval
 
    rval=1
-   set -f ; IFS="
-"
+   set -f ; IFS=$'\n'
    for filename in ${filenames}
    do
       set +f; IFS="${DEFAULT_IFS}"
@@ -1273,8 +1304,7 @@ _env_environment_combined_list_main()
    r_get_existing_scope_files "DEFAULT"
    filenames="${RVAL}"
 
-   set -f ; IFS="
-"
+   set -f ; IFS=$'\n'
    for filename in ${filenames}
    do
       set +f; IFS="${DEFAULT_IFS}"
@@ -1480,8 +1510,7 @@ env_environment_list_main()
          local i
          local scopename
 
-         set -f; IFS="
-"
+         set -f; IFS=$'\n'
          for i in ${scopes}
          do
             IFS="${DEFAULT_IFS}"; set +f
@@ -1513,11 +1542,12 @@ env_environment_scope_main()
 {
    log_entry "env_environment_scope_main" "$@"
 
-   local OPTION_FILENAME='NO'
+   local OPTION_OUTPUT_FILENAME='NO'
    local OPTION_EXISTING='NO'
    local OPTION_USER_SCOPES='YES'
    local OPTION_AUX_SCOPES='NO'
    local OPTION_PLUGIN_SCOPES='NO'
+   local OPTION_EXISTING_FILENAME='NO'
 
    while :
    do
@@ -1532,8 +1562,12 @@ env_environment_scope_main()
             OPTION_USER_SCOPES='YES'
          ;;
 
-         --filename)
-            OPTION_FILENAME='YES'
+         --output-filename)
+            OPTION_OUTPUT_FILENAME='YES'
+         ;;
+
+         --output-existing-filename)
+            OPTION_EXISTING_FILENAME='YES'
          ;;
 
          --no-directory)
@@ -1623,44 +1657,41 @@ env_environment_scope_main()
       fi
    fi
 
-   local etcdir
-   local sharedir
-
-   etcdir="${MULLE_ENV_ETC_DIR#${PWD}/}"
-   sharedir="${MULLE_ENV_DIR#${PWD}/}/share"
-
    local scopename
    local scope
    local filename
 
    set -f
-   IFS="
-"
+   IFS=$'\n'
    for scope in ${scopes}
    do
       IFS="${DEFAULT_IFS}"
       filename=
-
       scopename="${scope:2}"
-      if [ "${OPTION_FILENAME}" = 'YES' ]
+
+      if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
       then
          case "${scope}" in
             'e:'*)
-               if [ -f "${etcdir}/environment-${scopename}.sh" ]
-               then
-                  filename="(${etcdir}/environment-${scopename}.sh)"
-               fi
+               filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
             ;;
 
             's:'*)
-               if [ -f "${sharedir}/environment-${scopename}.sh" ]
-               then
-                  filename="(${sharedir}/environment-${scopename}.sh)"
-               fi
+               filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
             ;;
          esac
+
+         log_debug "scopename: ${scopename}"
+         log_debug "filename : ${filename}"
+         log_debug "scope    : ${scope}"
+
+         if [ "${OPTION_EXISTING_FILENAME}" = 'YES' -a ! -f "${filename}" ]
+         then
+            filename=""
+         fi
       fi
-      concat "${scopename}" "${filename}" ";"
+
+      concat "${scopename}" "${filename#${MULLE_USER_PWD}/}" ";"
    done
 
    IFS="${DEFAULT_IFS}"

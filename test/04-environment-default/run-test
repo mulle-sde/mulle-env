@@ -13,7 +13,7 @@ run_mulle_env()
 }
 
 
-setup()
+test_simple()
 {
    run_mulle_env environment --global set FOO "global"
    run_mulle_env environment --host set FOO "host"
@@ -25,6 +25,40 @@ setup()
    then
       fail "setup failed"
    fi
+
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "user" ] && internal_fail "Wrong value \"${value}\" from get"
+
+   value="`run_mulle_env environment get --output-eval FOO`"
+   [ "${value}" != "user" ] && internal_fail "Wrong value \"${value}\" from get"
+
+   run_mulle_env environment --user remove FOO
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "host" ] && internal_fail "Wrong value \"${value}\" from get"
+
+   run_mulle_env environment --host remove FOO
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "global" ] && internal_fail "Wrong value \"${value}\" from get"
+
+   run_mulle_env environment --global remove FOO
+   value="`run_mulle_env environment get FOO`"
+   [ "${value}" != "" ] && internal_fail "Wrong value \"${value}\" from get"
+
+   log_verbose "----- #1 PASSED -----"
+}
+
+
+test_simple2()
+{
+   local sed_expr
+
+   sed_expr='s/\(.*\)/\1&/'
+   run_mulle_env environment --global set SED_EXPR "${sed_expr}"
+   value="`run_mulle_env environment get SED_EXPR`"
+   [ "${value}" != "${sed_expr}" ] && internal_fail "Wrong value \"${value}\" from get"
+
+   log_verbose "----- #2 PASSED -----"
+
 }
 
 
@@ -43,42 +77,9 @@ main()
 
    run_mulle_env -s init --style none/tight
 
-   setup
-
-   value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "global" ] && fail "Wrong value for get"
-
-   run_mulle_env environment --global remove FOO
-   value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "host" ] && fail "Wrong value for get"
-
-   run_mulle_env environment --host remove FOO
-   value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "user" ] && fail "Wrong value for get"
-
-   run_mulle_env environment --user remove FOO
-   value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "" ] && fail "Wrong value for get"
-
-   log_verbose "----- #1 PASSED -----"
-
-   setup
-
-   run_mulle_env environment set FOO  "global2"
-
-   value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "global2" ] && fail "Wrong value for get"
-
-   value="`run_mulle_env environment --user get FOO`"
-   [ "${value}" != "" ] && fail "Wrong value for get"
-
-   log_verbose "----- #2 PASSED -----"
-
-   log_info "----- ALL PASSED -----"
-
-   rmdir_safer "${directory}"
+   test_simple
+   test_simple2
 }
-
 
 
 init()

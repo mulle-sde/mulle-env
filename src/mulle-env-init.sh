@@ -82,8 +82,7 @@ custom_environment_init()
    #
    # use custom environment values to set environment
    #
-   set -f; IFS="
-"
+   set -f; IFS=$'\n'
    for keyvalue in ${CUSTOM_ENVIRONMENT}
    do
       set +f; IFS="${DEFAULT_IFS}"
@@ -209,8 +208,9 @@ env_init_main()
                   then
                      fail "Could not retrieve style from old .mulle-env directory"
                   fi
+               else
+                  log_warning "Can not determine style of (${MULLE_VIRTUAL_ROOT:-${PWD}})"
                fi
-               log_warning "Can not determine style of (${MULLE_VIRTUAL_ROOT:-${PWD}})"
             else
                __fail_get_saved_style_flavor "${mulle_dir}/etc/env" \
                                              "${mulle_dir}/share/env"
@@ -237,121 +237,124 @@ env_init_main()
    esac
    log_verbose "Init style is \"${style}\""
 
-   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   # chmoding the share directory is bad for git
+   if [ "${OPTION_PROTECT}" != 'NO' ]
    then
-      if [ -d "${sharedir}" ]
+      find "${sharedir}" -type f -exec chmod ug+w {} \;
+   fi
+
+   (
+      # need proper flavor for migration
+      if [ "${OPTION_UPGRADE}" = 'YES' ]
       then
-         find "${sharedir}" -type f -exec chmod ug+w {} \; || return 1
-      fi
-   fi
-
-   # need proper flavor for migration
-   if [ "${OPTION_UPGRADE}" = 'YES' ]
-   then
-      if ! _r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
-      then
-         fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_SHARE_DIR}/version"
-      fi
-      version="${RVAL}"
-
-      # shellcheck source=src/mulle-env-migrate.sh
-      . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh"
-      env_migrate "${version}" "${MULLE_ENV_VERSION}" "${flavor}"
-   fi
-
-   envincludefile="${sharedir}/include-environment.sh"
-
-   pluginfile="${sharedir}/environment-plugin.sh"
-   completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
-   auxscopefile="${sharedir}/auxscope"
-   toolfile="${sharedir}/tool-plugin"
-   versionfile="${sharedir}/version"
-
-   stylefile="${sharedir}/style"
-
-
-   # indicate a fresh init by removing a possibly old versionfile
-   remove_file_if_present "${versionfile}"
-
-   log_verbose "Creating \"${envfile}\""
-
-   mkdir_if_missing "${sharedir}"
-
-   local text
-
-   if ! text="`print_${flavor}_startup_sh "${style}" `"
-   then
-      fail "Plugin \"${flavor}\" failed in startup"
-   fi
-
-   redirect_exekutor "${envfile}" echo "${text}" || exit 1
-
-   text="`print_${flavor}_auxscope_sh "${style}" `"
-   if [ ! -z "${text}" ]
-   then
-      log_verbose "Creating \"${auxscopefile}\""
-      redirect_exekutor "${auxscopefile}" echo "${text}" || exit 1
-   fi
-
-   log_verbose "Creating \"${envincludefile}\""
-   if ! text="`print_${flavor}_include_sh "${style}" `"
-   then
-      fail "Plugin \"${flavor}\" failed in include"
-   fi
-   redirect_exekutor "${envincludefile}" echo "${text}" || exit 1
-
-   log_verbose "Creating \"${pluginfile}\""
-   if ! text="`print_${flavor}_environment_aux_sh "${style}" `"
-   then
-      fail "Plugin \"${flavor}\" failed in environment_aux"
-   fi
-   if [ ! -z "${text}" ]
-   then
-      redirect_exekutor "${pluginfile}" echo "${text}" || exit 1
-   fi
-
-   # add more os flavors later
-   for os in darwin freebsd linux mingw
-   do
-      callback="print_${flavor}_environment_os_${os}_sh"
-      if [ "`type -t "${callback}"`" = "function" ]
-      then
-         local pluginosfile
-
-         pluginosfile="${sharedir}/environment-plugin-os-${os}.sh"
-         log_verbose "Creating \"${pluginosfile}\""
-         if ! text="`${callback} "${style}" `"
+         if ! _r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
          then
-            fail "Plugin \"${flavor}\" failed in environment os"
+            fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_SHARE_DIR}/version"
          fi
-         redirect_exekutor "${pluginosfile}" echo "${text}" || exit 1
+         version="${RVAL}"
+
+         # shellcheck source=src/mulle-env-migrate.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh"
+         env_migrate "${version}" "${MULLE_ENV_VERSION}" "${flavor}"
       fi
-   done
 
-   log_verbose "Creating \"${toolfile}\""
-   if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
-   then
-      fail "Tool install of \"${flavor}\" failed"
-   fi
-   redirect_exekutor "${toolfile}" echo "${text}" || exit 1
+      envincludefile="${sharedir}/include-environment.sh"
 
-   mkdir_if_missing "${sharedir}/libexec"
-   log_verbose "Installing \"${completionfile}\""
-   exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
-                ${completionfile}
+      pluginfile="${sharedir}/environment-plugin.sh"
+      completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
+      auxscopefile="${sharedir}/auxscope"
+      toolfile="${sharedir}/tool-plugin"
+      versionfile="${sharedir}/version"
 
-   log_verbose "Creating \"${stylefile}\""
-   redirect_exekutor "${stylefile}" echo "${style}" || exit 1
+      stylefile="${sharedir}/style"
 
-   # we create this last, if its present than the init ran through
-   log_verbose "Creating \"${versionfile}\""
-   redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}" || exit 1
 
-   # chowning the directory is bad for git
-   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+      # indicate a fresh init by removing a possibly old versionfile
+      remove_file_if_present "${versionfile}"
+
+      log_verbose "Creating \"${envfile}\""
+
+      mkdir_if_missing "${sharedir}"
+
+      local text
+
+      if ! text="`print_${flavor}_startup_sh "${style}" `"
+      then
+         fail "Plugin \"${flavor}\" failed in startup"
+      fi
+
+      redirect_exekutor "${envfile}" echo "${text}" || exit 1
+
+      text="`print_${flavor}_auxscope_sh "${style}" `"
+      if [ ! -z "${text}" ]
+      then
+         log_verbose "Creating \"${auxscopefile}\""
+         redirect_exekutor "${auxscopefile}" echo "${text}" || exit 1
+      fi
+
+      log_verbose "Creating \"${envincludefile}\""
+      if ! text="`print_${flavor}_include_sh "${style}" `"
+      then
+         fail "Plugin \"${flavor}\" failed in include"
+      fi
+      redirect_exekutor "${envincludefile}" echo "${text}" || exit 1
+
+      log_verbose "Creating \"${pluginfile}\""
+      if ! text="`print_${flavor}_environment_aux_sh "${style}" `"
+      then
+         fail "Plugin \"${flavor}\" failed in environment_aux"
+      fi
+      if [ ! -z "${text}" ]
+      then
+         redirect_exekutor "${pluginfile}" echo "${text}" || exit 1
+      fi
+
+      # add more os flavors later
+      for os in darwin freebsd linux mingw
+      do
+         callback="print_${flavor}_environment_os_${os}_sh"
+         if [ "`type -t "${callback}"`" = "function" ]
+         then
+            local pluginosfile
+
+            pluginosfile="${sharedir}/environment-plugin-os-${os}.sh"
+            log_verbose "Creating \"${pluginosfile}\""
+            if ! text="`${callback} "${style}" `"
+            then
+               fail "Plugin \"${flavor}\" failed in environment os"
+            fi
+            redirect_exekutor "${pluginosfile}" echo "${text}" || exit 1
+         fi
+      done
+
+      log_verbose "Creating \"${toolfile}\""
+      if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
+      then
+         fail "Tool install of \"${flavor}\" failed"
+      fi
+      redirect_exekutor "${toolfile}" echo "${text}" || exit 1
+
+      mkdir_if_missing "${sharedir}/libexec"
+      log_verbose "Installing \"${completionfile}\""
+      exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
+                   ${completionfile}
+
+      log_verbose "Creating \"${stylefile}\""
+      redirect_exekutor "${stylefile}" echo "${style}" || exit 1
+
+      # we create this last, if its present than the init ran through
+      log_verbose "Creating \"${versionfile}\""
+      redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}" || exit 1
+   )
+   rval=$?
+
+   # chmoding the share directory is bad for git
+   if [ "${OPTION_PROTECT}" != 'NO' ]
    then
       find "${sharedir}" -type f -exec chmod a-w {} \;
    fi
+
+   [ $rval -ne 0 ] && exit $rval
 
    if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
    then

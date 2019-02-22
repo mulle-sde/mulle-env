@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.2.7"
+MULLE_ENV_VERSION="2.3.0"
 
 #
 # The default for first time mulle-env
@@ -286,68 +286,21 @@ _default_setup_environment()
    _setup_environment "${directory}" "${setroot}"
 }
 
-#
-# smallish library of functions
-#
-
-protect_file()
-{
-   log_entry "protect_file" "$@"
-
-   local filename="$1"
-
-   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
-   then
-      exekutor chmod -f a-w "${filename}" || exit 1
-   fi
-}
-
-
-protect_file_if_exists()
-{
-   log_entry "protect_file" "$@"
-
-   local filename="$1"
-
-   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
-   then
-      if [ -e "${filename}" ]
-      then
-         exekutor chmod -f a-w "${filename}" || exit 1
-         return 0
-      fi
-   fi
-   return 1
-}
-
 
 protect_dir_if_exists()
 {
    log_entry "protect_dir_if_exists" "$@"
 
-   if protect_file_if_exists "$@"
+   local directory="$1"
+
+   if [ "${OPTION_PROTECT}" != 'NO' ]
    then
-      # write protect all files
-      find "$1" ! -type d -exec chmod a-w {} \;
-   fi
-}
-
-
-unprotect_file_if_exists()
-{
-   log_entry "unprotect_file_if_exists" "$@"
-
-   local filename="$1"
-
-   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
-   then
-      if [ -e "${filename}" ]
+      if [ -d "${directory}" ]
       then
-         exekutor chmod -f ug+w "${filename}"
+         chmod -R -f a-w "${directory}" || internal_fail "Could not protect \"${directory}\""
       fi
    fi
 }
-
 
 
 unprotect_dir_if_exists()
@@ -356,11 +309,11 @@ unprotect_dir_if_exists()
 
    local directory="$1"
 
-   if [ "${OPTION_PROTECT_SHARE}" != 'NO' ]
+   if [ "${OPTION_PROTECT}" != 'NO' ]
    then
       if [ -d "${directory}" ]
       then
-         exekutor chmod -f ug+wX "${directory}"
+         exekutor chmod -R -f ug+wX "${directory}"
       fi
    fi
 }
@@ -466,6 +419,43 @@ _env_tool2_status()
 
 
 #
+# Check that any symlink in .mulle/var/etc/bin is still valid
+# returns 0 if OK
+#
+_env_symlink_status()
+{
+   log_entry "_env_symlink_status" "$@"
+
+   local rval
+
+   rval=0
+
+   local filename
+   local resolved
+
+   shopt -s nullglob
+   for filename in "${MULLE_VIRTUAL_ROOT}"/.mulle/var/.env/bin/*
+   do
+      shopt -u nullglob
+
+      # quick check, assume either all symlinks or none
+      if [ -L "${filename}" ]
+      then
+         resolved="`readlink "${filename}"`"
+         if [ ! -e "${resolved}" ]
+         then
+            log_fluff "Symlink is \"${filename}\" to \"${resolved}\" is broken"
+            rval=1
+         fi
+      fi
+      break # first file decides
+   done
+   shopt -u nullglob
+
+   return $rval
+}
+
+#
 # dealing with styles and flavors and their changes
 #
 _r_get_saved_version()
@@ -502,7 +492,9 @@ __check_version()
 
    case "${version}" in
       "")
-         fail "\"${PWD}\" is not a mulle-env environment (no version information found)"
+         # allow mulle-sde to squelch this with -s
+         log_warning "\"${PWD}\" is not a mulle-env environment (no version information found)"
+         exit 1
       ;;
 
       0\.*|1\.*)
@@ -571,7 +563,7 @@ check your tool list.
 
    if [ "${needs_bin_update}" = 'DEFAULT' ]
    then
-      if _env_tool2_status
+      if _env_tool2_status && _env_symlink_status
       then
          needs_bin_update='NO'
       else
@@ -1069,9 +1061,11 @@ undefined (old mulle-bashfunctions)"
    then
       log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" (${MULLE_VIRTUAL_ROOT})"
       mode="SCRIPT"
+      [ -z "${MULLE_USER_PWD}" ] && internal_fail "MULLE_USER_PWD not set"
    else
       log_verbose "Starting shell ${env_flag} (${MULLE_VIRTUAL_ROOT})"
       mode="INTERACTIVE"
+      unset MULLE_USER_PWD
    fi
 
    case "${style}" in
@@ -1093,6 +1087,7 @@ undefined (old mulle-bashfunctions)"
          [ ! -z "${SSH_TTY}" ]   && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
          [ ! -z "${MULLE_ENV_PLUGIN_PATH}" ] && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
          [ ! -z "${MULLE_SDE_EXTENSION_PATH}" ]   && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
+         [ ! -z "${MULLE_USER_PWD}" ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
          [ ! -z "${TERM}" ]      && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
          [ ! -z "${TMPDIR}" ]    && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
          [ ! -z "${USER}" ]      && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
@@ -1217,7 +1212,7 @@ main()
    local MULLE_FLAG_MAGNUM_FORCE=
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCHMODE="DEFAULT"
-   local OPTION_PROTECT_SHARE="DEFAULT"
+   local OPTION_PROTECT="DEFAULT"
 
    local MULLE_TRACE
    local MULLE_FLAG_EXEKUTOR_DRY_RUN
@@ -1272,8 +1267,7 @@ main()
 
             local arg
 
-            set -o noglob; IFS="
-"
+            set -o noglob; IFS=$'\n'
             for arg in $1
             do
                if [ ! -z "${arg}" ]
@@ -1335,11 +1329,11 @@ main()
          ;;
 
          --protect)
-            OPTION_PROTECT_SHARE='YES'
+            OPTION_PROTECT='YES'
          ;;
 
          --no-protect)
-            OPTION_PROTECT_SHARE='NO'
+            OPTION_PROTECT='NO'
          ;;
 
          --style)
@@ -1383,6 +1377,7 @@ main()
    done
 
    options_setup_trace "${MULLE_TRACE}"
+
    export MULLE_TRACE
 
    local arg
