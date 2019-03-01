@@ -52,7 +52,7 @@ emit_options()
    -P            : search for parent enivronment
    -p <path>     : specify an additional plugin search path
    -S            : search for superior environment
-   -s <tool/env> : enter subshell with a certain style (${MULLE_ENV_DEFAULT_STYLE})
+   --style <t/e> : enter and change subshell style (${MULLE_ENV_DEFAULT_STYLE})
 EOF
 
    if [ ! -z "${MULLE_TRACE}" ]
@@ -106,6 +106,7 @@ Commands:
    envstyles     : list available environment styles
    init          : set up the subshell for the first time
    clean         : force relink of tools
+   style         : show style of directory (PWD)
    subenv        : enter a sub environment
    tool          : manage subshell tools
    toolstyles    : list available tool styles (including plugins)
@@ -1088,6 +1089,7 @@ undefined (old mulle-bashfunctions)"
          [ ! -z "${MULLE_ENV_PLUGIN_PATH}" ] && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
          [ ! -z "${MULLE_SDE_EXTENSION_PATH}" ]   && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
          [ ! -z "${MULLE_USER_PWD}" ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
+         [ ! -z "${MULLE_NO_COLOR}" ]  && r_concat "${s}" "MULLE_NO_COLOR='${MULLE_NO_COLOR}'" && s="${RVAL}"
          [ ! -z "${TERM}" ]      && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
          [ ! -z "${TMPDIR}" ]    && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
          [ ! -z "${USER}" ]      && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
@@ -1441,7 +1443,6 @@ wild"
       ;;
 
       reinit)
-
          local style
          local flavor
          local directory
@@ -1472,6 +1473,12 @@ wild"
          local flavor
 
          local directory="$1"
+
+         case "${directory}" in
+            --help|help|-h)
+               usage
+            ;;
+         esac
 
          directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
          directory="${directory:-.}"
