@@ -298,7 +298,7 @@ protect_dir_if_exists()
    then
       if [ -d "${directory}" ]
       then
-         chmod -R -f a-w "${directory}" || internal_fail "Could not protect \"${directory}\""
+         exekutor chmod -R -f a-w "${directory}" || internal_fail "Could not protect \"${directory}\""
       fi
    fi
 }

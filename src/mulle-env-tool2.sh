@@ -432,102 +432,110 @@ env_tool2_add()
       shift
    done
 
-   [ $# -ne 1 ] && env_tool2_add_usage "Missing tool name"
+   [ $# -lt 1 ] && env_tool2_add_usage "Missing tool name"
 
-   tool="$1"
+   local tool
 
-   [ -z "${tool}" ] && env_tool2_get_usage "Empty tool name"
+   while [ $# -ne 0 ]
+   do
+      tool="$1"
+      shift
 
-   local mark
+      [ -z "${tool}" ] && env_tool2_get_usage "Empty tool name"
 
-   if [ "${OPTION_CSV}" = 'YES' ]
-   then
-      mark="${tool##*;}"
-      if [ "${mark}" = "${tool}" ]
+      local mark
+
+      if [ "${OPTION_CSV}" = 'YES' ]
       then
-         mark=""
+         mark="${tool##*;}"
+         if [ "${mark}" = "${tool}" ]
+         then
+            mark=""
+         else
+            tool="${tool%;${mark}}"
+         fi
       else
-         tool="${tool%;${mark}}"
-      fi
-   else
-      if [ "${OPTION_OPTIONALITY}" = 'YES' ]
-      then
-         mark="optional"
-      fi
-
-      # this overrides/ignores optional
-      if [ "${OPTION_REMOVE}" = 'YES' ]
-      then
-         mark="remove"
-      fi
-   fi
-
-   local extension
-
-   if [ "${os}" = "DEFAULT" ]
-   then
-      extension=""
-   else
-      extension=".${os}"
-   fi
-
-   local exists
-
-   exists='NO'
-
-   if r_env_tool2_scoped_get "${scope}" "${os}" "${tool}"
-   then
-      exists='YES'
-   fi
-
-   case "${mark}" in
-      remove)
-         if [ "${exists}" = 'NO' ]
+         if [ "${OPTION_OPTIONALITY}" = 'YES' ]
          then
-            log_verbose "\"${tool}\" is already deinstalled"
-            return 0 # no one cares or ?
+            mark="optional"
          fi
-      ;;
 
-      *)
-         if [ "${exists}" = 'YES' ]
+         # this overrides/ignores optional
+         if [ "${OPTION_REMOVE}" = 'YES' ]
          then
-            if [ "${OPTION_IF_MISSING}" = 'YES' ]
+            mark="remove"
+         fi
+      fi
+
+      local extension
+
+      if [ "${os}" = "DEFAULT" ]
+      then
+         extension=""
+      else
+         extension=".${os}"
+      fi
+
+      local exists
+
+      exists='NO'
+      if r_env_tool2_scoped_get "${scope}" "${os}" "${tool}"
+      then
+         exists='YES'
+      fi
+
+      case "${mark}" in
+         remove)
+            if [ "${exists}" = 'NO' ]
             then
-               return 0
+               log_verbose "\"${tool}\" is already deinstalled"
+               continue
             fi
-            fail "\"${tool}\" is already installed"
-         fi
-      ;;
-   esac
+         ;;
 
-   if [ ! -z "${mark}" ]
-   then
-      tool="${tool};${mark}"
-   fi
+         *)
+            if [ "${exists}" = 'YES' ]
+            then
+               if [ "${OPTION_IF_MISSING}" = 'YES' ]
+               then
+                  continue
+               fi
+               fail "\"${tool}\" is already installed"
+            fi
+         ;;
+      esac
 
-   local rval
+      if [ ! -z "${mark}" ]
+      then
+         tool="${tool};${mark}"
+      fi
 
-   rval=0
+      local rval
 
-   case "${scope}" in
-      plugin|extension)
-         tool_filename="${MULLE_ENV_SHARE_DIR}/tool-${scope}${extension}"
-         unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
-         redirect_append_exekutor "${tool_filename}" echo "${tool}"
-         rval=$?
-         protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
-      ;;
+      rval=0
 
-      *)
-         mkdir_if_missing "${MULLE_ENV_ETC_DIR}"
-         tool_filename="${MULLE_ENV_ETC_DIR}/tool${extension}"
-         redirect_append_exekutor "${tool_filename}" echo "${tool}"
-         rval=$?
-      ;;
-   esac
+      case "${scope}" in
+         plugin|extension)
+            tool_filename="${MULLE_ENV_SHARE_DIR}/tool-${scope}${extension}"
+            unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
+            redirect_append_exekutor "${tool_filename}" echo "${tool}"
+            rval=$?
+            protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
+         ;;
 
-   [ $rval -ne 0 ] && exit 1
+         *)
+            mkdir_if_missing "${MULLE_ENV_ETC_DIR}"
+            tool_filename="${MULLE_ENV_ETC_DIR}/tool${extension}"
+            redirect_append_exekutor "${tool_filename}" echo "${tool}"
+            rval=$?
+         ;;
+      esac
+
+      [ $rval -ne 0 ] && exit 1
+
+      log_verbose "Tool \"${tool}\" added"
+   done
+
 
    if [ "${OPTION_COMPILE_LINK}" != 'NO' ]
    then
