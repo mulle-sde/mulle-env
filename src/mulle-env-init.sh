@@ -238,9 +238,9 @@ env_init_main()
    log_verbose "Init style is \"${style}\""
 
    # chmoding the share directory is bad for git
-   if [ "${OPTION_PROTECT}" != 'NO' ]
+   if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${sharedir}" ]
    then
-      find "${sharedir}" -type f -exec chmod ug+w {} \;
+      exekutor find "${sharedir}" -type f -exec chmod ug+w {} \;
    fi
 
    (
@@ -349,9 +349,9 @@ env_init_main()
    rval=$?
 
    # chmoding the share directory is bad for git
-   if [ "${OPTION_PROTECT}" != 'NO' ]
+   if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${sharedir}" ]
    then
-      find "${sharedir}" -type f -exec chmod a-w {} \;
+      exekutor find "${sharedir}" -type f -exec chmod a-w {} \;
    fi
 
    [ $rval -ne 0 ] && exit $rval

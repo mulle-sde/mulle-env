@@ -471,7 +471,7 @@ env_environment_set_main()
    done
 
    # unprotect files
-   if [ "${OPTION_PROTECT}" != 'NO' -a -d "${MULLE_ENV_SHARE_DIR}" ]
+   if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${MULLE_ENV_SHARE_DIR}" ]
    then
       exekutor find "${MULLE_ENV_SHARE_DIR}" -type f -exec chmod ug+w {} \;
    fi
@@ -568,7 +568,7 @@ env_environment_set_main()
    rval=$?
 
    # protect files only, chmoding the share directory is bad for git
-   if [ "${OPTION_PROTECT}" != 'NO' ]
+   if [ "${OPTION_PROTECT}" != 'NO' ]  && [ -d "${MULLE_ENV_SHARE_DIR}" ]
    then
       exekutor find "${MULLE_ENV_SHARE_DIR}" -type f -exec chmod a-w {} \;
    fi
