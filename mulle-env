@@ -63,7 +63,7 @@ EOF
 
 
 #
-# restrict has this problem, that on linux cmake is installed in /bin
+# relax has this problem, that on linux cmake is installed in /bin
 # and everything works find and then you go to darwin where its in
 # /usr/local/bin and things fail
 #
@@ -105,7 +105,8 @@ Commands:
    environment   : manage subshell environment variables
    envstyles     : list available environment styles
    init          : set up the subshell for the first time
-   clean         : force relink of tools
+   clean         : force relink of tools on next entry
+   reset         : force relink of tools immediately
    style         : show style of directory (PWD)
    subenv        : enter a sub environment
    tool          : manage subshell tools
@@ -127,14 +128,14 @@ Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
 
 Env-style:
    tight         : all environment variables are user defined
-   relax         : none + inherit some environment (e.g. SSH_TTY) (default)
-   restrict      : relax + all /bin and /usr/bin tools.
-   inherit       : restrict + all PATH tools
+   restrict      : none + inherit some environment (e.g. SSH_TTY) (default)
+   relax         : restrict + all /bin and /usr/bin tools.
+   inherit       : relax + all PATH tools
    wild          : no restrictions
 
 EOF
    else
-      echo "      (use -v help to see more usage text)"
+      echo "      (Use -v help to see more usage text)"
    fi
 
   exit 1
@@ -466,11 +467,11 @@ _r_get_saved_version()
    local sharedir="$1"
    local fallbackroot="$2"
 
-   RVAL="`grep -v '^#' "${sharedir}/version" 2> /dev/null`"
+   RVAL="`egrep -v '^#' "${sharedir}/version" 2> /dev/null`"
    if [ "${RVAL}" = "" ]
    then
       # old location
-      RVAL="`grep -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
+      RVAL="`egrep -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
    fi
 
    [ "${RVAL}" != "" ]
@@ -986,12 +987,12 @@ _run_subshell()
          inherit_path="${PATH}"
       ;;
 
-      */restrict)
+      */relax)
          r_censored_path "${PATH}"
          inherit_path="${RVAL}"
       ;;
 
-      */tight|*/relax)
+      */tight|*/restrict)
          inherit_path=""
       ;;
 
@@ -1202,6 +1203,12 @@ clean()
       || fail "failed to load \"${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh\""
 
    env_clean_main "$@"
+}
+
+
+reset()
+{
+   clean "$@" && _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
 }
 
 
@@ -1468,6 +1475,11 @@ wild"
          return $?
       ;;
 
+      reset)
+         reset "$@"
+         return $?
+      ;;
+
       style)
          local style
          local flavor
@@ -1484,7 +1496,11 @@ wild"
          directory="${directory:-.}"
          r_simplified_absolutepath "${directory}"
          directory="${RVAL}"
-
+         if [ ! -d "${directory}" ]
+         then
+            fail "Directory \"${directory}\" does not exist.
+${C_INFO}Hint: Use --style to switch styles."
+         fi
          if ! __get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
                                        "${directory}/.mulle/share/env"
          then
@@ -1578,7 +1594,7 @@ wild"
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
          env_init_main --upgrade --style "${OPTION_STYLE}" "$@" || exit 1
-         clean
+         reset
          return $?
       ;;
 

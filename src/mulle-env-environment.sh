@@ -134,8 +134,9 @@ Example:
    ${MULLE_USAGE_NAME} environment --global set FOO "A value"
 
 Options:
-   --add              : add value to existing values (using seperator :)
-   --separator <sep>  : sepecify custom separator for --add
+   --append           : add value to existing values (using seperator :)
+   --prepend          : prepent value to existing values (using seperator :)
+   --separator <sep>  : sepecify custom separator for --append
 EOF
    exit 1
 }
@@ -232,11 +233,8 @@ key_values_to_command()
    local escaped_value
    local escaped_key
 
-   IFS=$'\n'
-   while read -r line
+   while IFS=$'\n' read -r line
    do
-      IFS="${DEFAULT_IFS}"
-
       if [ -z "${line}" ]
       then
          continue
@@ -248,7 +246,6 @@ key_values_to_command()
       # scope is a cheat!!
       echo "${MULLE_USAGE_NAME} environment set ${key} '${value}'"
    done
-   IFS="${DEFAULT_IFS}"
 }
 
 
@@ -260,11 +257,9 @@ key_values_to_sed()
    local value
    local escaped_value
    local escaped_key
-   IFS=$'\n'
-   while read -r line
-   do
-      IFS="${DEFAULT_IFS}"
 
+   while IFS=$'\n' read -r line
+   do
       if [ -z "${line}" ]
       then
          continue
@@ -302,13 +297,14 @@ _env_environment_set()
    local comment="$4"
 
    #
-   # put quotes around it if needed
+   # put quotes around it
    # we don't want to escape ${X} since this is supposed to expand
    # except when presented as '${X}'
    #
    case "${value}" in
-      ""|\"\")
-         value=""
+      "")
+         # otherwise the list grep fails
+         value="\"\""
       ;;
 
       \"*\")
@@ -443,12 +439,17 @@ env_environment_set_main()
             OPTION_ADD_EMPTY='NO'
          ;;
 
-         -a|--add)
-            OPTION_ADD='YES'
+         -a|--add|--append)
+            OPTION_ADD='APPEND'
          ;;
 
          -c|--comment-out-empty)
             OPTION_COMMENT_OUT_EMPTY='YES'
+         ;;
+
+
+         -p|--prepend)
+            OPTION_ADD='PREPEND'
          ;;
 
          -s|--separator)
@@ -485,7 +486,7 @@ env_environment_set_main()
 
       assert_valid_environment_key "${key}"
 
-      if [ "${OPTION_ADD}" = 'YES' ]
+      if [ "${OPTION_ADD}" != 'NO' ]
       then
          local prev
          local oldvalue
@@ -514,8 +515,14 @@ env_environment_set_main()
 
          set +f; IFS="${DEFAULT_IFS}"
 
-         r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
-         value="${RVAL}"
+         if [ "${OPTION_ADD}" = 'APPEND' ]
+         then
+            r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
+            value="${RVAL}"
+         else
+            r_concat "${value}" "${prev}" "${OPTION_SEPARATOR}"
+            value="${RVAL}"
+         fi
       fi
 
       local filename
@@ -599,7 +606,7 @@ env_environment_mset_main()
          *+=\"*\"*)
             key="${1%%+=*}"
             value="${1#${key}+=}"
-            option="--add"
+            option="--append"
          ;;
 
          *=*)
@@ -817,7 +824,7 @@ r_get_auxscopes()
 
       if [ ! -z "${aux_scope}" ]
       then
-         aux_scope="`eval echo "${aux_scope}" | sed 's/^/s:/'`"
+         aux_scope="`eval "echo \"${aux_scope}\"" | sed 's/^/s:/'`"
          r_add_line "${RVAL}" "${aux_scope}"
       fi
    done
@@ -1322,6 +1329,8 @@ _env_environment_list()
 {
    log_entry "_env_environment_list" "$@"
 
+   local scopetype="$2"
+
    local scope
    while [ "$#" -ne 0 ]
    do
@@ -1333,7 +1342,14 @@ _env_environment_list()
          scope="${scope%.sh}"
          scope="${scope#environment-}"
 
-         log_info "${C_MAGENTA}${C_BOLD}${scope}"
+         if [ "${scopetype}" = 'e' ]
+         then
+            log_info "${C_MAGENTA}${C_BOLD}${scope}"
+            printf "${C_RESET}"
+         else
+            log_info "${C_RESET_BOLD}${scope}"
+            printf "${C_FAINT}"
+         fi
 
          merge_environment_file "$1"
       else
@@ -1341,6 +1357,8 @@ _env_environment_list()
       fi
       shift
    done
+
+   printf "${C_RESET}"
 }
 
 
@@ -1523,11 +1541,11 @@ env_environment_list_main()
 
             case "${i}" in
                'e:'*)
-                  "${lister}" "${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
+                  "${lister}" "${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh" "${i:0:1}"
                ;;
 
                's:'*)
-                 "${lister}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
+                 "${lister}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh" "${i:0:1}"
                ;;
             esac
          done
