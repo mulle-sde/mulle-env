@@ -1,0 +1,64 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+   directory="${directory:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/relax
+
+   local value
+   run_mulle_env environment --global set FOO 'x'
+   run_mulle_env environment --user set FOO '${FOO}y'
+
+   value="`run_mulle_env -c env | sed -n -e 's/^FOO=//p'`"
+   if [ "${value}" != 'xy' ]
+   then
+      run_mulle_env environment list
+      fail "Unexpected return value \"${value}\" instead of xy"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
+

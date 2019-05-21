@@ -2,11 +2,15 @@
 
 requires mulle-bashfunctions 1.11.0
 
+* fix escaping problem
+* relax and strict switch meanings, because relax sounds looser than strict, but wasn't
+* added a reset command, to fix broken symlinks from the outside
+* allow addition of multiple tools with --csv option
+* pass `MULLE_NO_COLOR` through environment, give style -h flag
 * proper environment get
 * proper sed replacement escape support
 * fix some more protection problems
 * fix problems when rsyncing projects across platforms
-
 
 ### 2.2.7
 

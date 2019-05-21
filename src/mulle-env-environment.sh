@@ -107,7 +107,8 @@ Usage:
    looking into the global scope and then the other scopes.
 
 Options:
-   --output-eval : resolve value with other environment variables
+   --output-eval : resolve value with other environment variables. This will
+                   not evaluate values from other scopes though
 EOF
    exit 1
 }
@@ -274,9 +275,11 @@ key_values_to_sed()
       escaped_value="${RVAL}"
 
       # escape quotes for "eval line"
-      # i really don't see why i need 6 backquotes here, but...
-      escaped_key="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_key}"`"
-      escaped_value="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_value}"`"
+      escaped_key="${escaped_key//\'/\'\\\'\'}"
+      escaped_value="${escaped_value//\'/\'\\\'\'}"
+      #   before:
+      #   escaped_key=`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_key}"`"
+      #   escaped_value="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_value}"`"
 
       echo "-e 's/${escaped_key}/${escaped_value}/g'"
    done
@@ -322,8 +325,12 @@ _env_environment_set()
 
    r_escaped_sed_pattern "${key}"
    sed_escaped_key="${RVAL}"
+
    r_escaped_sed_replacement "${value}"
    sed_escaped_value="${RVAL}"
+
+   log_debug "Key:   >>${key}<<"
+   log_debug "Value: >>${value}<<"
 
    case "${MULLE_SHELL_MODE}" in
       *INTERACTIVE)
@@ -485,6 +492,7 @@ env_environment_set_main()
       [ -z "${key}" ] && env_environment_set_usage "empty key"
 
       assert_valid_environment_key "${key}"
+
 
       if [ "${OPTION_ADD}" != 'NO' ]
       then
@@ -683,8 +691,14 @@ _env_environment_get()
    r_escaped_sed_pattern "${key}"
    sedcmd="s/^ *export *${RVAL} *= *\"\\(.*\\)\$/\\1/p"
 
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+   then
+      log_trace2 "filename : ${filename}"
+      cat "${filename}" >&2
+   fi
+
    value="`rexekutor sed -n -e "${sedcmd}" "${filename}" `"
-   value="`rexekutor sed 's/\(.*\)\".*/\1/' <<< "${value}"`"
+   value="`rexekutor sed -e 's/\(.*\)\".*/\1/' <<< "${value}"`"
 
    if [ -z "${value}" ]
    then
@@ -730,15 +744,13 @@ _env_environment_eval_get()
    local key="$1"; shift
 
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT not set up"
-   [ -z "${MULLE_UNAME}" ] && internal_fail "MULLE_UNAME not set up"
-
+   [ -z "${MULLE_UNAME}" ]        && internal_fail "MULLE_UNAME not set up"
+ 
    if [ ! -f "${filename}" ]
    then
       log_fluff "\"${filename}\" does not exist"
       return 1
    fi
-
-   log_fluff "Reading \"${filename}\""
 
    local value
    local cmd
@@ -753,6 +765,8 @@ _env_environment_eval_get()
    r_concat "${cmd}" ". '${filename}' ;"
    r_concat "${RVAL}" "echo \${${key}}"
    cmd="${RVAL}"
+
+   log_debug "cmd: $cmd"
 
    value="`eval_rexekutor env -i "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
                                  "MULLE_UNAME='${MULLE_UNAME}'" \
@@ -788,8 +802,8 @@ _env_environment_sed_get()
    escaped_value="${RVAL}"
 
    # escape quotes for "eval line"
-   escaped_key="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_key}"`"
-   escaped_value="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_value}"`"
+   escaped_key="${escaped_key//\'/\'\\\'\'}"
+   escaped_value="${escaped_value//\'/\'\\\'\'}"
 
    echo "-e 's/${escaped_key}/${escaped_value}/g'"
 }
@@ -1005,6 +1019,18 @@ r_get_existing_scope_files()
 }
 
 
+r_unescaped_doublequotes()
+{
+   RVAL="${*//\\\"/\"}"
+   RVAL="${RVAL//\\\\/\\}" 
+}
+
+
+#
+# TODO: make sure the quoting and unquoting of values read and put into
+#       the environment files is a the proper level. Not sure if
+#       r_unescaped_doublequotes is correct here, or should be lower/higher
+#
 env_environment_get_main()
 {
    log_entry "env_environment_get_main" "$@"
@@ -1093,7 +1119,8 @@ env_environment_get_main()
          rval=0
          if [ ! -z "${reverse}" ]
          then
-            echo "${value}"
+            r_unescaped_doublequotes "${value}"
+            echo "${RVAL}"
             return $rval
          fi
       fi
@@ -1103,7 +1130,11 @@ env_environment_get_main()
    done
    set +f; IFS="${DEFAULT_IFS}"
 
-   [ "${rval}" -eq 0 ] && echo "${value}"
+   if [ "${rval}" -eq 0 ]
+   then
+      r_unescaped_doublequotes "${value}"
+      echo "${RVAL}"
+   fi
 
    return $rval
 }

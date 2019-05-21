@@ -48,14 +48,14 @@ test_simple()
 }
 
 
-test_simple2()
+test_hard()
 {
    local sed_expr
 
    sed_expr='s/\(.*\)/\1&/'
    run_mulle_env environment --global set SED_EXPR "${sed_expr}"
    value="`run_mulle_env environment get SED_EXPR`"
-   [ "${value}" != "${sed_expr}" ] && internal_fail "Wrong value \"${value}\" from get"
+   [ "${value}" != "${sed_expr}" ] && internal_fail "Wrong value \"${value}\" instead of \"${sed_expr}\" from get"
 
    log_verbose "----- #2 PASSED -----"
 
@@ -77,8 +77,8 @@ main()
 
    run_mulle_env -s init --style none/tight
 
-   test_simple
-   test_simple2
+#   test_simple
+   test_hard
 }
 
 
