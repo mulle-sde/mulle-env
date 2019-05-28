@@ -1,3 +1,7 @@
+### 2.3.1
+
+* remove environment key in proper reverse file order
+
 ## 2.3.0
 
 requires mulle-bashfunctions 1.11.0

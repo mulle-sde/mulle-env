@@ -179,7 +179,7 @@ Usage:
    List environment variables. If you specified no scope, you will get
    a combined listing of all scopes. Specify the scope using the
    environment options. See \`${MULLE_USAGE_NAME} environment scope help\` for
-   more information about scopes.
+   more information about scopes and the files used by them.
 
 Example:
       mulle-env environment --scope merged list
@@ -745,7 +745,7 @@ _env_environment_eval_get()
 
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT not set up"
    [ -z "${MULLE_UNAME}" ]        && internal_fail "MULLE_UNAME not set up"
- 
+
    if [ ! -f "${filename}" ]
    then
       log_fluff "\"${filename}\" does not exist"
@@ -1022,7 +1022,7 @@ r_get_existing_scope_files()
 r_unescaped_doublequotes()
 {
    RVAL="${*//\\\"/\"}"
-   RVAL="${RVAL//\\\\/\\}" 
+   RVAL="${RVAL//\\\\/\\}"
 }
 
 
@@ -1168,6 +1168,14 @@ _env_environment_remove()
    r_escaped_sed_pattern "${key}"
    sed_escaped_key="${RVAL}"
 
+   if [ ! -w "${filename}" ]
+   then
+      log_warning "${filename#${MULLE_USER_PWD}/} defines \"${key}\" but its not writable.
+${C_INFO}Maybe override this setting with the same key in the global scope ?
+${C_RESET_BOLD}   ${MULLE_USAGE_NAME} environment --global set ${key} \"\""
+      return 1
+   fi
+
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "filename : ${filename}"
@@ -1181,7 +1189,7 @@ _env_environment_remove()
    #       delete here
    inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)//" "${filename}"
 
-   if [ "${OPTION_REMOVE}" != 'NO' ]
+   if [ "${OPTION_REMOVE_FILE}" != 'NO' ]
    then
       remove_environmentfile_if_empty "${filename}"
    fi
@@ -1194,7 +1202,7 @@ env_environment_remove_main()
 
    local scope="$1"; shift
 
-   local OPTION_REMOVE='DEFAULT'
+   local OPTION_REMOVE_FILE='DEFAULT'
 
    while :
    do
@@ -1203,8 +1211,8 @@ env_environment_remove_main()
             env_environment_remove_usage
          ;;
 
-         --no-remove)
-            OPTION_REMOVE='YES'
+         --no-remove-file)
+            OPTION_REMOVE_FILE='NO'
          ;;
 
          -*)
@@ -1234,6 +1242,7 @@ env_environment_remove_main()
       r_get_existing_scope_files "${scope}"
    fi
 
+   r_reverse_lines "${RVAL}"
    filenames="${RVAL}"
 
    local rval
@@ -1246,8 +1255,11 @@ env_environment_remove_main()
 
       if _env_file_defines_key "${filename}" "${key}"
       then
-         _env_environment_remove "${filename}" "${key}"
-         rval=0
+         if _env_environment_remove "${filename}" "${key}"
+         then
+            rval=0
+            break
+         fi
       fi
   done
    set +f; IFS="${DEFAULT_IFS}"
