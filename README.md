@@ -125,7 +125,7 @@ with the '-c' flag, like you would using bash:
 
 
 ```
-$ mulle-env -c 'echo "${PATH}"'
+$ mulle-env -c 'printf "%s\n" "${PATH}"'
 ```
 
 

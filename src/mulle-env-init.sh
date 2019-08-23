@@ -283,13 +283,13 @@ env_init_main()
          fail "Plugin \"${flavor}\" failed in startup"
       fi
 
-      redirect_exekutor "${envfile}" echo "${text}" || exit 1
+      redirect_exekutor "${envfile}" printf "%s\n" "${text}" || exit 1
 
       text="`print_${flavor}_auxscope_sh "${style}" `"
       if [ ! -z "${text}" ]
       then
          log_verbose "Creating \"${auxscopefile}\""
-         redirect_exekutor "${auxscopefile}" echo "${text}" || exit 1
+         redirect_exekutor "${auxscopefile}" printf "%s\n" "${text}" || exit 1
       fi
 
       log_verbose "Creating \"${envincludefile}\""
@@ -297,7 +297,7 @@ env_init_main()
       then
          fail "Plugin \"${flavor}\" failed in include"
       fi
-      redirect_exekutor "${envincludefile}" echo "${text}" || exit 1
+      redirect_exekutor "${envincludefile}" printf "%s\n" "${text}" || exit 1
 
       log_verbose "Creating \"${pluginfile}\""
       if ! text="`print_${flavor}_environment_aux_sh "${style}" `"
@@ -306,7 +306,7 @@ env_init_main()
       fi
       if [ ! -z "${text}" ]
       then
-         redirect_exekutor "${pluginfile}" echo "${text}" || exit 1
+         redirect_exekutor "${pluginfile}" printf "%s\n" "${text}" || exit 1
       fi
 
       # add more os flavors later
@@ -323,7 +323,7 @@ env_init_main()
             then
                fail "Plugin \"${flavor}\" failed in environment os"
             fi
-            redirect_exekutor "${pluginosfile}" echo "${text}" || exit 1
+            redirect_exekutor "${pluginosfile}" printf "%s\n" "${text}" || exit 1
          fi
       done
 
@@ -332,7 +332,7 @@ env_init_main()
       then
          fail "Tool install of \"${flavor}\" failed"
       fi
-      redirect_exekutor "${toolfile}" echo "${text}" || exit 1
+      redirect_exekutor "${toolfile}" printf "%s\n" "${text}" || exit 1
 
       mkdir_if_missing "${sharedir}/libexec"
       log_verbose "Installing \"${completionfile}\""
@@ -340,11 +340,11 @@ env_init_main()
                    ${completionfile}
 
       log_verbose "Creating \"${stylefile}\""
-      redirect_exekutor "${stylefile}" echo "${style}" || exit 1
+      redirect_exekutor "${stylefile}" printf "%s\n" "${style}" || exit 1
 
       # we create this last, if its present than the init ran through
       log_verbose "Creating \"${versionfile}\""
-      redirect_exekutor "${versionfile}" echo "${MULLE_ENV_VERSION}" || exit 1
+      redirect_exekutor "${versionfile}" printf "%s\n" "${MULLE_ENV_VERSION}" || exit 1
    )
    rval=$?
 
