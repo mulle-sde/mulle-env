@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.3.2"
+MULLE_ENV_VERSION="2.4.0"
 
 #
 # The default for first time mulle-env
@@ -1001,8 +1001,6 @@ _run_subshell()
       ;;
    esac
 
-   local s
-
    case "${style}" in
       */restrict|*/tight|*/relax)
 
@@ -1087,8 +1085,8 @@ undefined (old mulle-bashfunctions)"
          [ ! -z "${SSH_CONNECTION}" ] \
                                  && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
          [ ! -z "${SSH_TTY}" ]   && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
-         [ ! -z "${MULLE_ENV_PLUGIN_PATH}" ] && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
-         [ ! -z "${MULLE_SDE_EXTENSION_PATH}" ]   && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
+         [ ! -z "${MULLE_ENV_PLUGIN_PATH}" ]    && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
+         [ ! -z "${MULLE_SDE_EXTENSION_PATH}" ] && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
          [ ! -z "${MULLE_USER_PWD}" ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
          [ ! -z "${MULLE_NO_COLOR}" ]  && r_concat "${s}" "MULLE_NO_COLOR='${MULLE_NO_COLOR}'" && s="${RVAL}"
          [ ! -z "${TERM}" ]      && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
@@ -1098,9 +1096,25 @@ undefined (old mulle-bashfunctions)"
          [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
                                  && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
       ;;
+
    esac
 
    #
+   # remember old environment in "var" as export statements
+   # for later use by "mudo -e" with env -i (if required)
+   #
+   local sep
+
+   log_fluff "Saving current environment into ${vardir}/old-environment"
+
+   sep=""
+   while IFS= read line
+   do
+      printf "${sep}%s=\"%s\"" "${line%%=*}" "${line#*=}"
+      sep=" "
+   done < <( env ) > "${vardir}/old-environment"
+
+
    # home is needed for git
    # otherwise provide a minimal environment, for better reproducability
    #

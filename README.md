@@ -23,7 +23,7 @@ mulle-env.
 Commands            | Description
 --------------------|--------------------------------
 `mulle-env`         | Virtual environment sub-shell
-`mudo`              | Run a command with the unrestricted PATH
+`mudo`              | Run a command with the unrestricted PATH/environment
 `mulle-env-reload`  | Refresh virtual environment variables
 
 
@@ -177,6 +177,12 @@ exit
 
 ```
 mulle-env -c ls
+```
+
+#### Run a command inside the virtual environment as if outside
+
+```
+mudo -e env
 ```
 
 

@@ -1,3 +1,8 @@
+## 2.4.0
+
+* mudo gains the -e flag to call executables with the "outside" environment
+
+
 ### 2.3.1
 
 * remove environment key in proper reverse file order
