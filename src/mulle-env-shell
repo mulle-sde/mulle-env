@@ -196,7 +196,7 @@ run_interactive_shell()
    #
    local tmpdir
 
-   tmpdir=.mulle/var/${MULLE_HOSTNAME}/env/tmp
+   tmpdir="${MULLE_ENV_HOST_VAR_DIR}/tmp"
 
    mkdir -p "${tmpdir}" 2> /dev/null
 
@@ -311,6 +311,13 @@ main()
 
    MULLE_VIRTUAL_ROOT="$1"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && _fail "empty MULLE_VIRTUAL_ROOT"
+   shift
+
+
+   local MULLE_ENV_HOST_VAR_DIR
+
+   MULLE_ENV_HOST_VAR_DIR="$1"
+   [ -z "${MULLE_ENV_HOST_VAR_DIR}" ] && _fail "empty MULLE_ENV_HOST_VAR_DIR"
    shift
 
    local RUNPATH

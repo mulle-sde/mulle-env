@@ -257,16 +257,37 @@ _setup_environment()
       MULLE_VIRTUAL_ROOT="${physicaldir}"
    fi
 
-   MULLE_ENV_VAR_DIR="${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env"
+   #
+   # MULLE_VAR_ENV_BIN is for mulle-sde tools (bash scripts)
+   # MULLE_ENV_HOST_VAR_DIR for all the rest
+   #
+   case "${MULLE_UNAME}" in 
+      windows)
+         # on windows the project directory is likely on a windows filesystem so the
+         # symlinks don't work out (e.g. cmake.exe)
+         # we use a quiet place in HOME
+         # Well symlink still have other problems: https://github.com/microsoft/WSL/issues/3999
+         #
+         MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
+         MULLE_ENV_VAR_DIR="${HOME}/.mulle/${directory##*/}-var/.env"
+      ;;
+
+      *)
+         MULLE_ENV_HOST_VAR_DIR="${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env"
+         MULLE_ENV_VAR_DIR="${physicaldir}/.mulle/var/.env"
+      ;;
+   esac
+
    MULLE_ENV_SHARE_DIR="${physicaldir}/.mulle/share/env"
    MULLE_ENV_ETC_DIR="${physicaldir}/.mulle/etc/env"
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "MULLE_VIRTUAL_ROOT  set to \"${MULLE_VIRTUAL_ROOT}\""
-      log_trace2 "MULLE_ENV_ETC_DIR   set to \"${MULLE_ENV_ETC_DIR}\""
-      log_trace2 "MULLE_ENV_SHARE_DIR set to \"${MULLE_ENV_SHARE_DIR}\""
-      log_trace2 "MULLE_ENV_VAR_DIR   set to \"${MULLE_ENV_VAR_DIR}\""
+      log_trace2 "MULLE_VIRTUAL_ROOT     set to \"${MULLE_VIRTUAL_ROOT}\""
+      log_trace2 "MULLE_ENV_ETC_DIR      set to \"${MULLE_ENV_ETC_DIR}\""
+      log_trace2 "MULLE_ENV_SHARE_DIR    set to \"${MULLE_ENV_SHARE_DIR}\""
+      log_trace2 "MULLE_ENV_VAR_DIR      set to \"${MULLE_ENV_VAR_DIR}\""
+      log_trace2 "MULLE_ENV_HOST_VAR_DIR set to \"${MULLE_ENV_HOST_VAR_DIR}\""
    fi
 }
 
@@ -396,9 +417,9 @@ _env_tool2_status()
       IFS="${DEFAULT_IFS}"
 
       # make same date force recompile, because we can't be sure then
-      if [ "${MULLE_ENV_VAR_DIR}/tool" -nt "${file}" ]
+      if [ "${MULLE_ENV_HOST_VAR_DIR}/tool" -nt "${file}" ]
       then
-         log_debug "\"${file}\" is not newer than \"${MULLE_ENV_VAR_DIR}/tool\""
+         log_debug "\"${file}\" is not newer than \"${MULLE_ENV_HOST_VAR_DIR}/tool\""
       else
          log_fluff "Compile is needed because \"${file}\" has edits"
          compile='YES'
@@ -409,7 +430,7 @@ _env_tool2_status()
 
    if [ "${compile}" = 'NO' ]
    then
-      if [ "${anymatch}" = 'YES' -o -f "${MULLE_ENV_VAR_DIR}/tool" ]
+      if [ "${anymatch}" = 'YES' -o -f "${MULLE_ENV_HOST_VAR_DIR}/tool" ]
       then
          return 0
       fi
@@ -423,7 +444,9 @@ _env_tool2_status()
 #
 # Check that any symlink in .mulle/var/etc/bin is still valid
 # returns 0 if OK
-#
+# The contents of MULLE_ENV_VAR_DIR/bin are actually installed by the mulle.sh plugin
+# so this code should also move to the plugin.
+# 
 _env_symlink_status()
 {
    log_entry "_env_symlink_status" "$@"
@@ -436,7 +459,7 @@ _env_symlink_status()
    local resolved
 
    shopt -s nullglob
-   for filename in "${MULLE_VIRTUAL_ROOT}"/.mulle/var/.env/bin/*
+   for filename in "${MULLE_ENV_VAR_DIR}/bin/"*
    do
       shopt -u nullglob
 
@@ -599,7 +622,7 @@ check your tool list.
 	      )
 	      then
 	         # force needs_bin_update on next update
-	         remove_file_if_present "${MULLE_ENV_VAR_DIR}/tool"
+	         remove_file_if_present "${MULLE_ENV_HOST_VAR_DIR}/tool"
 	         exit 1
 	      fi
 	   )
@@ -629,8 +652,7 @@ __fail_get_saved_style_flavor()
    local userdir
 
    r_fast_dirname "${directory}"  # ../env
-   r_fast_dirname "${directory}"  # ../${HOSTNAME}
-   r_fast_dirname "${directory}"  # ../var
+   r_fast_dirname "${directory}"  # ../share
    r_fast_dirname "${directory}"  # ../.mulle
    userdir="${RVAL}"
 
@@ -735,8 +757,8 @@ apply_style_to_directory()
 
    # memorize new style
    # since this always changes on user reques its in etc
-   mkdir_if_missing "${MULLE_ENV_VAR_DIR}"
-   redirect_exekutor "${MULLE_ENV_VAR_DIR}/style.${LOGNAME:-all}" echo "${style}"
+   mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
+   redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/style.${LOGNAME:-all}" echo "${style}"
 }
 
 
@@ -842,6 +864,7 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
         "'${MULLE_UNAME}'" \
         "'${MULLE_HOSTNAME}'" \
         "'${MULLE_VIRTUAL_ROOT}'" \
+        "'${MULLE_ENV_HOST_VAR_DIR}'" \
         "'${PATH}'" \
         "'${mode}'" \
         "'none/wild'" \
@@ -913,7 +936,7 @@ _run_subshell()
 
    etcdir="${MULLE_ENV_ETC_DIR}"
    sharedir="${MULLE_ENV_SHARE_DIR}"
-   vardir="${MULLE_ENV_VAR_DIR}"
+   vardir="${MULLE_ENV_HOST_VAR_DIR}"
 
    local style
    local flavor
@@ -1118,6 +1141,7 @@ undefined (old mulle-bashfunctions)"
             "'${MULLE_UNAME}'" \
             "'${MULLE_HOSTNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
+            "'${MULLE_ENV_HOST_VAR_DIR}'" \
             "'${runpath}'" \
             "'${mode}'" \
             "'${style}'" \
@@ -1454,17 +1478,27 @@ wild"
          local flavor
          local directory
          local fallback
+         local envdirectory
 
-         directory="${MULLE_VIRTUAL_ROOT:-.}/.mulle/var/${MULLE_HOSTNAME}/env"
-         fallback="${MULLE_VIRTUAL_ROOT:-.}/.mulle/share/env"
-         r_simplified_absolutepath "${directory}"
-         directory="${RVAL}"
+         directory="${MULLE_VIRTUAL_ROOT:-${PWD}}"
+         case "${MULLE_UNAME}" in 
+            windows)
+               envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
+            ;;
+
+            *)
+               envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
+            ;;
+         esac
+         fallback="${directory}/.mulle/share/env"
+         r_simplified_absolutepath "${envdirectory}"
+         envdirectory="${RVAL}"
          r_simplified_absolutepath "${fallback}"
          fallback="${RVAL}"
 
-         if ! __get_saved_style_flavor "${directory}" "${fallback}"
+         if ! __get_saved_style_flavor "${envdirectory}" "${fallback}"
          then
-            __fail_get_saved_style_flavor "${directory}" "${fallback}"
+            __fail_get_saved_style_flavor "${envdirectory}" "${fallback}"
          fi
 
          # shellcheck source=src/mulle-env-init.sh
@@ -1483,6 +1517,7 @@ wild"
       style)
          local style
          local flavor
+         local envdirectory
 
          local directory="$1"
 
@@ -1493,7 +1528,7 @@ wild"
          esac
 
          directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
-         directory="${directory:-.}"
+         directory="${directory:-${PWD}}"
          r_simplified_absolutepath "${directory}"
          directory="${RVAL}"
          if [ ! -d "${directory}" ]
@@ -1501,10 +1536,21 @@ wild"
             fail "Directory \"${directory}\" does not exist.
 ${C_INFO}Hint: Use --style to switch styles."
          fi
-         if ! __get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
+
+         case "${MULLE_UNAME}" in 
+            windows)
+               envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
+            ;;
+
+            *)
+               envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
+            ;;
+         esac
+
+         if ! __get_saved_style_flavor "${envdirectory}" \
                                        "${directory}/.mulle/share/env"
          then
-            __fail_get_saved_style_flavor "${directory}/.mulle/var/${MULLE_HOSTNAME}/env" \
+            __fail_get_saved_style_flavor "${envdirectory}" \
                                           "${directory}/.mulle/share/env"
          fi
 
@@ -1595,6 +1641,38 @@ ${C_INFO}Hint: Use --style to switch styles."
 
          env_init_main --upgrade --style "${OPTION_STYLE}" "$@" || exit 1
          reset
+         return $?
+      ;;
+
+      mulle-tool-env)
+         # should possibly create output like ssh-agent
+         # so tools get MULLE_MATCH_ETC_DIR
+         # so tools get MULLE_MATCH_VAR_DIR
+         # so tools get MULLE_MATCH_SHARE_DIR
+         # and they can source it
+         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+
+         local upper 
+
+         r_uppercase "$1"
+         upper="${RVAL}"
+
+         r_filepath_concat "${MULLE_ENV_HOST_VAR_DIR%/*}" "${1}"
+         if [ ! -z "${RVAL}" ]
+         then
+            printf "MULLE_${upper}_VAR_DIR='%s'\n" "${RVAL}"
+         fi
+
+         r_filepath_concat "${MULLE_ENV_ETC_DIR%/*}" "${1}"
+         if [ ! -z "${RVAL}" ]
+         then
+            printf "MULLE_${upper}_ETC_DIR='%s'\n" "${RVAL}"
+         fi
+         r_filepath_concat "${MULLE_ENV_SHARE_DIR%/*}" "${1}"
+         if [ ! -z "${RVAL}" ]
+         then
+            printf "MULLE_${upper}_SHARE_DIR='%s'\n" "${RVAL}"
+         fi
          return $?
       ;;
 

@@ -36,8 +36,8 @@ env_clean_main()
 {
    rmdir_safer "env_clean_main" "$@"
 
-   rmdir_safer "${MULLE_VIRTUAL_ROOT}/.mulle/var/.env"
-   rmdir_safer "${MULLE_ENV_VAR_DIR}" # this has hostname in it
+   rmdir_safer "${MULLE_ENV_VAR_DIR}"
+   rmdir_safer "${MULLE_ENV_HOST_VAR_DIR}" # this has hostname in it
    return 0
 }
 

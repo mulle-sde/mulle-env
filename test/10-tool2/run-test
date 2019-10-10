@@ -20,6 +20,7 @@ main()
    _options_mini_main "$@"
 
    local directory
+   local vardir 
 
    directory="`make_tmp_directory`" || exit 1
    directory="${directory:-/tmp/exekutor}"
@@ -69,22 +70,25 @@ main()
    [ "${value}" != "ls" ] && fail "#3: ls not available in foobar"
 
    run_mulle_env -s tool compile
-   result="`cat .mulle/var/${MULLE_HOSTNAME}/env/tool`"
+
+   vardir="`run_mulle_env var-dir env`"
+
+   result="`cat "${vardir}/tool`"
    expect="awk
 mudo"
    [ "${expect}" != "${result}" ] && fail "#3: result ${result} did not match ${expect}"
 
    log_verbose "----- #3 PASSED -----"
 
-   [ -x ".mulle/var/${MULLE_HOSTNAME}/env/bin/ls" ] && fail "#4: ls already in bin"
+   [ -x "${vardir}/bin/ls" ] && fail "#4: ls already in bin"
 
    if ! run_mulle_env -s tool link
    then
       fail fail "#4: link failed unexpectedly"
    fi
 
-   [ ! -x ".mulle/var/${MULLE_HOSTNAME}/env/bin/awk" ] && fail "#4: awk not in bin"
-   [ -x ".mulle/var/${MULLE_HOSTNAME}/env/bin/ls" ] && fail "#4: ls in bin, but should not be"
+   [ ! -x "${vardir}/bin/awk" ] && fail "#4: awk not in bin"
+   [ -x "${vardir}/bin/ls" ] && fail "#4: ls in bin, but should not be"
 
    log_verbose "----- #4 PASSED -----"
 
@@ -116,7 +120,7 @@ mudo"
          fail fail "#5: link failed unexpectedly"
       fi
 
-      [ -e ".mulle/var/${MULLE_HOSTNAME}/env/bin/ishouldnotexist" ] && fail "#5: ishouldnotexist in bin, but should not be"
+      [ -e "${vardir}/bin/ishouldnotexist" ] && fail "#5: ishouldnotexist in bin, but should not be"
 
       log_verbose "----- #5 PASSED -----"
    fi

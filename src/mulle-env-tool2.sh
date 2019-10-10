@@ -552,9 +552,10 @@ env_tool2_compile()
 {
    log_entry "env_tool2_compile" "$@"
 
-   [ -z "${MULLE_ENV_ETC_DIR}" ]   && internal_fail "MULLE_ENV_ETC_DIR not defined"
-   [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
-   [ -z "${MULLE_ENV_VAR_DIR}" ]   && internal_fail "MULLE_ENV_VAR_DIR not defined"
+   [ -z "${MULLE_ENV_ETC_DIR}" ]      && internal_fail "MULLE_ENV_ETC_DIR not defined"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ]    && internal_fail "MULLE_ENV_SHARE_DIR not defined"
+   [ -z "${MULLE_ENV_VAR_DIR}" ]      && internal_fail "MULLE_ENV_VAR_DIR not defined"
+   [ -z "${MULLE_ENV_HOST_VAR_DIR}" ] && internal_fail "MULLE_ENV_HOST_VAR_DIR not defined"
 
    local ifneeded='NO'
 
@@ -600,7 +601,7 @@ env_tool2_compile()
          ;;
 
          2)
-            touch "${MULLE_ENV_VAR_DIR}/tool"
+            touch "${MULLE_ENV_HOST_VAR_DIR}/tool"
             return 0
          ;;
       esac
@@ -660,8 +661,8 @@ env_tool2_compile()
    done
    IFS="${DEFAULT_IFS}"
 
-   mkdir_if_missing "${MULLE_ENV_VAR_DIR}"
-   redirect_exekutor "${MULLE_ENV_VAR_DIR}/tool" sort <<< "${result}" || exit 1
+   mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
+   redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/tool" sort <<< "${result}" || exit 1
 }
 
 
@@ -900,7 +901,7 @@ env_tool2_link()
 
    local bindir
 
-   bindir="${MULLE_ENV_VAR_DIR}/bin"
+   bindir="${MULLE_ENV_HOST_VAR_DIR}/bin"
 
    while :
    do
@@ -944,7 +945,7 @@ env_tool2_link()
 
    local toolfile
 
-   toolfile="${MULLE_ENV_VAR_DIR}/tool"
+   toolfile="${MULLE_ENV_HOST_VAR_DIR}/tool"
 
    [ -f "${toolfile}" ] || fail "\"${toolfile}\" is missing"
 
@@ -1002,7 +1003,7 @@ _list_tool_file()
             filename="`command -v "${toolname}" `"
             case "${filename}" in
                /*)
-                  if [ -x "${MULLE_ENV_VAR_DIR}/bin/${toolname}" ]
+                  if [ -x "${MULLE_ENV_HOST_VAR_DIR}/bin/${toolname}" ]
                   then
                      color_start="${C_GREEN}"
                   else
@@ -1251,8 +1252,8 @@ env_tool2_main()
    local bindir
    local libexecdir
 
-   bindir="${MULLE_ENV_VAR_DIR}/bin"
-   libexecdir="${MULLE_ENV_VAR_DIR}/libexec"
+   bindir="${MULLE_ENV_HOST_VAR_DIR}/bin"
+   libexecdir="${MULLE_ENV_HOST_VAR_DIR}/libexec"
 
    case "${cmd:-list}" in
       add)
