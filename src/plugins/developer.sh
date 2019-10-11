@@ -110,7 +110,7 @@ nano;optional
 xargs;optional
 vi;optional"
 
-   echo "${DEVELOPER_BINARIES}"
+   printf "%s\n" "${DEVELOPER_BINARIES}"
 }
 
 

@@ -108,7 +108,7 @@ umount
 uname
 "
 
-   echo "${MINIMAL_BIN_BINARIES}"
+   printf "%s\n" "${MINIMAL_BIN_BINARIES}"
 }
 
 

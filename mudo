@@ -6,13 +6,46 @@ if [ $# -eq 0 ]
 then
    cat <<EOF >&2
 usage:
-   mudo <command> ...
+   mudo [-e] <command> ...
 
-   mudo is like sudo, except simpler. And it doesn't make you superuser.
-   But your PATH will be unrestricted, when executing <command> and it's
-   arguments.
+   mudo lets you execute commands with an unrestricted PATH from within a
+   mulle-env environment.
+   With the -e option you can replace the current environment with the
+   unrestricted user environment.
+
+   See the difference by comparing \`env\` with \`mudo env\` and \`mudo -e env\`.
+
 EOF
    exit 1
+fi
+
+if [ -z "${MULLE_VIRTUAL_ROOT}" -o -z "${MULLE_HOSTNAME}" ]
+then
+   echo "error: mudo must be run from within the mulle virtual environment" >&2
+   exit 1
+fi
+
+if [ "$1" = "-e" ]
+then
+   shift
+
+   filename="${MULLE_VIRTUAL_ROOT}/.mulle/var/${MULLE_HOSTNAME}/env/old-environment"
+   environment="`cat "${filename}" 2> /dev/null`"
+   if [ -z "${environment}" ]
+   then
+      echo "error: mudo did not find previous environment (${filename})" >&2
+      exit 1
+   fi
+
+   #
+   # does not work with builtins like `command -v ps`
+   #
+   if [ -z "${MULLE_OLDPATH}" ]
+   then
+      eval exec env -i - ${environment} "$@"
+   else
+      PATH="${MULLE_OLDPATH}" eval exec env -i - ${environment} "$@"
+   fi
 fi
 
 #

@@ -287,7 +287,7 @@ print_none_tools_sh()
 
    if [ ! -z "${OPTION_OTHER_TOOLS}" ]
    then
-      echo "${OPTION_OTHER_TOOLS}"
+      printf "%s\n" "${OPTION_OTHER_TOOLS}"
    fi
 }
 

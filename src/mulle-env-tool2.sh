@@ -518,7 +518,7 @@ env_tool2_add()
          plugin|extension)
             tool_filename="${MULLE_ENV_SHARE_DIR}/tool-${scope}${extension}"
             unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
-            redirect_append_exekutor "${tool_filename}" echo "${tool}"
+            redirect_append_exekutor "${tool_filename}" printf "%s\n" "${tool}"
             rval=$?
             protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
          ;;
@@ -526,7 +526,7 @@ env_tool2_add()
          *)
             mkdir_if_missing "${MULLE_ENV_ETC_DIR}"
             tool_filename="${MULLE_ENV_ETC_DIR}/tool${extension}"
-            redirect_append_exekutor "${tool_filename}" echo "${tool}"
+            redirect_append_exekutor "${tool_filename}" printf "%s\n" "${tool}"
             rval=$?
          ;;
       esac
@@ -617,7 +617,7 @@ env_tool2_compile()
    local file
    local name
 
-   IFS=":"
+   IFS=':'
    for file in ${_filepath}
    do
       IFS="${DEFAULT_IFS}"
@@ -633,7 +633,7 @@ env_tool2_compile()
 
       for i in ${lines}
       do
-         set +f; IFS=":"
+         set +f; IFS=':'
 
          case "${i}" in
             *';remove')
@@ -657,7 +657,7 @@ env_tool2_compile()
          esac
       done
 
-      set +f; IFS=":"
+      set +f; IFS=':'
    done
    IFS="${DEFAULT_IFS}"
 
@@ -760,7 +760,7 @@ env_tool2_get()
       return 1
    fi
 
-   echo "${RVAL}"
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -1067,7 +1067,7 @@ _env_tool2_list()
    local directory
    local name
 
-   IFS=":"
+   IFS=':'
    for file in ${toolfiles}
    do
       IFS="${DEFAULT_IFS}"
@@ -1141,7 +1141,7 @@ env_tool2_list()
    case "$1" in
       file|files)
          r_get_existing_tool_filepath "${os}"
-         echo "${RVAL}"
+         printf "%s\n" "${RVAL}"
       ;;
 
       os|oss)

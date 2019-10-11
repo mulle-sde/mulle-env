@@ -78,10 +78,10 @@ Commands:
 EOF
 
    (
-      echo "${SHOWN_COMMANDS}"
+      printf "%s\n" "${SHOWN_COMMANDS}"
       if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
       then
-         echo "${HIDDEN_COMMANDS}"
+         printf "%s\n" "${HIDDEN_COMMANDS}"
       fi
    ) | sed '/^$/d' | LC_ALL=C sort >&2
 
@@ -245,7 +245,7 @@ key_values_to_command()
       value="${line#${key}=}"
 
       # scope is a cheat!!
-      echo "${MULLE_USAGE_NAME} environment set ${key} '${value}'"
+      printf "%s\n" "${MULLE_USAGE_NAME} environment set ${key} '${value}'"
    done
 }
 
@@ -281,7 +281,7 @@ key_values_to_sed()
       #   escaped_key=`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_key}"`"
       #   escaped_value="`sed -e "s/'/'\\\\\\''/g" <<< "${escaped_value}"`"
 
-      echo "-e 's/${escaped_key}/${escaped_value}/g'"
+      printf "%s\n" "-e 's/${escaped_key}/${escaped_value}/g'"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -394,7 +394,7 @@ export ${key}=${value}
 
 "
    r_mkdir_parent_if_missing "${filename}"
-   redirect_append_exekutor "${filename}" echo "${text}"
+   redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
 }
 
 
@@ -557,7 +557,7 @@ env_environment_set_main()
             log_warning "Adding unknown scope \"${scope}\" to auxscope"
 
             filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-            redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" echo "${scope}"
+            redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" printf "%s\n" "${scope}"
 
             RVAL="s" # auxscope are always share
          else
@@ -711,11 +711,11 @@ _env_environment_get()
    case "${value}" in
       \"*\")
          value="${value%?}"
-         echo "${value:1}"
+         printf "%s\n" "${value:1}"
       ;;
 
       *)
-         echo "${value}"
+         printf "%s\n" "${value}"
       ;;
    esac
 }
@@ -773,7 +773,7 @@ _env_environment_eval_get()
                                  '${BASH}' -c "'${cmd}'" `"
    if [ ! -z "${value}" ]
    then
-      echo "$value"
+      printf "%s\n" "$value"
       return 0
    fi
 
@@ -805,7 +805,7 @@ _env_environment_sed_get()
    escaped_key="${escaped_key//\'/\'\\\'\'}"
    escaped_value="${escaped_value//\'/\'\\\'\'}"
 
-   echo "-e 's/${escaped_key}/${escaped_value}/g'"
+   printf "%s\n" "-e 's/${escaped_key}/${escaped_value}/g'"
 }
 
 
@@ -1120,7 +1120,7 @@ env_environment_get_main()
          if [ ! -z "${reverse}" ]
          then
             r_unescaped_doublequotes "${value}"
-            echo "${RVAL}"
+            printf "%s\n" "${RVAL}"
             return $rval
          fi
       fi
@@ -1133,7 +1133,7 @@ env_environment_get_main()
    if [ "${rval}" -eq 0 ]
    then
       r_unescaped_doublequotes "${value}"
-      echo "${RVAL}"
+      printf "%s\n" "${RVAL}"
    fi
 
    return $rval
@@ -1379,6 +1379,7 @@ _env_environment_list()
    do
       if [ -f "$1" ]
       then
+         log_verbose "$1"
       	r_fast_basename "$1"
 
          scope="${RVAL}"
@@ -1423,6 +1424,7 @@ USER=\"${USER}\" \
    [ "$#" -eq 0 ] && internal_fail "No environment files specified"
 
    local files
+
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
@@ -1855,11 +1857,11 @@ env_environment_main()
       ;;
 
       user)
-         echo "${USER}"
+         printf "%s\n" "${USER}"
       ;;
 
       os|uname)
-         echo "${MULLE_UNAME}"
+         printf "%s\n" "${MULLE_UNAME}"
       ;;
 
       get|list|mset|remove|set)
