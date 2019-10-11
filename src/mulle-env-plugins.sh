@@ -109,7 +109,7 @@ _env_all_plugin_names()
    local directory
    local pluginpath
 
-   IFS=":"
+   IFS=':'
    for directory in ${searchpath}
    do
       IFS=$'\n'
@@ -117,7 +117,7 @@ _env_all_plugin_names()
       do
          basename -- "${pluginpath}" .sh
       done
-      IFS=":"
+      IFS=':'
    done
 
    IFS="${DEFAULT_IFS}"
@@ -145,7 +145,7 @@ _env_load_plugin()
    local directory
    local pluginpath
 
-   IFS=":"
+   IFS=':'
    for directory in ${searchpath}
    do
       IFS="${DEFAULT_IFS}"
@@ -157,7 +157,7 @@ _env_load_plugin()
 
          return 0
       fi
-      IFS=":"
+      IFS=':'
    done
    IFS="${DEFAULT_IFS}"
 

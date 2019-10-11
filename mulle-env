@@ -355,7 +355,7 @@ r_get_existing_tool_filepath()
    local file
 
    RVAL=""
-   IFS=":"
+   IFS=':'
 
    for file in ${_filepath}
    do
@@ -390,7 +390,7 @@ _env_tool2_status()
    anymatch='NO'
    compile='NO'
 
-   IFS=":"
+   IFS=':'
    for file in ${filepath}
    do
       IFS="${DEFAULT_IFS}"
@@ -768,7 +768,7 @@ r_censored_path()
 
    RVAL=""
 
-   set -f ; IFS=":"
+   set -f ; IFS=':'
    for i in $*
    do
       for j in ${RESTRICTED_PATH}
@@ -780,7 +780,7 @@ r_censored_path()
             r_colon_concat "${RVAL}" "${i}"
          fi
 
-         set -f ; IFS=":"
+         set -f ; IFS=':'
       done
    done
 

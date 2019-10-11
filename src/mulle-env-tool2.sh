@@ -616,7 +616,7 @@ env_tool2_compile()
    local file
    local name
 
-   IFS=":"
+   IFS=':'
    for file in ${_filepath}
    do
       IFS="${DEFAULT_IFS}"
@@ -632,7 +632,7 @@ env_tool2_compile()
 
       for i in ${lines}
       do
-         set +f; IFS=":"
+         set +f; IFS=':'
 
          case "${i}" in
             *';remove')
@@ -656,7 +656,7 @@ env_tool2_compile()
          esac
       done
 
-      set +f; IFS=":"
+      set +f; IFS=':'
    done
    IFS="${DEFAULT_IFS}"
 
@@ -1066,7 +1066,7 @@ _env_tool2_list()
    local directory
    local name
 
-   IFS=":"
+   IFS=':'
    for file in ${toolfiles}
    do
       IFS="${DEFAULT_IFS}"
