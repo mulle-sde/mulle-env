@@ -1116,7 +1116,6 @@ _env_tool2_list()
       log_info "${directory}/${name}"
 
       _list_tool_file "${file}" "${color}" "${csv}" "${builtin}"
-
    done
 
    IFS="${DEFAULT_IFS}"
