@@ -294,7 +294,7 @@ main()
       shift
    done
 
-   [ $# -lt 9 -o $# -gt 10 ] && _fail "API mismatch ($# args: $*)"
+   [ $# -lt 10 -o $# -gt 11 ] && _fail "API mismatch ($# args: $*)"
 
    local MULLE_UNAME
 

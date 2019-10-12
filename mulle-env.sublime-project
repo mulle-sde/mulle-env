@@ -2,25 +2,32 @@
 	"folders":
 	[
 		{
-			"path": ".",
-         "file_exclude_patterns": [
-          "*~",
-          "*~.*",
-          "*.chk",
-          ".DS_Store",
-          "._.DS_Store",
-          "*.sublime-workspace",
-          "tmp.*"
-       ],
-         "folder_exclude_patterns": [
-          "package",
-          "build",
-          ".repos",
-          ".mulle",
-          ".bootstrap*",
-          ".git*",
-       ],
-
-      }
-   ]
+			"file_exclude_patterns":
+			[
+				"*~",
+				"*~.*",
+				"*.chk",
+				".DS_Store",
+				"._.DS_Store",
+				"*.sublime-workspace",
+				"tmp.*"
+			],
+			"folder_exclude_patterns":
+			[
+				"package",
+				"build",
+				".repos",
+				".mulle",
+				".bootstrap*",
+				".git*"
+			],
+			"path": "."
+		},
+		{
+			"path": "\\\\wsl$\\Ubuntu-18.04\\home\\nat\\src\\mulle-sde"
+		},
+		{
+			"path": "\\\\wsl$\\Ubuntu-18.04\\home\\nat\\src\\mulle-sde-developer"
+		}
+	]
 }

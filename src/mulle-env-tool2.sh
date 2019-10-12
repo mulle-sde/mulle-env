@@ -784,6 +784,21 @@ env_tool2_link_tool()
    fi
 
    local filename
+   local use_script 
+
+   case "${MULLE_UNAME}" in
+      mingw*)
+         use_script='YES'
+      ;;
+
+      windows)
+         use_script='MAYBE'
+      ;;
+
+      *) 
+         use_script='NO'
+      ;;
+   esac
 
    if [ ! -z "${MULLE_OLDPATH}" ]
    then
@@ -802,6 +817,13 @@ env_tool2_link_tool()
 
          log_fluff "\"${toolname}\" not found, but it's optional"
          return 0
+      ;;
+
+      *.exe)
+         if [ "${use_script}" = 'MAYBE' ]
+         then
+            use_script='YES'
+         fi
       ;;
 
       #
@@ -828,9 +850,23 @@ env_tool2_link_tool()
       ;;
    esac
 
-   log_fluff "Creating symlink \"${bindir}/${toolname}\""
 
-   exekutor ln -sf "${filename}" "${bindir}/" || exit 1
+   if [ "${use_script}" = 'YES' ]
+   then
+      log_fluff "Creating script \"${bindir}/${toolname}\""
+
+      local script 
+
+      script="#! /bin/sh
+
+exec '${filename}' \"\$@\""
+      redirect_exekutor "${bindir}/${toolname}" echo "${script}" || exit 1
+      exekutor chmod 755 "${bindir}/${toolname}"  || exit 1
+   else
+      log_fluff "Creating symlink \"${bindir}/${toolname}\""
+
+      exekutor ln -sf "${filename}" "${bindir}/" || exit 1
+   fi
 }
 
 
@@ -944,14 +980,11 @@ env_tool2_link()
    fi
 
    local toolfile
+   local toollines
 
    toolfile="${MULLE_ENV_HOST_VAR_DIR}/tool"
 
-   [ -f "${toolfile}" ] || fail "\"${toolfile}\" is missing"
-
-   local toollines
-
-   toollines="`cat "${toolfile}" `"
+   toollines="`egrep -v '^#' "${toolfile}" `" || fail "\"${toolfile}\" is missing"
    if [ -z "${toollines}" ]
    then
       log_warning "No tools defined in \"${toolfile}\""

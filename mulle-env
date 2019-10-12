@@ -269,7 +269,7 @@ _setup_environment()
          # Well symlink still have other problems: https://github.com/microsoft/WSL/issues/3999
          #
          MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
-         MULLE_ENV_VAR_DIR="${HOME}/.mulle/${directory##*/}-var/.env"
+         MULLE_ENV_VAR_DIR="${HOME}/.mulle/${directory##*/}.var/.env"
       ;;
 
       *)
@@ -1177,13 +1177,13 @@ assert_valid_environment_key()
 
    local identifier
 
+   r_identifier "${key}"
+   identifier="${RVAL}"
+
    case "${OPTION_IDENTIFIERCASE}" in
       UPPERCASE_ONLY)
-         identifier="`printf "%s" "${key}" | tr -c 'a-zA-Z0-9' '_' | tr 'a-z' 'A-Z'`"
-      ;;
-
-      *)
-         identifier="`printf "%s" "${key}" | tr -c 'a-zA-Z0-9' '_'`"
+         r_uppercase "${identifier}"
+         identifier="${RVAL}"
       ;;
    esac
 
@@ -1191,12 +1191,6 @@ assert_valid_environment_key()
    then
       fail "\"${key}\" is not a valid environment identifier"
    fi
-
-   case "${identifier}" in
-      [0-9]*)
-         fail "\"${key}\" is not a valid environment identifier"
-      ;;
-   esac
 }
 
 
@@ -1659,6 +1653,9 @@ ${C_INFO}Hint: Use --style to switch styles."
       ;;
 
       mulle-tool-env)
+         [ $# -eq 0 ] && usage "Missing argument to \"${arg}\""
+         [ $# -ne 1 ] && usage "Superflous arguments to \"${arg}\""
+
          # should possibly create output like ssh-agent
          # so tools get MULLE_MATCH_ETC_DIR
          # so tools get MULLE_MATCH_VAR_DIR
