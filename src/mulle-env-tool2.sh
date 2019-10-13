@@ -209,9 +209,9 @@ env_link_mulle_tool()
    local srclibname
 
    srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
-   r_fast_dirname "${srclibdir}"
+   r_dirname "${srclibdir}"
    srclibexecdir="${RVAL}"
-   r_fast_basename "${srclibdir}"
+   r_basename "${srclibdir}"
    srclibname="${RVAL}"
 
    local dstbindir
@@ -784,7 +784,7 @@ env_tool2_link_tool()
    fi
 
    local filename
-   local use_script 
+   local use_script
 
    case "${MULLE_UNAME}" in
       mingw*)
@@ -795,7 +795,7 @@ env_tool2_link_tool()
          use_script='MAYBE'
       ;;
 
-      *) 
+      *)
          use_script='NO'
       ;;
    esac
@@ -855,7 +855,7 @@ env_tool2_link_tool()
    then
       log_fluff "Creating script \"${bindir}/${toolname}\""
 
-      local script 
+      local script
 
       script="#! /bin/sh
 
@@ -1105,12 +1105,12 @@ _env_tool2_list()
    do
       IFS="${DEFAULT_IFS}"
 
-      r_fast_dirname "${file}"
-      r_fast_dirname "${RVAL}"
-      r_fast_basename "${RVAL}"
+      r_dirname "${file}"
+      r_dirname "${RVAL}"
+      r_basename "${RVAL}"
       directory="${RVAL}"
 
-      r_fast_basename "${file}"
+      r_basename "${file}"
       name="${RVAL}"
 
       log_info "${directory}/${name}"

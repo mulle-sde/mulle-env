@@ -210,7 +210,7 @@ r_find_best_environment()
          log_debug "Did not find \"${searchfile}\""
       fi
 
-      r_fast_dirname "${directory}"
+      r_dirname "${directory}"
       directory="${RVAL}"
 
       # look for .mulle/share/env/*/environment.sh going up to root, if we
@@ -261,7 +261,7 @@ _setup_environment()
    # MULLE_VAR_ENV_BIN is for mulle-sde tools (bash scripts)
    # MULLE_ENV_HOST_VAR_DIR for all the rest
    #
-   case "${MULLE_UNAME}" in 
+   case "${MULLE_UNAME}" in
       windows)
          # on windows the project directory is likely on a windows filesystem so the
          # symlinks don't work out (e.g. cmake.exe)
@@ -446,7 +446,7 @@ _env_tool2_status()
 # returns 0 if OK
 # The contents of MULLE_ENV_VAR_DIR/bin are actually installed by the mulle.sh plugin
 # so this code should also move to the plugin.
-# 
+#
 _env_symlink_status()
 {
    log_entry "_env_symlink_status" "$@"
@@ -651,9 +651,9 @@ __fail_get_saved_style_flavor()
 
    local userdir
 
-   r_fast_dirname "${directory}"  # ../env
-   r_fast_dirname "${directory}"  # ../share
-   r_fast_dirname "${directory}"  # ../.mulle
+   r_dirname "${directory}"  # ../env
+   r_dirname "${directory}"  # ../share
+   r_dirname "${directory}"  # ../.mulle
    userdir="${RVAL}"
 
    if [ -z "${fallback}" ]
@@ -1489,7 +1489,7 @@ wild"
          local envdirectory
 
          directory="${MULLE_VIRTUAL_ROOT:-${PWD}}"
-         case "${MULLE_UNAME}" in 
+         case "${MULLE_UNAME}" in
             windows)
                envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
             ;;
@@ -1545,7 +1545,7 @@ wild"
 ${C_INFO}Hint: Use --style to switch styles."
          fi
 
-         case "${MULLE_UNAME}" in 
+         case "${MULLE_UNAME}" in
             windows)
                envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
             ;;
@@ -1663,7 +1663,7 @@ ${C_INFO}Hint: Use --style to switch styles."
          # and they can source it
          _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
 
-         local upper 
+         local upper
 
          r_uppercase "$1"
          upper="${RVAL}"
@@ -1731,15 +1731,8 @@ _init()
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || exit 1
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
 
-   local _libexec_dir
-
-   _get_libexec_dir "$0" "mulle-env" "mulle-env-shell"
-
-   if [ -z "${_libexec_dir}" ]
-   then
-      fail "Fatal Error: Could not find libexec for ${MULLE_EXECUTABLE} ($PWD)"
-   fi
-   MULLE_ENV_LIBEXEC_DIR="${_libexec_dir}"
+   r_get_libexec_dir "$0" "mulle-env" "mulle-env-shell"
+   MULLE_ENV_LIBEXEC_DIR="${RVAL}"
 
    #
    # minimal setup exit

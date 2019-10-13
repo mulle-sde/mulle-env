@@ -1380,7 +1380,7 @@ _env_environment_list()
       if [ -f "$1" ]
       then
          log_verbose "$1"
-      	r_fast_basename "$1"
+      	r_basename "$1"
 
          scope="${RVAL}"
          scope="${scope%.sh}"
@@ -1429,7 +1429,7 @@ USER=\"${USER}\" \
    do
       if [ -f "$1" ]
       then
-         log_verbose "${C_RESET_BOLD}`fast_basename "$1"`:"
+         log_verbose "${C_RESET_BOLD}`basename -- "$1"`:"
 
          r_concat "${files}" ". \"$1\" ; "
          files="${RVAL}"

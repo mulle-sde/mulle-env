@@ -50,7 +50,7 @@ env_move_directory()
       # move over contents
       exekutor ${MV:-mv} "${srcdir}"/* "${dstdir}/"
    else
-      r_fast_dirname "${dstdir}"
+      r_dirname "${dstdir}"
       mkdir_if_missing "${RVAL}"
       exekutor ${MV:-mv} "${srcdir}" "${dstdir}" || exit 1
    fi
@@ -74,10 +74,10 @@ env_straight_convert_directory_if_present()
 
    [ ! -d "${directory}" ] && return 2
 
-   r_fast_basename "${directory}"
+   r_basename "${directory}"
    subdir="${RVAL}"
 
-   r_fast_dirname "${directory}"
+   r_dirname "${directory}"
    name="${RVAL##*-}"
 
    env_move_directory "${directory}" ".mulle/${subdir}/${name}"
