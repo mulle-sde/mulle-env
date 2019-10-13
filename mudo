@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env bash
 
 [ "${TRACE}" = 'YES' -o "${MUDO_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
@@ -25,35 +25,45 @@ then
    exit 1
 fi
 
-if [ "$1" = "-e" ]
+if [ "$1" != "-e" ]
 then
-   shift
-
-   filename="${MULLE_VIRTUAL_ROOT}/.mulle/var/${MULLE_HOSTNAME}/env/old-environment"
-   environment="`cat "${filename}" 2> /dev/null`"
-   if [ -z "${environment}" ]
-   then
-      echo "error: mudo did not find previous environment (${filename})" >&2
-      exit 1
-   fi
-
    #
    # does not work with builtins like `command -v ps`
    #
    if [ -z "${MULLE_OLDPATH}" ]
    then
-      eval exec env -i - ${environment} "$@"
+      exec "$@"
    else
-      PATH="${MULLE_OLDPATH}" eval exec env -i - ${environment} "$@"
+      PATH="${MULLE_OLDPATH}" exec "$@"
    fi
+   exit $?
+fi
+
+shift
+
+eval `mulle-env mulle-tool-env env` || exit 1 
+
+filename="${MULLE_ENV_VAR_DIR}/old-environment"
+environment="`cat "${filename}" 2> /dev/null`"
+if [ -z "${environment}" ]
+then
+   echo "error: mudo did not find previous environment (${filename})" >&2
+   exit 1
 fi
 
 #
 # does not work with builtins like `command -v ps`
 #
+argv=
+for arg in "$@"
+do
+   argv="$argv '$arg'"
+done
+
 if [ -z "${MULLE_OLDPATH}" ]
 then
-   exec "$@"
+   eval exec env -i - ${environment} $argv
 else
-   PATH="${MULLE_OLDPATH}" exec "$@"
+   PATH="${MULLE_OLDPATH}" eval exec env -i - ${environment} $argv
 fi
+
