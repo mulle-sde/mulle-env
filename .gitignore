@@ -3,6 +3,7 @@
 *.bak
 tmp.*
 build/
+research/
 build-*.d/
 mulle-project/publisher-info.sh
 *.sublime-workspace

@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.4.0"
+MULLE_ENV_VERSION="2.5.0"
 
 #
 # The default for first time mulle-env
@@ -244,12 +244,13 @@ _setup_environment()
    local directory="$1"
    local setroot="$2"
 
+   [ -z "${MULLE_UNAME}" ]   && internal_fail "MULLE_UNAME not set"
    [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME not set"
 
    local physicaldir
 
    physicaldir="`physicalpath "${directory}" `"
-   [ ! -d "${physicaldir}" ] && internal_fail "physicalpath failed"
+   [ ! -d "${physicaldir}" ]  && internal_fail "physicalpath failed"
    [ "${physicaldir}" = "/" ] && fail "Running in / which is not supported"
 
    if [ "${setroot}" = 'YES' ]
@@ -258,17 +259,19 @@ _setup_environment()
    fi
 
    #
-   # MULLE_VAR_ENV_BIN is for mulle-sde tools (bash scripts)
+   # MULLE_ENV_VAR_DIR is for mulle-sde tools (bash scripts)
    # MULLE_ENV_HOST_VAR_DIR for all the rest
    #
    case "${MULLE_UNAME}" in
       windows)
-         # on windows the project directory is likely on a windows filesystem so the
-         # symlinks don't work out (e.g. cmake.exe)
-         # we use a quiet place in HOME
-         # Well symlink still have other problems: https://github.com/microsoft/WSL/issues/3999
          #
-         MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
+         # on windows the project directory is likely on a windows filesystem
+         # so the symlinks don't work out (e.g. cmake.exe) ???? Still true ??
+         # Symlinks still have other problems: https://github.com/microsoft/WSL/issues/3999
+         # We use a quiet place in HOME.
+         #
+         hash="`shasum -a 256 -b <<< "${MULLE_VIRTUAL_ROOT}" | cut -c1-8`"
+         MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}-${hash}.var/${MULLE_HOSTNAME}/env"
          MULLE_ENV_VAR_DIR="${HOME}/.mulle/${directory##*/}.var/.env"
       ;;
 
@@ -822,7 +825,8 @@ _run_subenv()
 
    local directory="$1"
 
-   directory="`simplified_absolutepath "${directory:-${PWD}}"`"
+   r_simplified_absolutepath "${directory:-${PWD}}"
+   directory="${RVAL}"
 
    if [ ! -d "${directory}/.mulle/share/env" ]
    then
@@ -837,8 +841,7 @@ _run_subenv()
       ;;
    esac
 
-
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
+   _setup_environment "${directory}" "YES"
 
    local mode
 
@@ -1047,10 +1050,10 @@ undefined (old mulle-bashfunctions)"
    esac
 
    #
-   # have /usr and /usr/bin in front if possible
-   # it creates less problems and have our symlinks as fallbacks only
+   # Have /usr and /usr/bin in the back
+   # It obscures less problems and reflects the original PATH better.
    #
-   r_colon_concat "${inherit_path}" "${runpath}"
+   r_colon_concat  "${runpath}" "${inherit_path}"
    runpath="${RVAL}"
 
    # mulle tools must be in front of /usr/bin, otherwise i can't develop this
@@ -1566,6 +1569,16 @@ ${C_INFO}Hint: Use --style to switch styles."
          return 0
       ;;
 
+      searchpath)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         log_info "Plugin searchpath"
+
+         r_plugin_searchpath
+         printf "%s\n" "${RVAL}"
+         return
+      ;;
+
       subenv)
          if [ -z "${MULLE_VIRTUAL_ROOT}" ]
          then
@@ -1577,16 +1590,6 @@ ${C_INFO}Hint: Use --style to switch styles."
 
          _run_subenv "$1"
          return $?
-      ;;
-
-      searchpath)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
-
-         log_info "Plugin searchpath"
-
-         r_plugin_searchpath
-         printf "%s\n" "${RVAL}"
-         return
       ;;
 
       tool)
@@ -1748,5 +1751,17 @@ _init()
 
 
 _init "$@"
-main "$@"
+
+quote="'"
+args=""
+for arg in "$@"
+do
+   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
+   args="${args} '${arg}'"
+done
+
+unset quote
+unset arg
+
+eval main "${MULLE_ENV_FLAGS}" "${args}"
 

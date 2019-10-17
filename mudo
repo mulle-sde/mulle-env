@@ -41,7 +41,7 @@ fi
 
 shift
 
-eval `mulle-env mulle-tool-env env` || exit 1 
+eval `mulle-env -N mulle-tool-env env` || exit 1
 
 filename="${MULLE_ENV_VAR_DIR}/old-environment"
 environment="`cat "${filename}" 2> /dev/null`"
@@ -54,16 +54,17 @@ fi
 #
 # does not work with builtins like `command -v ps`
 #
-argv=
+args=
 for arg in "$@"
 do
+   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
    argv="$argv '$arg'"
 done
 
 if [ -z "${MULLE_OLDPATH}" ]
 then
-   eval exec env -i - ${environment} $argv
+   eval exec env -i - "${environment}" "${args}"
 else
-   PATH="${MULLE_OLDPATH}" eval exec env -i - ${environment} $argv
+   PATH="${MULLE_OLDPATH}" eval exec env -i - "${environment}" "${args}"
 fi
 

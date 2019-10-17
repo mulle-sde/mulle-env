@@ -1,3 +1,9 @@
+## 2.5.0
+
+* moved to mulle-bashfunctions v2
+* use stubs instead of symlinks for windows native executables
+* make it possible to move .mulle/var somewhere else
+
 ## 2.4.0
 
 * mudo gains the -e flag to call executables with the "outside" environment

@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${7}" = 'YES' ] && set -x && : "mulle-env-shell" "$@"
+[ "${9}" = 'YES' ] && set -x && : "mulle-env-shell" "$@"
 
 
 _fail()
@@ -130,6 +130,7 @@ emit_initfile()
    echo "set +o posix"  # turn back to default
 
    local envfile
+
    r_get_envfile
    envfile="${RVAL}"
 
@@ -298,62 +299,73 @@ main()
 
    local MULLE_UNAME
 
+   #1
    MULLE_UNAME="$1"
    [ -z "${MULLE_UNAME}" ] && _fail "empty MULLE_UNAME"
    shift
 
    local MULLE_HOSTNAME
 
+   #2
    MULLE_HOSTNAME="$1"     # hostname empty ? we don't care
    shift
 
+   #3
    local MULLE_VIRTUAL_ROOT
 
    MULLE_VIRTUAL_ROOT="$1"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && _fail "empty MULLE_VIRTUAL_ROOT"
    shift
 
-
+   #4
    local MULLE_ENV_HOST_VAR_DIR
 
    MULLE_ENV_HOST_VAR_DIR="$1"
    [ -z "${MULLE_ENV_HOST_VAR_DIR}" ] && _fail "empty MULLE_ENV_HOST_VAR_DIR"
    shift
 
+   #5
    local RUNPATH
 
    RUNPATH="$1"
    [ -z "${RUNPATH}" ] && _fail "empty RUNPATH"
    shift
 
+   #6
    local MODE  # either SCRIPT or INTERACTIVE
 
    MODE="$1"
    [ -z "${MODE}" ] && _fail "empty MODE"
    shift
 
+   #7
    local STYLE  # wild or else
 
    STYLE="$1"
    [ -z "${STYLE}" ] && _fail "empty STYLE"
    shift
 
+   #8
    local ENVFILENAME  # environment.sh or so
 
    ENVFILENAME="$1"
    [ -z "${ENVFILENAME}" ] && _fail "empty ENVFILENAME"
    shift
 
+   #9
    local TRACE  # either YES or usually empty
 
    TRACE="$1"
    shift
 
+   #10
    local NO_MOTD  # either YES or usually empty
 
    NO_MOTD="$1"
    shift
 
+   ####
+   #
    local MULLE_ENV_LIBEXEC_DIR
 
    MULLE_ENV_LIBEXEC_DIR="`dirname -- "$0"`"
