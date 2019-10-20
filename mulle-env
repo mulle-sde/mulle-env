@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.5.0"
+MULLE_ENV_VERSION="2.5.1"
 
 #
 # The default for first time mulle-env
@@ -305,6 +305,7 @@ _default_setup_environment()
 
    r_find_best_environment "${directory}" "${searchmode}"
    directory="${RVAL}"
+
    log_fluff "Environment directory determined to be \"${directory}\""
 
    [ ! -d "${directory}" ] && fail "${directory} does not exist (init it first)"
@@ -1387,7 +1388,7 @@ main()
             OPTION_STYLE="$1"
          ;;
 
-         -N|--search-nearest|--no-search)  # no-search is historical
+         -N|--search-nearest)  # no-search is historical
             OPTION_SEARCHMODE='NEAREST'
          ;;
 

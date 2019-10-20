@@ -1,3 +1,7 @@
+### 2.5.1
+
+* remove --no-search from flags
+
 ## 2.5.0
 
 * moved to mulle-bashfunctions v2
