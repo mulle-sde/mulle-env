@@ -347,13 +347,13 @@ shell environment"
       if [ -f "${filename}" ]
       then
          log_fluff "${filename} does not exist"
-         return 2
+         return 4
       fi
 
       if ! _env_file_defines_key "${filename}" "${key}"
       then
          log_fluff "${key} does not exist in ${filename}"
-         return 2
+         return 4
       fi
 
       inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\

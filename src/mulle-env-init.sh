@@ -184,7 +184,7 @@ env_init_main()
    if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
    then
       log_warning "\"${envfile}\" already exists"
-      return 2
+      return 4
    fi
 
    if [ "${OPTION_UPGRADE}" = 'YES' ]

@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${9}" = 'YES' ] && set -x && : "mulle-env-shell" "$@"
+[ "${7}" = 'YES' ] && set -x && : "mulle-env-shell" "$@"
 
 
 _fail()
@@ -105,15 +105,36 @@ r_make_tmp_in_dir()
 
 r_get_envfile()
 {
-   RVAL="${MULLE_VIRTUAL_ROOT}/.mulle/etc/env/${ENVFILENAME}"
-   if [ ! -f "${MULLE_VIRTUAL_ROOT}/.mulle/etc/env/${ENVFILENAME}" ]
-   then
-      RVAL="${MULLE_VIRTUAL_ROOT}/.mulle/share/env/${ENVFILENAME}"
-   fi
-   if [ ! -f "${RVAL}" ]
-   then
-      _fail "\"${RVAL}\" not found, can not continue"
-   fi
+   local envvar="$1"
+   local optional="${2:-NO}"
+
+   local filename
+
+   filename="${!envvar}"
+   case "${filename}" in
+      ~/*|./*|../*|/*)
+         RVAL="${filename}"
+         [ -f "${RVAL}" ] && return 0
+         _fail "\"${RVAL}\" not found, can not continue"
+      ;;
+
+      "")
+         if [ "${optional}" = 'YES' ]
+         then
+            RVAL=""
+            return 1
+         fi
+         _fail "Empty \"$envvar\" is not possible"
+      ;;
+   esac
+
+   RVAL="${MULLE_VIRTUAL_ROOT}/.mulle/etc/env/${filename}"
+   [ -f "${RVAL}" ] && return 0
+   RVAL="${MULLE_VIRTUAL_ROOT}/.mulle/share/env/${filename}"
+   [ -f "${RVAL}" ] && return 0
+   RVAL="${PWD}/${filename}"
+   [ -f "${RVAL}" ] && return 0
+   _fail "\"${MULLE_VIRTUAL_ROOT}/.mulle/<etc|share>/env/${filename}\" not found, can not continue"
 }
 
 
@@ -131,7 +152,7 @@ emit_initfile()
 
    local envfile
 
-   r_get_envfile
+   r_get_envfile "ENVFILENAME"
    envfile="${RVAL}"
 
    if [ "${TRACE}" = 'YES' ]
@@ -139,6 +160,17 @@ emit_initfile()
      echo "TRACE=\"${TRACE}\" && . \"${envfile}\""
    else
      echo ". \"${envfile}\""
+   fi
+
+   # optional additional file
+   if r_get_envfile "AUXENVFILENAME" "YES"
+   then
+      if [ "${TRACE}" = 'YES' ]
+      then
+        echo "TRACE=\"${TRACE}\" && . \"${RVAL}\""
+      else
+        echo ". \"${RVAL}\""
+      fi
    fi
 
    # try to set terminal title
@@ -164,7 +196,8 @@ run_script_shell()
 {
    local args
    local envfile
-   r_get_envfile
+
+   r_get_envfile "ENVFILENAME"
    envfile="${RVAL}"
 
    #
@@ -295,7 +328,7 @@ main()
       shift
    done
 
-   [ $# -lt 10 -o $# -gt 11 ] && _fail "API mismatch ($# args: $*)"
+   [ $# -lt 11 -o $# -gt 12 ] && _fail "API mismatch ($# args: $*)"
 
    local MULLE_UNAME
 
@@ -345,6 +378,12 @@ main()
    [ -z "${STYLE}" ] && _fail "empty STYLE"
    shift
 
+   #7
+   local TRACE  # either YES or usually empty
+
+   TRACE="$1"
+   shift
+
    #8
    local ENVFILENAME  # environment.sh or so
 
@@ -353,12 +392,12 @@ main()
    shift
 
    #9
-   local TRACE  # either YES or usually empty
+   local AUXENVFILENAME  # usually empty
 
-   TRACE="$1"
+   AUXENVFILENAME="$1"
    shift
 
-   #10
+   #11
    local NO_MOTD  # either YES or usually empty
 
    NO_MOTD="$1"

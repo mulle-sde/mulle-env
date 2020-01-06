@@ -600,7 +600,7 @@ env_tool2_compile()
          1)
          ;;
 
-         2)
+         4)
             touch "${MULLE_ENV_HOST_VAR_DIR}/tool"
             return 0
          ;;
@@ -1212,7 +1212,7 @@ env_tool2_status()
       1)
          ${logger} "Compile"
       ;;
-      2)
+      4)
          ${logger} "Empty"
       ;;
    esac

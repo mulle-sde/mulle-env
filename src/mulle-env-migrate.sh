@@ -72,7 +72,7 @@ env_straight_convert_directory_if_present()
    local subdir
    local name
 
-   [ ! -d "${directory}" ] && return 2
+   [ ! -d "${directory}" ] && return 4
 
    r_basename "${directory}"
    subdir="${RVAL}"
@@ -91,7 +91,7 @@ env_convert_directory_if_present()
    local srcdir="$1"
    local dstdir="$2"
 
-   [ ! -d "${srcdir}" ] && return 2
+   [ ! -d "${srcdir}" ] && return 4
 
    env_move_directory "${srcdir}" "${dstdir}"
 }
@@ -104,7 +104,7 @@ env_rename_file_if_present()
    local srcfile="$1"
    local dstfile="$2"
 
-   [ ! -f "${srcfile}" ] && return 2
+   [ ! -f "${srcfile}" ] && return 4
 
    r_mkdir_parent_if_missing "${dstfile}"
    exekutor mv -f "${srcfile}" "${dstfile}"
@@ -123,7 +123,7 @@ env_migrate_from_v1_to_v2()
 
    if [ -d ".mulle/share/env" ]
    then
-      log_warning "This projects seems to be migrated already"
+      log_warning "This project seems to have been migrated already"
    fi
 
    MV="mv"
@@ -280,4 +280,6 @@ env_migrate()
    then
       env_migrate_from_v2_0_to_v2_2
    fi
+
+   env_upgrade_plugin "${flavor}" "${oldversion}" "${version}"
 }

@@ -1,0 +1,81 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+   local vardir
+
+   directory="`make_tmp_directory`" || exit 1
+   directory="${directory:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   local expect
+   local result
+   local cmdline
+
+   expect="a ${directory} b"
+   cmdline="echo \"a \${MULLE_VIRTUAL_ROOT} b\""
+   result="`run_mulle_env -c "${cmdline}" `" || exit 1
+   if [ "${expect}" != "${result}" ]
+   then
+      fail "#1: Unexpected -c failure (\"${result}\" vs. \"${expect}\")"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   expect="a  \${MULLE_VIRTUAL_ROOT}  b"
+   cmdline='echo
+a
+
+${MULLE_VIRTUAL_ROOT}
+
+b'
+   result="`run_mulle_env -C "${cmdline}" `" || exit 1
+   if [ "${expect}" != "${result}" ]
+   then
+      fail "#2: Unexpected -C failure (\"${result}\" vs. \"${expect}\")"
+   fi
+
+   log_verbose "----- #2 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
+

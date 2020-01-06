@@ -5,19 +5,42 @@
 ![Last version](https://img.shields.io/github/tag/mulle-sde/mulle-env.svg)
 
 **mulle-env** provides a virtual environment as an interactive bash shell.
-Developing inside the mulle-env shell protects you from the following
+Developing inside the virtual environment protects you from the following
 common mistakes:
 
 * inadvertant reliance on non-standard tools
-* reproducability problems due to non-standard environment variables
+* reproducability problems due to personal or non-standard environment variables
 
 With **mulle-env** you can easily manage
 
 * the command line tools available in the virtual environment
-* additional virtual environment variables with multiple scopes, like on a per-user or per-host basis.
+* additional environment variables with multiple scopes, like on a per-user or per-host basis.
 
-Therefore any directory can become a self contained virtual environment with
-mulle-env.
+You can turn any directory into a self contained virtual environment.
+`mulle-env init` will create a `.mulle` folder to hold all permanent and
+temporary data. Remove that folder and the virtual environment is gone.
+
+```
+$ mulle-env init -d foo
+Enter the environment:
+   mulle-env "foo"
+$ tree -a foo
+foo
+└── .mulle
+    └── share
+        └── env
+            ├── environment.sh
+            ├── include-environment.sh
+            ├── libexec
+            │   └── mulle-env-bash-completion.sh
+            ├── style
+            ├── tool-plugin
+            └── version
+```
+
+Customize your environment content by creating a `.mulle/etc/env` folder and
+then store your modifications in it. This allows future versions of `mulle-env`
+to upgrade files in `.mulle/share` without losing your edits.
 
 
 Commands            | Description
@@ -95,6 +118,8 @@ And this is what happens:
 
 ![dox](dox/mulle-env-overview.png)
 
+Temporary and host-specific data is kept in `var`. User edits in `etc`.
+`mulle-env` installs its content in `share` (and write protects it).
 
 ```
 $ mulle-env project
@@ -131,22 +156,22 @@ $ mulle-env -c 'printf "%s\n" "${PATH}"'
 
 ## Styles
 
-A style is mix of a tool-style and an environment style of the form
+A style is mix of a tool-style and an env-style of the form
 `<tool>/<env>`.
 
-The env style determines the filtering of the environment variables.
+The env-style determines the filtering of the environment variables.
 
-The tool style determines the change of the PATH variables,
-in the environment styles `tight`, `relax`, `inherit`.
+The tool-style determines the content of the PATH variable, in the environment
+styles `tight`, `relax`, `inherit`.
 
 > Toolstyles can be augmented with plugins. See `mulle-env toolstyles` for
 > what's available.
 
-Tool Style  | Descripton
-------------|--------------------------
-`none`      | No default commands available.
-`minimal`   | PATH with a minimal `/bin` like set of tools like `ls` or `chmod`
-`developer` | PATH with a a set of common unix tools like `awk` or `man` in addition to `minimal`
+Tool Style        | Descripton
+------------------|--------------------------
+`none`            | No default commands available.
+`minimal`         | PATH with a minimal `/bin` like set of tools like `ls` or `chmod`
+`developer`       | PATH with a a set of common unix tools like `awk` or `man` in addition to `minimal`
 
 
 Environment Style | Description
@@ -155,7 +180,7 @@ Environment Style | Description
 `relax`           | Inherit some environment environment variables (e.g. SSH_TTY)
 `restrict`        | In addition to `relax`  + all /bin and /usr/bin tools
 `inherit`         | The environment is restricted but tool style is ignored and the original PATH is unchanged.
-`wild`            | The environment unchanged and the tool style is ignored.
+`wild`            | The user environment remains unchanged and the tool style is ignored.
 
 
 ## Enviroment
@@ -173,7 +198,7 @@ mulle-env
 exit
 ```
 
-#### Run any command
+#### Run any command (from the outside)
 
 ```
 mulle-env -c ls
@@ -197,6 +222,8 @@ mulle-env upgrade
 
 ## Manage tools
 
+Tools are your standard unix tools, executables like `cc`, `ls` or `make`.
+
 List all tools
 
 ```
@@ -219,13 +246,12 @@ mulle-env tool remove git
 ## Manage environment variables
 
 
-There are multiple environment variable domains, that override each other
-in top (weakest) to bottom (strongest) fashion. User values should not be
-manipulated by tools, where as non-user values will lose changes on
-later mulle-env upgrades.
+There are multiple environment variable scopes, that override each other
+in top (weakest) to bottom (strongest) fashion. Non-user values will lose
+changes on mulle-env upgrades, so don't write into those scopes.
 
 
-Domain        | User Value | Description
+Scope         | User Value | Description
 --------------|------------|----------------------------------
 `plugin`      | NO         | Values set by a mulle-env plugin
 `global`      | YES        | Global user values
@@ -243,7 +269,7 @@ mulle-env environment list
 Set an environment variable
 
 ```
-mulle-env environment --global set FOO "whatever"
+mulle-env environment --scope global set FOO "whatever"
 ```
 
 Get an environment variable
@@ -273,18 +299,23 @@ Use `mulle-env --style none/restrict init` when initalizing your environment.
 Use `mulle-env -f init` to overwrite a previous environment.
 
 
+#### Remove an environment
+
+Use `sudo rm -rf .mulle` to remove everything, including write protected
+directories.
+
 #### Specify a global list of tools
 
 Tools that you always require can be specified in your home directory as
 `~/.config/mulle-env/tool`. These will be installed in addition to those found
-in `.mulle/etc/env/tool`.
+in `.mulle/etc/env/tool`. Or use the `tool` command.
 
 
 #### Specify optionals tools
 
 Tools that are nice to have, but aren't required can be placed into
 `.mulle/etc/env/optionaltool`. A non-required tool does not prevent a subshell
-from running.
+from running. Or use the `tool` command.
 
 
 #### Specify platform specific tools
@@ -316,3 +347,8 @@ then
 fi
 EOF
 ```
+
+#### Write your own plugin
+
+If you see that you are adding always the same tools and environment variables
+into a new project, it may be time to create your own plugin!

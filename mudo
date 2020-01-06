@@ -41,6 +41,12 @@ fi
 
 shift
 
+# get mulle-env paths into this shell script environment like f.i.:
+#
+#    MULLE_ENV_VAR_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/var/walitza/env'
+#    MULLE_ENV_ETC_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/etc/env'
+#    MULLE_ENV_SHARE_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/share/env'
+#
 eval `mulle-env -N mulle-tool-env env` || exit 1
 
 filename="${MULLE_ENV_VAR_DIR}/old-environment"
@@ -54,7 +60,8 @@ fi
 #
 # does not work with builtins like `command -v ps`
 #
-args=
+quote="'"
+argv=
 for arg in "$@"
 do
    arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
@@ -63,8 +70,8 @@ done
 
 if [ -z "${MULLE_OLDPATH}" ]
 then
-   eval exec env -i - "${environment}" "${args}"
+   eval exec env -i - "${environment}" "${argv}"
 else
-   PATH="${MULLE_OLDPATH}" eval exec env -i - "${environment}" "${args}"
+   PATH="${MULLE_OLDPATH}" eval exec env -i - "${environment}" "${argv}"
 fi
 

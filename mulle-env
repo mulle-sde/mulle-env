@@ -31,23 +31,24 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.5.1"
+MULLE_ENV_VERSION="2.6.0"
 
 #
 # The default for first time mulle-env
 #
 MULLE_ENV_DEFAULT_STYLE="developer/relax"
 ENVFILENAME="environment.sh"
-
+AUXENVFILENAME=
 
 emit_options()
 {
    cat <<EOF
-   -C <cmd>      : like -c, but command and each argument are separated by LF
+   -C <cmd>      : as -c but no shell expansion, command/args are LF separated
    -c <cmd>      : shell command to execute instead of interactive subshell
    -d <dir>      : specify directory
    -DKEY=VALUE   : define one-time environment variable
    -ef <file>    : use a different environment file (${ENVFILENAME})
+   -aef <file>   : add another environment file to an interactive subshell
    -N            : search for nearest enclosing environment
    -P            : search for parent enivronment
    -p <path>     : specify an additional plugin search path
@@ -76,9 +77,12 @@ Usage:
    ${MULLE_USAGE_NAME} [options] [commands] [path-or-url]
 
    Create a virtual environment with a custom set of environment variables
-   and tools for use in a subshell. If the directory at "path-or-url" does not
-   exist and the path looks like an URL, then ${MULLE_USAGE_NAME} will attempt
-   to \`git clone\` that URL.
+   and tools for use in a subshell. Use the -ef option to specify an
+   environment file or let mulle-env search for a default environment.sh
+   file in your local .mulle/etc/env ot .mulle/share/env folder.
+
+   If the directory at "path-or-url" does not exist and the path looks like
+   an URL, then ${MULLE_USAGE_NAME} will attempt to \`git clone\` that URL.
 
    Use the -c or -C options to run commands in the virtual environment
    without entering an interactive subshell.
@@ -173,7 +177,7 @@ r_find_best_environment()
          log_debug "Found \"${searchfile}"
 
          case "${searchmode}" in
-            NEAREST)
+            NEAREST|NONE)
                RVAL="${directory}"
                return
             ;;
@@ -208,7 +212,13 @@ r_find_best_environment()
          best="${directory}"
       else
          log_debug "Did not find \"${searchfile}\""
+         case "${searchmode}" in
+            NONE)
+               RVAL=""
+               return 1
+         esac
       fi
+
 
       r_dirname "${directory}"
       directory="${RVAL}"
@@ -256,6 +266,7 @@ _setup_environment()
    if [ "${setroot}" = 'YES' ]
    then
       MULLE_VIRTUAL_ROOT="${physicaldir}"
+      log_fluff "mulle-env sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
    fi
 
    #
@@ -270,7 +281,9 @@ _setup_environment()
          # Symlinks still have other problems: https://github.com/microsoft/WSL/issues/3999
          # We use a quiet place in HOME.
          #
-         hash="`shasum -a 256 -b <<< "${MULLE_VIRTUAL_ROOT}" | cut -c1-8`"
+         # Use physicaldir for shasum calc
+         #
+         hash="`shasum -a 256 -b <<< "${physicaldir}" | cut -c1-8`"
          MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}-${hash}.var/${MULLE_HOSTNAME}/env"
          MULLE_ENV_VAR_DIR="${HOME}/.mulle/${directory##*/}.var/.env"
       ;;
@@ -304,12 +317,13 @@ _default_setup_environment()
    local setroot="${3:-YES}"
 
    r_find_best_environment "${directory}" "${searchmode}"
+
+   [ -z "${RVAL}" ] && fail "No suitable environment found for ${RVAL} (init it first)"
+   [ ! -d "${RVAL}" ] && fail "${RVAL} does not exist (init it first)"
+
    directory="${RVAL}"
 
    log_fluff "Environment directory determined to be \"${directory}\""
-
-   [ ! -d "${directory}" ] && fail "${directory} does not exist (init it first)"
-
    _setup_environment "${directory}" "${setroot}"
 }
 
@@ -438,7 +452,7 @@ _env_tool2_status()
       then
          return 0
       fi
-      return 2
+      return 4
    fi
 
    return 1
@@ -872,10 +886,38 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
         "'${PATH}'" \
         "'${mode}'" \
         "'none/wild'" \
-        "'${ENVFILENAME}'" \
         "'${TRACE}'" \
+        "'${ENVFILENAME}'" \
+        "'${AUXENVFILENAME}'" \
         "'${NO_MOTD}'" \
         "${OPTION_SHELL_COMMAND}"  # already escaped!
+}
+
+
+_print_env()
+{
+   log_entry "_print_env" "$@"
+
+   local sep
+   local line
+   local key
+   local value
+
+   sep=""
+   while IFS= read line
+   do
+      key="${line%%=*}"
+      if [ ! -z "${key}" ]
+      then
+         # indirection bash feature
+         value="${!key}"
+         if [ ! -z "${value}" ]
+         then
+            printf "${sep}%s=%q" "${key}" "${value}"
+            sep=" "
+         fi
+      fi
+   done < <( env )
 }
 
 
@@ -1130,17 +1172,9 @@ undefined (old mulle-bashfunctions)"
    # remember old environment in "var" as export statements
    # for later use by "mudo -e" with env -i (if required)
    #
-   local sep
-
    log_fluff "Saving current environment into ${vardir}/old-environment"
 
-   sep=""
-   while IFS= read line
-   do
-      printf "${sep}%s=\"%s\"" "${line%%=*}" "${line#*=}"
-      sep=" "
-   done < <( env ) > "${vardir}/old-environment"
-
+   redirect_exekutor "${vardir}/old-environment" _print_env
 
    # home is needed for git
    # otherwise provide a minimal environment, for better reproducability
@@ -1163,8 +1197,9 @@ undefined (old mulle-bashfunctions)"
             "'${runpath}'" \
             "'${mode}'" \
             "'${style}'" \
-            "'${ENVFILENAME}'" \
             "'${TRACE}'" \
+            "'${ENVFILENAME}'" \
+            "'${AUXENVFILENAME}'" \
             "'${NO_MOTD}'" \
             "${OPTION_SHELL_COMMAND}" # already escaped!
 
@@ -1301,7 +1336,8 @@ main()
             [ $# -eq 1 ] && usage "Missing argument to $1"
             shift
 
-            printf -v OPTION_SHELL_COMMAND "%q" "$1"
+            OPTION_SHELL_COMMAND="$1"
+            printf -v OPTION_SHELL_COMMAND "%q" "${OPTION_SHELL_COMMAND}"
          ;;
 
          -C)
@@ -1312,20 +1348,20 @@ main()
 
             local arg
 
-            set -o noglob; IFS=$'\n'
-            for arg in $1
+            #
+            # the only way to preserve empty lines properly is read AFAIK
+            # -C doesn't expand contents
+            #
+            while read -r arg
             do
-               if [ ! -z "${arg}" ]
+               printf -v arg "%q" "${arg}"
+               if [ -z "${OPTION_SHELL_COMMAND}" ]
                then
-                  if [ -z "${OPTION_SHELL_COMMAND}" ]
-                  then
-                     OPTION_SHELL_COMMAND="'${arg}'"
-                  else
-                     OPTION_SHELL_COMMAND="${OPTION_SHELL_COMMAND} '${arg}'"
-                  fi
+                  OPTION_SHELL_COMMAND="${arg}"
+               else
+                  OPTION_SHELL_COMMAND="${OPTION_SHELL_COMMAND} ${arg}"
                fi
-            done
-            IFS="${DEFAULT_IFS}"; set +o noglob
+            done <<< "$1"
 
             printf -v OPTION_SHELL_COMMAND "%q" "${OPTION_SHELL_COMMAND}"
          ;;
@@ -1363,6 +1399,13 @@ main()
             shift
 
             ENVFILENAME="$1"
+         ;;
+
+         -aef|--aux-environment-file)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            AUXENVFILENAME="$1"
          ;;
 
          --keep-tmp)
@@ -1440,6 +1483,18 @@ main()
       clean)
          clean "$@"
          return $?
+      ;;
+
+      local)
+         # just return a status
+         if r_find_best_environment "${PWD}" "NONE"
+         then
+            log_info "YES"
+            return 0
+         fi
+
+         log_warning "NO"
+         return 1
       ;;
 
       environment)
@@ -1748,21 +1803,13 @@ _init()
    fi
 
    set -o pipefail
-}
 
+   call_main "${MULLE_ENV_FLAGS}" "$@"
+}
 
 _init "$@"
 
-quote="'"
-args=""
-for arg in "$@"
-do
-   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
-   args="${args} '${arg}'"
-done
-
-unset quote
-unset arg
-
-eval main "${MULLE_ENV_FLAGS}" "${args}"
-
+###
+### INIT
+###
+########

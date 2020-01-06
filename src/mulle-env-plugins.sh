@@ -103,6 +103,7 @@ _env_all_plugin_names()
    [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
 
    local searchpath
+
    r_plugin_searchpath
    searchpath="${RVAL}"
 
@@ -172,6 +173,7 @@ env_load_plugin()
    local flavor="$1"
 
    local searchpath
+
    r_plugin_searchpath
    searchpath="${RVAL}"
 
@@ -183,3 +185,26 @@ env_load_plugin()
 
    fail "No plugin \"${flavor}\" found in \"${searchpath}\""
 }
+
+
+#
+# assumes plugin has already been loaded
+#
+env_upgrade_plugin()
+{
+   log_entry "env_upgrade_plugin" "$@"
+
+   local flavor="$1"
+   local oldversion="$2"
+   local version="$3"
+
+   local functionname
+
+   functionname="env_${flavor}_migrate"
+   if [ "`type -t "${functionname}"`" = "function" ]
+   then
+      log_fluff "Migrating ${flavor} plugin"
+      rexekutor "${functionname}" "${oldversion}" "${version}"
+   fi
+}
+
