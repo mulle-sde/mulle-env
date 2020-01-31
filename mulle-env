@@ -670,18 +670,18 @@ __fail_get_saved_style_flavor()
    local userdir
 
    r_dirname "${directory}"  # ../env
-   r_dirname "${directory}"  # ../share
-   r_dirname "${directory}"  # ../.mulle
+   r_dirname "${RVAL}"       # ../share
+   r_dirname "${RVAL}"       # ../.mulle
    userdir="${RVAL}"
 
    if [ -z "${fallback}" ]
    then
       fail "No properly setup environment found in candidate project \
-directory \"${userdir}\" as \"${directory}\" contains no \
+directory \"${userdir#${MULLE_USER_PWD}/}\" as \"${directory#${MULLE_USER_PWD}/}\" contains no \
 style information."
    else
       fail "No properly setup environment found in candidate project \
-directory \"${userdir}\" as \"${directory}\" or \"${fallback}\" contain no \
+directory \"${userdir#${MULLE_USER_PWD}/}\" as \"${directory#${MULLE_USER_PWD}/}\" or \"${fallback#${MULLE_USER_PWD}/}\" contain no \
 style information."
    fi
 }
@@ -698,11 +698,11 @@ __get_saved_style_flavor()
 
    # make foo:bar foo/bar for backwards compatibility
    filename="${directory}/style.${LOGNAME:-all}"
-   style="`sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
+   style="`rexekutor sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
    if [ -z "${style}" ]
    then
       filename="${fallback}/style"
-      style="`sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
+      style="`rexekutor sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
       if [ -z "${style}" ]
       then
          log_debug "No previous style found ${filename}"

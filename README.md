@@ -42,6 +42,9 @@ Customize your environment content by creating a `.mulle/etc/env` folder and
 then store your modifications in it. This allows future versions of `mulle-env`
 to upgrade files in `.mulle/share` without losing your edits.
 
+Another benefit of the virtual environment is a per-project command shell
+history.
+
 
 Commands            | Description
 --------------------|--------------------------------
