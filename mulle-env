@@ -131,10 +131,10 @@ Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
    developer     : a common set of tools (like cd, ls, awk, man) (default)
 
 Env-style:
-   tight         : all environment variables are user defined
-   restrict      : none + inherit some environment (e.g. SSH_TTY) (default)
-   relax         : restrict + all /bin and /usr/bin tools.
-   inherit       : relax + all PATH tools
+   tight         : all environment variables must be user defined
+   restrict      : inherit some environment (e.g. SSH_TTY) (default)
+   relax         : restrict plus all /bin and /usr/bin tools.
+   inherit       : relax plus all tools in PATH
    wild          : no restrictions
 
 EOF
@@ -177,12 +177,7 @@ r_find_best_environment()
          log_debug "Found \"${searchfile}"
 
          case "${searchmode}" in
-            NEAREST|NONE)
-               RVAL="${directory}"
-               return
-            ;;
-
-            PARENT)
+            'PARENT')
                if [ ! -z "${best}" ]
                then
                   RVAL="${directory}"
@@ -190,15 +185,20 @@ r_find_best_environment()
                fi
             ;;
 
-            SUPERIOR)
+            'SUPERIOR')
                log_debug "Keep looking past \"${directory}\""
             ;;
 
-            DEFAULT)
+            'NONE'|'NEAREST')
+               RVAL="${directory}"
+               return
+            ;;
+
+            'DEFAULT')
                if [ -f "${directory}/.mulle/share/env/defer" -o \
                     -f "${directory}/.mulle/etc/env/defer" ]
                then
-                  log_debug "\"${directory}\" is defering with tweak \"defer\""
+                  log_verbose "\"${directory#${MULLE_USER_PWD}/}\" is defering with tweak \"defer\""
                else
                   RVAL="${directory}"
                   return
@@ -1431,16 +1431,24 @@ main()
             OPTION_STYLE="$1"
          ;;
 
-         -N|--search-nearest)  # no-search is historical
+         -N|--search-nearest)
             OPTION_SEARCHMODE='NEAREST'
          ;;
 
-         -S|--search-superior)
-            OPTION_SEARCHMODE='SUPERIOR'
+         --search-default)
+            OPTION_SEARCHMODE='DEFAULT'
+         ;;
+
+         --search-none)
+            OPTION_SEARCHMODE='NONE'
          ;;
 
          -P|--search-parent)
             OPTION_SEARCHMODE='PARENT'
+         ;;
+
+         -S|--search-superior)
+            OPTION_SEARCHMODE='SUPERIOR'
          ;;
 
          --uppercase-only)
@@ -1483,18 +1491,6 @@ main()
       clean)
          clean "$@"
          return $?
-      ;;
-
-      local)
-         # just return a status
-         if r_find_best_environment "${PWD}" "NONE"
-         then
-            log_info "YES"
-            return 0
-         fi
-
-         log_warning "NO"
-         return 1
       ;;
 
       environment)
@@ -1540,6 +1536,65 @@ wild"
          return
       ;;
 
+      local)
+         # just return a status (not sure what this command is used for..)
+         # but NONE seems important. Use project-dir for most cases
+         if r_find_best_environment "${PWD}" "NONE"
+         then
+            log_info "YES"
+            return 0
+         fi
+
+         log_warning "NO"
+         return 1
+      ;;
+
+
+      mulle-tool-env)
+         [ $# -eq 0 ] && usage "Missing argument to \"${arg}\""
+         [ $# -ne 1 ] && usage "Superflous arguments to \"${arg}\""
+
+         # should possibly create output like ssh-agent
+         # so tools get MULLE_MATCH_ETC_DIR
+         # so tools get MULLE_MATCH_VAR_DIR
+         # so tools get MULLE_MATCH_SHARE_DIR
+         # and they can source it
+         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+
+         local upper
+
+         r_uppercase "$1"
+         upper="${RVAL}"
+
+         r_filepath_concat "${MULLE_ENV_HOST_VAR_DIR%/*}" "${1}"
+         if [ ! -z "${RVAL}" ]
+         then
+            printf "MULLE_${upper}_VAR_DIR='%s'\n" "${RVAL}"
+         fi
+
+         r_filepath_concat "${MULLE_ENV_ETC_DIR%/*}" "${1}"
+         if [ ! -z "${RVAL}" ]
+         then
+            printf "MULLE_${upper}_ETC_DIR='%s'\n" "${RVAL}"
+         fi
+         r_filepath_concat "${MULLE_ENV_SHARE_DIR%/*}" "${1}"
+         if [ ! -z "${RVAL}" ]
+         then
+            printf "MULLE_${upper}_SHARE_DIR='%s'\n" "${RVAL}"
+         fi
+         return $?
+      ;;
+
+      project-dir)
+         r_find_best_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         if [ -z "${RVAL}" ]
+         then
+            return 1
+         fi
+         printf "%s\n" "${RVAL}"
+         return 0
+      ;;
+
       reinit)
          local style
          local flavor
@@ -1578,6 +1633,24 @@ wild"
 
       reset)
          reset "$@"
+         return $?
+      ;;
+
+      searchpath)
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+
+         log_info "Plugin searchpath"
+
+         r_plugin_searchpath
+         printf "%s\n" "${RVAL}"
+         return
+      ;;
+
+      show)
+         log_verbose "Use --style <toolstyle>/<envstyle>"
+
+         main toolstyles
+         main envstyles
          return $?
       ;;
 
@@ -1625,15 +1698,6 @@ ${C_INFO}Hint: Use --style to switch styles."
          return 0
       ;;
 
-      searchpath)
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
-
-         log_info "Plugin searchpath"
-
-         r_plugin_searchpath
-         printf "%s\n" "${RVAL}"
-         return
-      ;;
 
       subenv)
          if [ -z "${MULLE_VIRTUAL_ROOT}" ]
@@ -1664,14 +1728,6 @@ ${C_INFO}Hint: Use --style to switch styles."
 
          log_info "Toolstyle"
          env_all_plugin_names
-         return $?
-      ;;
-
-      show)
-         log_verbose "Use --style <toolstyle>/<envstyle>"
-
-         main toolstyles
-         main envstyles
          return $?
       ;;
 
@@ -1708,41 +1764,6 @@ ${C_INFO}Hint: Use --style to switch styles."
 
          env_init_main --upgrade --style "${OPTION_STYLE}" "$@" || exit 1
          reset
-         return $?
-      ;;
-
-      mulle-tool-env)
-         [ $# -eq 0 ] && usage "Missing argument to \"${arg}\""
-         [ $# -ne 1 ] && usage "Superflous arguments to \"${arg}\""
-
-         # should possibly create output like ssh-agent
-         # so tools get MULLE_MATCH_ETC_DIR
-         # so tools get MULLE_MATCH_VAR_DIR
-         # so tools get MULLE_MATCH_SHARE_DIR
-         # and they can source it
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
-
-         local upper
-
-         r_uppercase "$1"
-         upper="${RVAL}"
-
-         r_filepath_concat "${MULLE_ENV_HOST_VAR_DIR%/*}" "${1}"
-         if [ ! -z "${RVAL}" ]
-         then
-            printf "MULLE_${upper}_VAR_DIR='%s'\n" "${RVAL}"
-         fi
-
-         r_filepath_concat "${MULLE_ENV_ETC_DIR%/*}" "${1}"
-         if [ ! -z "${RVAL}" ]
-         then
-            printf "MULLE_${upper}_ETC_DIR='%s'\n" "${RVAL}"
-         fi
-         r_filepath_concat "${MULLE_ENV_SHARE_DIR%/*}" "${1}"
-         if [ ! -z "${RVAL}" ]
-         then
-            printf "MULLE_${upper}_SHARE_DIR='%s'\n" "${RVAL}"
-         fi
          return $?
       ;;
 

@@ -50,17 +50,17 @@ Options:
 EOF
 
    cat <<EOF >&2
-Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
-   none          : no additions
-   minimal       : a minimal set of tools (like cd, ls)
-   developer     : a common set of tools (like cd, ls, awk, man) (default)
+Tool-style: (built-in only, see \`mulle-env toolstyles\` for all available)
+   none               : no additions
+   minimal            : a minimal set of tools (like cd, ls)
+   developer          : a common set of tools (like cd, ls, awk, man) (default)
 
 Env-style:
-   tight         : all environment variables are user defined
-   relax         : none + inherit some environment (e.g. SSH_TTY) (default)
-   restrict      : relax + all /bin and /usr/bin tools
-   inherit       : restrict + all PATH tools
-   wild          : no restrictions
+   tight              : all environment variables must be user defined
+   restrict           : inherit some environment (like SSH_TTY) (default)
+   relax              : as relax plus all /bin and /usr/bin tools
+   inherit            : as restrict plus all tools in PATH
+   wild               : no restrictions
 EOF
    exit 1
 }

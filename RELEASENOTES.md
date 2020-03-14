@@ -1,3 +1,15 @@
+## 2.6.0
+
+* improved setting of comment text for `environment set`
+* new command "local"
+* enable per-project bash history
+* fix mudo quoting
+* add -aef option to add temporary environment
+* new command "local"
+* use 4 instead of 2 as error return code to distinguish from shell error code 2
+* -ef can now accept an absolute path, which will bypass searches in .mulle
+
+
 ### 2.5.1
 
 * remove --no-search from flags

@@ -70,9 +70,11 @@ Options:
    -h                : show this usage
    --global          : scope for general environments variables
    --host            : narrow scope to this host only ($MULLE_HOSTNAME)
+   --hostname-<name> : host with name
    --os              : narrow scope to this operating system only ($MULLE_UNAME)
    --scope <name>    : use an arbitrarily named scope
    --user            : narrow scope to this user only ($USER)
+   --username-<name> : user with name
 
 Commands:
 EOF
@@ -135,8 +137,8 @@ Example:
    ${MULLE_USAGE_NAME} environment --global set FOO "A value"
 
 Options:
-   --append           : add value to existing values (using seperator :)
-   --prepend          : prepent value to existing values (using seperator :)
+   --append           : add value to existing values (using separator :)
+   --prepend          : prepent value to existing values (using separator :)
    --separator <sep>  : sepecify custom separator for --append
 EOF
    exit 1
@@ -374,12 +376,25 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
       fi
    fi
 
-   if [ -z "${comment}" ]
-   then
-      comment="#
+   case "${comment}" in
+      '#')
+         comment="#
+${comment}
+#"
+      ;;
+
+      "")
+         comment="#
 #
 #"
-   fi
+      ;;
+
+      *)
+         comment="#
+# ${comment}
+#"
+      ;;
+   esac
 
    if [ -z "${value}" -a "${OPTION_ADD_EMPTY}" = 'NO' ]
    then
@@ -459,7 +474,7 @@ env_environment_set_main()
             OPTION_ADD='PREPEND'
          ;;
 
-         -s|--separator)
+         -s|--separator|--seperator)
             [ "$#" -eq 1 ] && env_environment_set_usage "Missing argument to \"$1\""
             shift
 
@@ -556,10 +571,19 @@ env_environment_set_main()
          then
             log_warning "Adding unknown scope \"${scope}\" to auxscope"
 
-            filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-            redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" printf "%s\n" "${scope}"
+            case "${scope}" in
+               host-*|user-*)
+                  RVAL="e"
+               ;;
 
-            RVAL="s" # auxscope are always share
+               *)
+                  RVAL="s" # auxscope default always share, why ???
+               ;;
+            esac
+
+            filename="${MULLE_ENV_SHARE_DIR}/auxscope"
+            redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" \
+               printf "%s:%s\n" "${RVAL}" "${scope}"
          else
             fail "Unknown scope \"${scope}\""
          fi
@@ -728,11 +752,19 @@ _env_file_defines_key()
    local filename="$1"
    local key="$2"
 
-   local grep_escaped_pattern
+   local rval
 
    r_escaped_grep_pattern "${key}"
-   grep_escaped_pattern="${RVAL}"
-   rexekutor egrep -q -s "^ *export *${grep_escaped_pattern}=" "${filename}"
+   rexekutor egrep -q -s "^ *export *${RVAL}=" "${filename}"
+   rval=$?
+
+   if [ $rval -eq 0 ]
+   then
+      log_debug "${key} exists in \"${filename#${MULLE_USER_PWD}/}\""
+   else
+      log_debug "${key} does not exist in \"${filename#${MULLE_USER_PWD}/}\""
+   fi
+   return $rval
 }
 
 
@@ -822,14 +854,17 @@ r_get_auxscopes()
       RVAL=
       return 1
    fi
+
    # eval it to resolve USER and so on
    local tmp
    local aux_scope
 
    tmp="`rexekutor egrep -v '^#' "${auxscopefile}"`"
-   log_debug "aux_scopes: ${tmp}"
+   log_debug "auxscopes: ${tmp}"
 
    RVAL=
+
+   local evaled_aux_scope
 
    set -f; IFS=$'\n'
    for aux_scope in ${tmp}
@@ -838,8 +873,16 @@ r_get_auxscopes()
 
       if [ ! -z "${aux_scope}" ]
       then
-         aux_scope="`eval "echo \"${aux_scope}\"" | sed 's/^/s:/'`"
-         r_add_line "${RVAL}" "${aux_scope}"
+         eval printf -v evaled_aux_scope "%s" "${aux_scope}"
+         case "${evaled_aux_scope}" in
+            s:*|e:*)
+            ;;
+
+            *) # backwards compatibility
+               evaled_aux_scope="e:${evaled_aux_scope}"
+            ;;
+         esac
+         r_add_line "${RVAL}" "${evaled_aux_scope}"
       fi
    done
    IFS="${DEFAULT_IFS}"; set +f
@@ -960,6 +1003,19 @@ r_get_existing_scope_files()
       shift
    done
 
+   local scope
+
+   scope="$1"
+
+   case "${scope}" in
+      ""|*:*|DEFAULT)
+      ;;
+
+      *)
+         scope="*:${scope}"
+      ;;
+   esac
+
    local scopes
 
    r_get_scopes
@@ -981,10 +1037,19 @@ r_get_existing_scope_files()
    do
       IFS="${DEFAULT_IFS}"; set +f
 
+      case "${i}" in
+         *:*)
+         ;;
+
+         *)
+            i="*:${i}"
+         ;;
+      esac
+
       scopename="${i:2}"
       if [ "${skipcheck}" = 'NO' -a \
            "${scope}" != "DEFAULT" -a \
-           "${scopename}" != "${scope}" ]
+           "${scopename}" != "${scope:2}" ]
       then
          continue
       fi
@@ -992,12 +1057,20 @@ r_get_existing_scope_files()
       filename=
       skipcheck="${OPTION_INFERIORS}"
       case "${i}" in
+         's:'*)
+            filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
+         ;;
+
          'e:'*)
             filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
          ;;
 
-         's:'*)
-            filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
+         '*:'*)
+            filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
+            if [ ! -f "${filename}" ]
+            then
+               filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
+            fi
          ;;
       esac
 
@@ -1148,7 +1221,7 @@ remove_environmentfile_if_empty()
 
    local contents
 
-   contents="`egrep -v '^#' "${filename}"   | sed '/^[ ]*$/d'`"
+   contents="`egrep -v '^#' "${filename}" | sed '/^[ ]*$/d'`"
    if [ -z "${contents}" ]
    then
       remove_file_if_present "${filename}"
@@ -1372,9 +1445,10 @@ _env_environment_list()
 {
    log_entry "_env_environment_list" "$@"
 
-   local scopetype="$2"
+   local scopetype="$1"; shift
 
    local scope
+
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
@@ -1409,6 +1483,8 @@ _env_environment_list()
 _env_environment_eval_list()
 {
    log_entry "_env_environment_eval_list" "$@"
+
+   shift
 
    local cmdline
 
@@ -1562,8 +1638,8 @@ env_environment_list_main()
          _env_environment_combined_list_main "merge_environment_text" "$@"
       ;;
 
-      include)
-         "${lister}" "${MULLE_ENV_SHARE_DIR}/include-environment.sh"
+      "include")
+         "${lister}" "" "${MULLE_ENV_SHARE_DIR}/include-environment.sh"
       ;;
 
       *)
@@ -1586,11 +1662,20 @@ env_environment_list_main()
 
             case "${i}" in
                'e:'*)
-                  "${lister}" "${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh" "${i:0:1}"
+                  "${lister}" "${i:0:1}" "${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
                ;;
 
                's:'*)
-                 "${lister}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh" "${i:0:1}"
+                 "${lister}" "${i:0:1}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
+               ;;
+
+               '*':*)
+                  if [ -f "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh" ]
+                  then
+                    "${lister}" "${i:0:1}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
+                  else
+                     "${lister}" "${i:0:1}" "${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
+                  fi
                ;;
             esac
          done
@@ -1812,6 +1897,10 @@ env_environment_main()
             OPTION_SCOPE="host-${MULLE_HOSTNAME}"
          ;;
 
+         --username-*)
+            OPTION_SCOPE="user-${1:11}"
+         ;;
+
          --user)
             assert_default_scope
 
@@ -1819,6 +1908,7 @@ env_environment_main()
 
             OPTION_SCOPE="user-${USER}"
          ;;
+
 
          --os)
             assert_default_scope

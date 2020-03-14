@@ -96,15 +96,15 @@ LOGNAME or SSH_AUTH_SOCK, so that an interactive shell keeps functioning like
 one would expect to. You can see the effect for yourself with:
 
 ```
-mulle-sde init -d /tmp/xxx
-mulle-sde -d /tmp/xxx -c env
+mulle-env init -d /tmp/xxx
+mulle-env -d /tmp/xxx -c env
 ```
 
 This environment is modified by reading a profile file
 `.mulle/share/env/environment.sh`. With this file new environment variables,
 especially PATH and aliases can be defined. Usually you do not manually edit
-this files, but use mulle-env commands and mulle-env plugins to customize the
-environment to your liking.
+this files. You typically use mulle-env commands and mulle-env plugins to
+customize the environment to your liking.
 
 
 ## Prepare a directory to use mulle-env
@@ -180,8 +180,8 @@ Tool Style        | Descripton
 Environment Style | Description
 ------------------|--------------------------
 `tight`           | All environment variables must be defined via `mulle-env`
-`relax`           | Inherit some environment environment variables (e.g. SSH_TTY)
-`restrict`        | In addition to `relax`  + all /bin and /usr/bin tools
+`restrict`        | Inherit some environment environment variables (e.g. SSH_TTY)
+`relax`           | Like `restrict` plus all /bin and /usr/bin tools
 `inherit`         | The environment is restricted but tool style is ignored and the original PATH is unchanged.
 `wild`            | The user environment remains unchanged and the tool style is ignored.
 
@@ -288,70 +288,8 @@ mulle-env environment remove FOO
 ```
 
 
+## Author
 
-## Tips and Tricks
-
-
-#### Add /bin and /usr/bin to your sub-shell PATH
-
-Use `mulle-env --style none/restrict init` when initalizing your environment.
-
-
-#### Reinitialize an environment
-
-Use `mulle-env -f init` to overwrite a previous environment.
-
-
-#### Remove an environment
-
-Use `sudo rm -rf .mulle` to remove everything, including write protected
-directories.
-
-#### Specify a global list of tools
-
-Tools that you always require can be specified in your home directory as
-`~/.config/mulle-env/tool`. These will be installed in addition to those found
-in `.mulle/etc/env/tool`. Or use the `tool` command.
-
-
-#### Specify optionals tools
-
-Tools that are nice to have, but aren't required can be placed into
-`.mulle/etc/env/optionaltool`. A non-required tool does not prevent a subshell
-from running. Or use the `tool` command.
-
-
-#### Specify platform specific tools
-
-If you need some tools only on a certain platform, figure out the platform name
-with `mulle-env uname`. Then use this name (`MULLE_UNAME`) as the extension for
-`~/.config/mulle-env/tool.${MULLE_UNAME}` or
-`.mulle/etc/env/tool.${MULLE_UNAME}`.
-
-Platform specific tool configuration files take precedence over the
-cross-platform ones without the extension.
-
-
-#### Specify personal preferences (like a different shell)
-
-Short of executing `exec zsh` - or whatever the shell flavor du jour is -
-everytime you enter the **mulle-env** subshell, you can add this at the end
-of a `.mulle/etc/env/environment-custom.sh` file:
-
-```
-$ cat <<EOF >> .mulle/etc/env/environment-custom.sh
-if [ "${LOGNAME}" = "moi"]
-then
-   case "${MULLE_SHELL_MODE}" in
-      *INTERACTIVE*)
-         exec /bin/zsh
-      ;;
-   esac
-fi
-EOF
-```
-
-#### Write your own plugin
-
-If you see that you are adding always the same tools and environment variables
-into a new project, it may be time to create your own plugin!
+[Nat!](//www.mulle-kybernetik.com/weblog) for
+[Mulle kybernetiK](//www.mulle-kybernetik.com) and
+[Codeon GmbH](//www.codeon.de)
