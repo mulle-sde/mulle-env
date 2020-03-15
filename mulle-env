@@ -148,8 +148,14 @@ EOF
 
 #
 # start:     starting directory
-# search:    NONE (useless) NEAREST, SUPERIOR, DEFAULT
-# useclimb:
+# search:    NONE (doesn't climb), NEAREST, PARENT, SUPERIOR, DEFAULT
+#
+#            NONE:     does not climb, unhappy if none present at start
+#            NEAREST:  climb up until happy
+#            PARENT:   do NEAREST first, then look for PARENT
+#            SUPERIOR: find highes PARENT
+#            DEFAULT:  NEAREST with added defer for master/minion configuration
+#            AS_IS:    NEAREST with fallback to start
 #
 r_find_best_environment()
 {
@@ -163,9 +169,14 @@ r_find_best_environment()
    local warn
    local searchfile
 
-   best="${start}"
    r_absolutepath "${start}"
    directory="${RVAL}"  # paranoia
+
+   case "${searchmode}" in
+      'AS_IS')
+         best="${start}"
+      ;;
+   esac
 
    warn='NO'
 
@@ -189,7 +200,7 @@ r_find_best_environment()
                log_debug "Keep looking past \"${directory}\""
             ;;
 
-            'NONE'|'NEAREST')
+            'NONE'|'NEAREST'|'AS_IS')
                RVAL="${directory}"
                return
             ;;
@@ -216,9 +227,9 @@ r_find_best_environment()
             NONE)
                RVAL=""
                return 1
+            ;;
          esac
       fi
-
 
       r_dirname "${directory}"
       directory="${RVAL}"
@@ -242,7 +253,7 @@ per environment basis with:
 
    fi
 
-   log_debug "Accept as superior"
+   log_debug "Accept ${best} as superior"
    RVAL="${best}"
 }
 
@@ -315,10 +326,18 @@ _default_setup_environment()
    local directory="${1:-${PWD}}"
    local searchmode="$2"
    local setroot="${3:-YES}"
+   local failonerror="${4:-YES}"
 
    r_find_best_environment "${directory}" "${searchmode}"
+   if [ -z "${RVAL}" ]
+   then
+      if [ "${failonerror}" = 'YES' ]
+      then
+         return 1
+      fi
+      fail "No suitable environment found for ${directory} (init it first)"
+   fi
 
-   [ -z "${RVAL}" ] && fail "No suitable environment found for ${RVAL} (init it first)"
    [ ! -d "${RVAL}" ] && fail "${RVAL} does not exist (init it first)"
 
    directory="${RVAL}"
@@ -1431,6 +1450,10 @@ main()
             OPTION_STYLE="$1"
          ;;
 
+         --search-as-is)
+            OPTION_SEARCHMODE='AS_IS'
+         ;;
+
          -N|--search-nearest)
             OPTION_SEARCHMODE='NEAREST'
          ;;
@@ -1559,7 +1582,11 @@ wild"
          # so tools get MULLE_MATCH_VAR_DIR
          # so tools get MULLE_MATCH_SHARE_DIR
          # and they can source it
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         if ! _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}" 'YES' 'NO'
+         then
+            # silently error
+            return 1
+         fi
 
          local upper
 
