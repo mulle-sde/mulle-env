@@ -70,11 +70,12 @@ Options:
    -h                : show this usage
    --global          : scope for general environments variables
    --host            : narrow scope to this host only ($MULLE_HOSTNAME)
-   --hostname-<name> : host with name
+   --host-<name>     : host with name
    --os              : narrow scope to this operating system only ($MULLE_UNAME)
+   --os-<name>       : os swith name
    --scope <name>    : use an arbitrarily named scope
    --user            : narrow scope to this user only ($USER)
-   --username-<name> : user with name
+   --user-<name>     : user with name
 
 Commands:
 EOF
@@ -585,7 +586,7 @@ env_environment_set_main()
             redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" \
                printf "%s:%s\n" "${RVAL}" "${scope}"
          else
-            fail "Unknown scope \"${scope}\""
+            fail "Unknown scope \"${scope}\" (use -f to create a new one)"
          fi
       fi
       scopeprefix="${RVAL}"
@@ -1887,18 +1888,10 @@ env_environment_main()
             OPTION_SCOPE="${1:2}"
          ;;
 
-         --hostname-*)
-            OPTION_SCOPE="host-${1:11}"
-         ;;
-
-         --hostname|--host)
+         --host)
             assert_default_scope
 
             OPTION_SCOPE="host-${MULLE_HOSTNAME}"
-         ;;
-
-         --username-*)
-            OPTION_SCOPE="user-${1:11}"
          ;;
 
          --user)

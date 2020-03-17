@@ -47,7 +47,7 @@ shift
 #    MULLE_ENV_ETC_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/etc/env'
 #    MULLE_ENV_SHARE_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/share/env'
 #
-eval `mulle-env -N mulle-tool-env env` || exit 1
+eval `mulle-env --search-as-is mulle-tool-env env` || exit 1
 
 filename="${MULLE_ENV_VAR_DIR}/old-environment"
 environment="`cat "${filename}" 2> /dev/null`"
