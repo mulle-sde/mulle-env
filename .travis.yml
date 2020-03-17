@@ -1,7 +1,10 @@
 language: c
 
+os: linux
 dist: xenial
-sudo: required
+
+# ignore -prerelease tags
+if: NOT tag =~ .*-prerelease$
 
 before_install:
    - curl -sS "https://www.mulle-kybernetik.com/dists/debian-admin-pub.asc" | sudo apt-key add -
