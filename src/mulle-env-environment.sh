@@ -378,7 +378,7 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
    fi
 
    case "${comment}" in
-      '#')
+      '#'*)
          comment="#
 ${comment}
 #"
@@ -446,6 +446,7 @@ env_environment_set_main()
    log_entry "env_environment_set_main" "$@"
 
    local scope="$1"; shift
+
    local OPTION_COMMENT_OUT_EMPTY='NO'
    local OPTION_ADD_EMPTY='YES'
    local OPTION_ADD='NO'
@@ -470,6 +471,18 @@ env_environment_set_main()
             OPTION_COMMENT_OUT_EMPTY='YES'
          ;;
 
+         --share)
+            case "${scope}" in
+               'DEFAULT'|'merged'|'include')
+                  fail "You can't set --share with scope ${scope}"
+               ;;
+
+               [es]:*)
+                  scope="${scope:2}"
+               ;;
+            esac
+            scope="s:${scope}"
+         ;;
 
          -p|--prepend)
             OPTION_ADD='PREPEND'
@@ -505,7 +518,7 @@ env_environment_set_main()
       local value="$2"
       local comment="$3"
 
-      [ -z "${key}" ] && env_environment_set_usage "empty key"
+      [ -z "${key}" ] && env_environment_set_usage "empty key for set"
 
       assert_valid_environment_key "${key}"
 
@@ -573,18 +586,36 @@ env_environment_set_main()
             log_warning "Adding unknown scope \"${scope}\" to auxscope"
 
             case "${scope}" in
-               host-*|user-*)
-                  RVAL="e"
+               'DEFAULT'|'include'|'merged'|\
+               *:'DEFAULT'|*:'include'|*:'merged')
+                  fail "Reserved keyword \"${scope}\" used for custom scope"
+               ;;
+
+               s:*)
+                  filename="${MULLE_ENV_SHARE_DIR}/auxscope"
+                  scope="${scope:2}"
+               ;;
+
+               e:*)
+                  filename="${MULLE_ENV_ETC_DIR}/auxscope"
+                  scope="${scope:2}"
+               ;;
+
+               plugin*|extension*|project*)
+                  filename="${MULLE_ENV_SHARE_DIR}/auxscope"
+               ;;
+
+               *:*)
+                  fail "Invalid name \"${scope}\" used for custom scope"
                ;;
 
                *)
-                  RVAL="s" # auxscope default always share, why ???
+                  filename="${MULLE_ENV_ETC_DIR}/auxscope"
                ;;
             esac
 
-            filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-            redirect_append_exekutor "${MULLE_ENV_SHARE_DIR}/auxscope" \
-               printf "%s:%s\n" "${RVAL}" "${scope}"
+            redirect_append_exekutor "${filename}" \
+               printf "%s\n" "${scope}"
          else
             fail "Unknown scope \"${scope}\" (use -f to create a new one)"
          fi
@@ -842,13 +873,13 @@ _env_environment_sed_get()
 }
 
 
-r_get_auxscopes()
+r_read_auxscope_file()
 {
-   log_entry "r_get_auxscopes" "$@"
+   log_entry "r_read_auxscope_file" "$@"
 
-   local auxscopefile
+   local auxscopefile="$1"
+   local prefix="$2"
 
-   auxscopefile="${MULLE_ENV_SHARE_DIR}/auxscope"
    if [ ! -f "${auxscopefile}" ]
    then
       log_debug "No auxscope file found"
@@ -861,7 +892,6 @@ r_get_auxscopes()
    local aux_scope
 
    tmp="`rexekutor egrep -v '^#' "${auxscopefile}"`"
-   log_debug "auxscopes: ${tmp}"
 
    RVAL=
 
@@ -879,8 +909,8 @@ r_get_auxscopes()
             s:*|e:*)
             ;;
 
-            *) # backwards compatibility
-               evaled_aux_scope="e:${evaled_aux_scope}"
+            *)
+               evaled_aux_scope="${prefix}:${evaled_aux_scope}"
             ;;
          esac
          r_add_line "${RVAL}" "${evaled_aux_scope}"
@@ -888,7 +918,23 @@ r_get_auxscopes()
    done
    IFS="${DEFAULT_IFS}"; set +f
 
-   log_debug "aux_scopes: ${RVAL}"
+}
+
+
+r_get_auxscopes()
+{
+   log_entry "r_get_auxscopes" "$@"
+
+   local tmp
+
+   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
+   [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
+
+
+   r_read_auxscope_file "${MULLE_ENV_ETC_DIR}/auxscope" "e"
+   r_add_line "${tmp}" "${RVAL}"
+
+   log_debug "auxscopes: ${RVAL}"
 }
 
 
@@ -900,20 +946,21 @@ r_get_scopes()
    local option_aux="${2:-YES}"
    local option_user="${3:-YES}"
 
-   local user_scopes
-   local env_scopes
+   local etc_scopes
+   local share_scopes
    local aux_scopes
 
    if [ "${option_plugin}" = 'YES' ]
    then
-      env_scopes="s:plugin
+      share_scopes="s:plugin
 s:plugin-os-${MULLE_UNAME}"
    fi
 
    if [ "${option_aux}" = 'YES' ]
    then
-      r_get_auxscopes
-      aux_scopes="${RVAL}"
+      r_read_auxscope_file "${MULLE_ENV_SHARE_DIR}/auxscope" "e"
+      r_add_line "${share_scopes}" "${RVAL}"
+      share_scopes="${RVAL}"
    fi
 
    #
@@ -921,14 +968,20 @@ s:plugin-os-${MULLE_UNAME}"
    #
    if [ "${option_user}" = 'YES' ]
    then
-      user_scopes="e:global
+      etc_scopes="e:global
 e:os-${MULLE_UNAME}
 e:host-${MULLE_HOSTNAME}
 e:user-${USER}"
    fi
 
-   r_add_line "${env_scopes}" "${aux_scopes}"
-   r_add_line "${RVAL}" "${user_scopes}"
+   if [ "${option_aux}" = 'YES' ]
+   then
+      r_read_auxscope_file "${MULLE_ENV_ETC_DIR}/auxscope" "s"
+      r_add_line "${etc_scopes}" "${RVAL}"
+      etc_scopes="${RVAL}"
+   fi
+
+   r_add_line "${share_scopes}" "${etc_scopes}"
 
    log_debug "scopes: ${RVAL}"
 }
@@ -970,7 +1023,7 @@ r_scopeprefix_for_scope()
 
       if [ "${i:2}" = "${scope}" ]
       then
-         RVAL="${i:0:1}"
+         RVAL="${i:0:1}" # continue, get last one (why ?)
       fi
    done
    IFS="${DEFAULT_IFS}"; set +f
@@ -1164,13 +1217,13 @@ env_environment_get_main()
 
    local key="$1"
 
-   [ -z "${key}" ] && fail "empty key"
+   [ -z "${key}" ] && fail "empty key for get"
 
    local filename
    local filenames
 
    case "${scope}" in
-      include)
+      include|s:include)
          ${getter} "${MULLE_ENV_SHARE_DIR}/include-environment.sh" "${key}"
          return
       ;;
@@ -1305,7 +1358,7 @@ env_environment_remove_main()
 
    local key="$1"
 
-   [ -z "${key}" ] && fail "empty key"
+   [ -z "${key}" ] && fail "empty key for remove"
 
    local filename
    local filenames
@@ -1765,6 +1818,9 @@ env_environment_scope_main()
 
    [ "$#" -ne 0 ]  && env_environment_scope_usage "Superflous arguments \"$*\""
 
+   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
+   [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
+
    if [ "${OPTION_EXISTING}" = 'YES' ]
    then
       (
@@ -1864,9 +1920,6 @@ env_environment_main()
 {
    log_entry "env_environment_main" "$@"
 
-   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
-   [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
-
    local OPTION_SCOPE="DEFAULT"
    local infix="_"
    local OPTION_SED_KEY_PREFIX
@@ -1948,10 +2001,12 @@ env_environment_main()
       ;;
 
       get|list|mset|remove|set)
+         _setup_environment
          env_environment_${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
       scope|scopes)
+         _setup_environment
          env_environment_scope_main "$@"
       ;;
 
