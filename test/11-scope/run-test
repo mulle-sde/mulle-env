@@ -70,14 +70,14 @@ user-${LOGNAME}"
    run_mulle_env scope add --priority 0 --etc foo       || exit 1
    run_mulle_env scope add --priority 10000 --share bar || exit 1
 
-   expect="plugin
+   expect="foo
+plugin
 plugin-os-${MULLE_UNAME}
-bar
-foo
 global
 os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
-user-${LOGNAME}"
+user-${LOGNAME}
+bar"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"
 

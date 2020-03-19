@@ -315,11 +315,8 @@ e:user-${USER};100"
    #
    # get them properly sorted
    #
-   etc_scopes="`csv_field_1_by_sorting_numeric_field_2 "${etc_scopes}"`"
-   share_scopes="`csv_field_1_by_sorting_numeric_field_2 "${share_scopes}"`"
-
    r_add_line "${share_scopes}" "${etc_scopes}"
-
+   RVAL="`csv_field_1_by_sorting_numeric_field_2 "${RVAL}"`"
    log_debug "scopes: ${RVAL}"
 }
 
@@ -791,6 +788,10 @@ env_scope_add_main()
             shift
 
             priority="$1"
+            if [ -z "${priority}" -o ! -z "${priority//[0-9]/}" ]
+            then
+               fail "priority must be a number"
+            fi
          ;;
 
          --if-missing)
@@ -844,8 +845,8 @@ env_scope_add_main()
       then
          RVAL=200
       fi
+      priority="${RVAL}"
    fi
-   priority="${RVAL}"
 
    if [ "${protect}" = 'YES' ]
    then

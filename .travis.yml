@@ -14,4 +14,4 @@ before_install:
 
 script:
   - ./bin/installer /tmp
-  - cd test && ./run-test
+  - cd test && ./run-test -v
