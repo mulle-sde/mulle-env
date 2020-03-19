@@ -259,7 +259,7 @@ env_link_mulle_tool()
    fi
 
    mkdir_if_missing "${dstbindir}"
-   mkdir_parent_if_missing "${dstlibdir}" > /dev/null
+   r_mkdir_parent_if_missing "${dstlibdir}"
 
    log_fluff "Creating symlink \"${dstexefile}\""
    exekutor ln -s -f "${exefile}" "${dstexefile}" || exit 1

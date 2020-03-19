@@ -41,7 +41,7 @@ SHOWN_COMMANDS="\
    set               : set an environment variable
    get               : get value of an environment variable
    remove            : remove an environment variable
-   scopes            : list available scopes
+   scope             : add remove and list scopes
 "
 
 HIDDEN_COMMANDS="\
@@ -146,7 +146,6 @@ EOF
 }
 
 
-
 env_environment_remove_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -205,10 +204,10 @@ Usage:
 
    List scopes applicable to this session. The scopes vary by platform, host
    and user. Use \`${MULLE_USAGE_NAME} environment list\` to see the
-   contents of all existing environment scopes with definitions.
+   contents of all applicable environment scopes with definitions.
 
-   The scopes are listed in increasing order of precedence. An entry in
-   the user setting will override a setting in host, os, global etc.
+   The scopes are listed in increasing order of precedence. A later entry in
+   the user setting will override a previous setting in host, os, global et c.
 
 Scopes:
    plugin             : only used by mulle-env plugins
@@ -507,12 +506,18 @@ env_environment_set_main()
       shift
    done
 
+   [ $# -lt 2 -o $# -gt 3 ] && env_environment_set_usage
+
+   # shellcheck source=src/mulle-env-scope.sh
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+
    # unprotect files
    if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${MULLE_ENV_SHARE_DIR}" ]
    then
       exekutor find "${MULLE_ENV_SHARE_DIR}" -type f -exec chmod ug+w {} \;
    fi
 
+   # this shell protects from exits, that leave share unprotected
    (
       local key="$1"
       local value="$2"
@@ -533,7 +538,7 @@ env_environment_set_main()
 
          case "${value}" in
             *:*)
-            fail "${value} contains :, which is not possible for addition \
+               fail "${value} contains ':', which is not possible for addition \
 (can not be escaped either)"
             ;;
          esac
@@ -579,48 +584,13 @@ env_environment_set_main()
       local scopeprefix
       local rval
 
-      if ! r_scopeprefix_for_scope "${scope}"
-      then
-         if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
-         then
-            log_warning "Adding unknown scope \"${scope}\" to auxscope"
-
-            case "${scope}" in
-               'DEFAULT'|'include'|'merged'|\
-               *:'DEFAULT'|*:'include'|*:'merged')
-                  fail "Reserved keyword \"${scope}\" used for custom scope"
-               ;;
-
-               s:*)
-                  filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-                  scope="${scope:2}"
-               ;;
-
-               e:*)
-                  filename="${MULLE_ENV_ETC_DIR}/auxscope"
-                  scope="${scope:2}"
-               ;;
-
-               plugin*|extension*|project*)
-                  filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-               ;;
-
-               *:*)
-                  fail "Invalid name \"${scope}\" used for custom scope"
-               ;;
-
-               *)
-                  filename="${MULLE_ENV_ETC_DIR}/auxscope"
-               ;;
-            esac
-
-            redirect_append_exekutor "${filename}" \
-               printf "%s\n" "${scope}"
-         else
-            fail "Unknown scope \"${scope}\" (use -f to create a new one)"
-         fi
-      fi
+      r_scopeprefix_for_scope "${scope}"
       scopeprefix="${RVAL}"
+
+      if [ -z "${RVAL}" ]
+      then
+         fail "Unknown scope \"${scope}\" (use -f to create a new one)"
+      fi
 
       r_directory_for_scopeprefix "${scopeprefix}"
       filename="${RVAL}/environment-${scope}.sh"
@@ -873,279 +843,6 @@ _env_environment_sed_get()
 }
 
 
-r_read_auxscope_file()
-{
-   log_entry "r_read_auxscope_file" "$@"
-
-   local auxscopefile="$1"
-   local prefix="$2"
-
-   if [ ! -f "${auxscopefile}" ]
-   then
-      log_debug "No auxscope file found"
-      RVAL=
-      return 1
-   fi
-
-   # eval it to resolve USER and so on
-   local tmp
-   local aux_scope
-
-   tmp="`rexekutor egrep -v '^#' "${auxscopefile}"`"
-
-   RVAL=
-
-   local evaled_aux_scope
-
-   set -f; IFS=$'\n'
-   for aux_scope in ${tmp}
-   do
-      IFS="${DEFAULT_IFS}"; set +f
-
-      if [ ! -z "${aux_scope}" ]
-      then
-         eval printf -v evaled_aux_scope "%s" "${aux_scope}"
-         case "${evaled_aux_scope}" in
-            s:*|e:*)
-            ;;
-
-            *)
-               evaled_aux_scope="${prefix}:${evaled_aux_scope}"
-            ;;
-         esac
-         r_add_line "${RVAL}" "${evaled_aux_scope}"
-      fi
-   done
-   IFS="${DEFAULT_IFS}"; set +f
-
-}
-
-
-r_get_auxscopes()
-{
-   log_entry "r_get_auxscopes" "$@"
-
-   local tmp
-
-   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
-   [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
-
-
-   r_read_auxscope_file "${MULLE_ENV_ETC_DIR}/auxscope" "e"
-   r_add_line "${tmp}" "${RVAL}"
-
-   log_debug "auxscopes: ${RVAL}"
-}
-
-
-r_get_scopes()
-{
-   log_entry "r_get_scopes" "$@"
-
-   local option_plugin="${1:-YES}"
-   local option_aux="${2:-YES}"
-   local option_user="${3:-YES}"
-
-   local etc_scopes
-   local share_scopes
-   local aux_scopes
-
-   if [ "${option_plugin}" = 'YES' ]
-   then
-      share_scopes="s:plugin
-s:plugin-os-${MULLE_UNAME}"
-   fi
-
-   if [ "${option_aux}" = 'YES' ]
-   then
-      r_read_auxscope_file "${MULLE_ENV_SHARE_DIR}/auxscope" "e"
-      r_add_line "${share_scopes}" "${RVAL}"
-      share_scopes="${RVAL}"
-   fi
-
-   #
-   # os is special and may appear in etc and share
-   #
-   if [ "${option_user}" = 'YES' ]
-   then
-      etc_scopes="e:global
-e:os-${MULLE_UNAME}
-e:host-${MULLE_HOSTNAME}
-e:user-${USER}"
-   fi
-
-   if [ "${option_aux}" = 'YES' ]
-   then
-      r_read_auxscope_file "${MULLE_ENV_ETC_DIR}/auxscope" "s"
-      r_add_line "${etc_scopes}" "${RVAL}"
-      etc_scopes="${RVAL}"
-   fi
-
-   r_add_line "${share_scopes}" "${etc_scopes}"
-
-   log_debug "scopes: ${RVAL}"
-}
-
-
-r_directory_for_scopeprefix()
-{
-   log_entry "r_directory_for_scopeprefix" "$@"
-
-   local prefix="$1"
-
-   RVAL="${MULLE_ENV_ETC_DIR}"
-   if [ "${prefix:0:1}" = "s" ]
-   then
-      RVAL="${MULLE_ENV_SHARE_DIR}"
-   fi
-}
-
-
-r_scopeprefix_for_scope()
-{
-   log_entry "r_scopeprefix_for_scope" "$@"
-
-   local scope="$1"
-
-   r_get_scopes
-
-   local scopes
-
-   scopes="${RVAL}"
-   RVAL=""
-
-   local i
-
-   set -f; IFS=$'\n'
-   for i in ${scopes}
-   do
-      IFS="${DEFAULT_IFS}"; set +f
-
-      if [ "${i:2}" = "${scope}" ]
-      then
-         RVAL="${i:0:1}" # continue, get last one (why ?)
-      fi
-   done
-   IFS="${DEFAULT_IFS}"; set +f
-
-   [ ! -z "${RVAL}" ]
-}
-
-
-r_get_existing_scope_files()
-{
-   log_entry "r_existing_scope_files" "$@"
-
-   local OPTION_INFERIORS='NO'
-   local OPTION_REVERSE='NO'
-
-   while :
-   do
-      case "$1" in
-         --with-inferiors)
-            OPTION_INFERIORS='YES'
-         ;;
-
-         --reverse)
-            OPTION_REVERSE='YES'
-         ;;
-
-         *)
-            break
-         ;;
-      esac
-      shift
-   done
-
-   local scope
-
-   scope="$1"
-
-   case "${scope}" in
-      ""|*:*|DEFAULT)
-      ;;
-
-      *)
-         scope="*:${scope}"
-      ;;
-   esac
-
-   local scopes
-
-   r_get_scopes
-   scopes="${RVAL}"
-
-   log_debug "scopes: ${scopes}"
-
-   local i
-   local scopename
-   local filename
-   local skipcheck
-   local filenames
-
-   filenames=""
-   skipcheck='NO'
-
-   set -f; IFS=$'\n'
-   for i in ${scopes}
-   do
-      IFS="${DEFAULT_IFS}"; set +f
-
-      case "${i}" in
-         *:*)
-         ;;
-
-         *)
-            i="*:${i}"
-         ;;
-      esac
-
-      scopename="${i:2}"
-      if [ "${skipcheck}" = 'NO' -a \
-           "${scope}" != "DEFAULT" -a \
-           "${scopename}" != "${scope:2}" ]
-      then
-         continue
-      fi
-
-      filename=
-      skipcheck="${OPTION_INFERIORS}"
-      case "${i}" in
-         's:'*)
-            filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-         ;;
-
-         'e:'*)
-            filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
-         ;;
-
-         '*:'*)
-            filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
-            if [ ! -f "${filename}" ]
-            then
-               filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-            fi
-         ;;
-      esac
-
-      if [ -f "${filename}" ]
-      then
-         if [ "${OPTION_REVERSE}" = 'YES' ]
-         then
-            r_add_line "${filename}" "${filenames}"
-         else
-            r_add_line "${filenames}" "${filename}"
-         fi
-         filenames="${RVAL}"
-      fi
-   done
-   IFS="${DEFAULT_IFS}"; set +f
-
-   log_debug "filenames: ${filenames}"
-   RVAL="${filenames}"
-}
-
-
 r_unescaped_doublequotes()
 {
    RVAL="${*//\\\"/\"}"
@@ -1218,6 +915,9 @@ env_environment_get_main()
    local key="$1"
 
    [ -z "${key}" ] && fail "empty key for get"
+
+   # shellcheck source=src/mulle-env-scope.sh
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
 
    local filename
    local filenames
@@ -1355,6 +1055,9 @@ env_environment_remove_main()
    done
 
    [ "$#" -ne 1 ]  && env_environment_remove_usage "wrong number of arguments \"$*\""
+
+   # shellcheck source=src/mulle-env-scope.sh
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
 
    local key="$1"
 
@@ -1680,7 +1383,11 @@ env_environment_list_main()
 
    [ "$#" -ne 0 ] && env_environment_list_usage "wrong number of arguments \"$*\""
 
+   # shellcheck source=src/mulle-env-scope.sh
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+
    log_info "Environment"
+
 
    BASH="`command -v "bash"`"
    BASH="${BASH:-/usr/bin/bash}"  # panic fallback
@@ -1701,35 +1408,26 @@ env_environment_list_main()
          scopes="${RVAL}"
 
          local i
-         local scopename
+         local i_name
 
          set -f; IFS=$'\n'
          for i in ${scopes}
          do
             IFS="${DEFAULT_IFS}"; set +f
 
-            scopename="${i:2}"
-            if [ "${scope}" != "DEFAULT" -a "${scopename}" != "${scope}" ]
+            i_name="${i:2}"
+            if [ "${scope}" != "DEFAULT" -a "${i_name}" != "${scope}" ]
             then
                continue
             fi
 
             case "${i}" in
                'e:'*)
-                  "${lister}" "${i:0:1}" "${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
+                  "${lister}" "${i:0:1}" "${MULLE_ENV_ETC_DIR}/environment-${i_name}.sh"
                ;;
 
                's:'*)
-                 "${lister}" "${i:0:1}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-               ;;
-
-               '*':*)
-                  if [ -f "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh" ]
-                  then
-                    "${lister}" "${i:0:1}" "${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-                  else
-                     "${lister}" "${i:0:1}" "${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
-                  fi
+                 "${lister}" "${i:0:1}" "${MULLE_ENV_SHARE_DIR}/environment-${i_name}.sh"
                ;;
             esac
          done
@@ -1737,172 +1435,6 @@ env_environment_list_main()
       ;;
 
    esac
-}
-
-
-env_environment_scope_main()
-{
-   log_entry "env_environment_scope_main" "$@"
-
-   local OPTION_OUTPUT_FILENAME='NO'
-   local OPTION_EXISTING='NO'
-   local OPTION_USER_SCOPES='YES'
-   local OPTION_AUX_SCOPES='NO'
-   local OPTION_PLUGIN_SCOPES='NO'
-   local OPTION_EXISTING_FILENAME='NO'
-
-   while :
-   do
-      case "$1" in
-         -h|--help|help)
-            env_environment_scope_usage
-         ;;
-
-         --all)
-            OPTION_AUX_SCOPES='YES'
-            OPTION_PLUGIN_SCOPES='YES'
-            OPTION_USER_SCOPES='YES'
-         ;;
-
-         --output-filename)
-            OPTION_OUTPUT_FILENAME='YES'
-         ;;
-
-         --output-existing-filename)
-            OPTION_EXISTING_FILENAME='YES'
-         ;;
-
-         --no-directory)
-            OPTION_FILENAME='NO'
-         ;;
-
-         --aux)
-            OPTION_AUX_SCOPES='YES'
-         ;;
-
-         --no-aux)
-            OPTION_AUX_SCOPES='NO'
-         ;;
-
-         --plugin)
-            OPTION_PLUGIN_SCOPES='YES'
-         ;;
-
-         --no-plugin)
-            OPTION_PLUGIN_SCOPES='NO'
-         ;;
-
-         --user)
-            OPTION_USER_SCOPES='YES'
-         ;;
-
-         --no-user)
-            OPTION_USER_SCOPES='NO'
-         ;;
-
-         --existing)
-            OPTION_EXISTING='YES'
-         ;;
-
-         -*)
-            env_environment_scope_usage "Unknown option \"$1\""
-         ;;
-
-         *)
-            break
-         ;;
-      esac
-
-      shift
-   done
-
-   [ "$#" -ne 0 ]  && env_environment_scope_usage "Superflous arguments \"$*\""
-
-   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
-   [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
-
-   if [ "${OPTION_EXISTING}" = 'YES' ]
-   then
-      (
-         shopt -s nullglob
-
-         rexekutor ls -1 "${MULLE_ENV_SHARE_DIR}"/environment-*.sh \
-                         "${MULLE_ENV_ETC_DIR}"/environment-*.sh \
-            | sed '-e s|^.*/environment-\(.*\)\.sh$|\1|'
-      ) | LC_ALL=C sort -u | sed -e '/^include/d'
-
-      return 0
-   fi
-
-   local scopes
-
-   r_get_scopes "${OPTION_PLUGIN_SCOPES}" \
-                "${OPTION_AUX_SCOPES}" \
-                "${OPTION_USER_SCOPES}"
-   scopes="${RVAL}"
-
-   if [ -z "${scopes}" ]
-   then
-      fail "No scopes selected"
-   fi
-
-   if [ "${OPTION_USER_SCOPES}" = 'YES' -a \
-        "${OPTION_AUX_SCOPES}" = 'NO' -a \
-        "${OPTION_PLUGIN_SCOPES}" = 'NO' ]
-   then
-      log_info "User Scopes"
-   else
-      if [ "${OPTION_AUX_SCOPES}" = 'YES' -a \
-           "${OPTION_PLUGIN_SCOPES}" = 'YES' -a \
-           "${OPTION_USER_SCOPES}" = 'YES' ]
-      then
-         log_info "All Scopes"
-      else
-         log_info "Partial Scopes"
-      fi
-   fi
-
-   local scopename
-   local scope
-   local filename
-
-   set -f
-   IFS=$'\n'
-   for scope in ${scopes}
-   do
-      IFS="${DEFAULT_IFS}"
-      filename=
-      scopename="${scope:2}"
-
-      if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
-      then
-         case "${scope}" in
-            'e:'*)
-               filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
-            ;;
-
-            's:'*)
-               filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-            ;;
-         esac
-
-         log_debug "scopename: ${scopename}"
-         log_debug "filename : ${filename}"
-         log_debug "scope    : ${scope}"
-
-         if [ "${OPTION_EXISTING_FILENAME}" = 'YES' -a ! -f "${filename}" ]
-         then
-            filename=""
-         fi
-      fi
-
-      concat "${scopename}" "${filename#${MULLE_USER_PWD}/}" ";"
-   done
-
-   IFS="${DEFAULT_IFS}"
-   set +f
-
-   return 0
 }
 
 
@@ -1985,7 +1517,6 @@ env_environment_main()
    local cmd="${1:-list}"
    [ $# -ne 0 ] && shift
 
-   [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
 
    case "${cmd}" in
       host|hostname)
@@ -2002,16 +1533,19 @@ env_environment_main()
 
       get|list|mset|remove|set)
          _setup_environment
+
+         [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
+
          env_environment_${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
       scope|scopes)
          _setup_environment
-         env_environment_scope_main "$@"
-      ;;
 
-      "")
-         env_environment_usage
+         # shellcheck source=src/mulle-env-scope.sh
+         [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+
+         MULLE_USAGE_NAME="${MULLE_USAGE_NAME} environment" env_scope_main "$@"
       ;;
 
       *)

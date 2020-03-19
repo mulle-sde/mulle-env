@@ -115,6 +115,8 @@ env_migrate_from_v1_to_v2()
 {
    log_entry "env_migrate_from_v1_to_v2" "$@"
 
+   log_info "Migrating to mulle-env v2"
+
    if [ ! -d ".mulle-env" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
    then
       log_warning "There is nothing to migrate here"
@@ -236,6 +238,8 @@ env_migrate_from_v2_0_to_v2_2()
 {
    log_entry "env_migrate_from_v2_0_to_v2_2" "$@"
 
+   log_info "Migrating to mulle-env v2.2"
+
    remove_file_if_present ".mulle/share/env/tool"
    remove_file_if_present ".mulle/share/env/tool.darwin"
    remove_file_if_present ".mulle/share/env/tool.freebsd"
@@ -246,6 +250,126 @@ env_migrate_from_v2_0_to_v2_2()
    remove_file_if_present ".mulle/share/env/optionaltool.linux"
 
    env_rename_file_if_present .mulle/share/env/auxscopes .mulle/share/env/auxscope
+}
+
+
+env_migrate_from_v2_2_to_v3()
+{
+   log_entry "env_migrate_from_v2_2_to_v3" "$@"
+
+   local lines
+   local scope
+
+   local etc_lines
+   local share_lines
+   local order
+   local priority
+
+   log_info "Migrating to mulle-env 3"
+
+   # shellcheck source=src/mulle-env-scope.sh
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+
+   order=200
+   #
+   # auxscopes have changed
+   #
+   lines="`rexekutor egrep -v '^#' ".mulle/share/env/auxscope" 2> /dev/null`"
+   set -f; IFS=$'\n'
+   for scope in ${lines}
+   do
+      case "${scope}" in
+         extension|s:extension)
+            r_priority_for_scope 'extension'
+            r_add_unique_line "${share_lines}" 'extension;${RVAL}'
+            share_lines="${RVAL}"
+         ;;
+
+         # should be done by a mulle-sde extension upgrade really
+         project|s:project)
+            r_add_unique_line "${etc_lines}" 'project;10'
+            etc_lines="${RVAL}"
+         ;;
+
+         'e:'*)
+            if ! r_priority_for_scope "${scope:2}"
+            then
+               RVAL="${order}"
+               order=$(( order + 10 ))
+            fi
+            r_add_unique_line "${etc_lines}" "${scope:2};${RVAL}"
+            etc_lines="${RVAL}"
+         ;;
+
+         's:'*)
+            if ! r_priority_for_scope "${scope:2}"
+            then
+               RVAL="${order}"
+               order=$(( order + 10 ))
+            fi
+            r_add_unique_line "${share_lines}" "${scope:2};${RVAL}"
+            share_lines="${RVAL}"
+         ;;
+
+         *)
+            r_add_unique_line "${share_lines}" "${scope};${order}"
+            share_lines="${RVAL}"
+            order=$(( order + 10 ))
+         ;;
+      esac
+   done
+
+   order=100
+   lines="`rexekutor egrep -v '^#' ".mulle/etc/env/auxscope" 2> /dev/null`"
+   set -f; IFS=$'\n'
+   for scope in ${lines}
+   do
+      case "${scope}" in
+         'e:'*)
+            if ! r_priority_for_scope "${scope:2}"
+            then
+               RVAL="${order}"
+               order=$(( order + 10 ))
+            fi
+            r_add_unique_line "${etc_lines}" "${scope:2};${RVAL}"
+            etc_lines="${RVAL}"
+         ;;
+
+         's:'*)
+            if ! r_priority_for_scope "${scope:2}"
+            then
+               RVAL="${order}"
+               order=$(( order + 10 ))
+            fi
+            r_add_unique_line "${share_lines}" "${scope:2};${RVAL}"
+            share_lines="${RVAL}"
+         ;;
+
+         *) # difference
+            r_add_unique_line "${etc_lines}" "${scope};${order}"
+            etc_lines="${RVAL}"
+            order=$(( order + 10 ))
+         ;;
+      esac
+   done
+
+   if [ ! -z "${etc_lines}" ]
+   then
+      r_mkdir_parent_if_missing ".mulle/etc/env/auxscope" &&
+      redirect_exekutor ".mulle/etc/env/auxscope" echo "${etc_lines}"
+   fi
+
+   if [ ! -z "${share_lines}" ]
+   then
+      r_mkdir_parent_if_missing ".mulle/etc/env/auxscope" &&
+      redirect_exekutor ".mulle/share/env/auxscope" echo "${share_lines}"
+   fi
+
+   if [ ! -f ".mulle/etc/env/environment-project.sh" -a \
+          -f ".mulle/share/env/environment-project.sh" ]
+   then
+      exekutor mv  ".mulle/share/env/environment-project.sh" ".mulle/etc/env/"
+   fi
 }
 
 
@@ -274,11 +398,22 @@ env_migrate()
    if [ "${oldmajor}" -lt 2 ]
    then
       env_migrate_from_v1_to_v2
+      oldmajor=2
+      oldminor=0
    fi
 
    if [ "${oldmajor}" -eq 2 -a "${major}" -eq 2 -a "${oldminor}" -lt 2 ]
    then
       env_migrate_from_v2_0_to_v2_2
+      oldmajor=2
+      oldminor=2
+   fi
+
+   if [ "${oldmajor}" -lt 3 ]
+   then
+      env_migrate_from_v2_2_to_v3
+      oldmajor=3
+      oldminor=0
    fi
 
    env_upgrade_plugin "${flavor}" "${oldversion}" "${version}"

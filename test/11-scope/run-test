@@ -1,0 +1,135 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+fail_if_not_equal()
+{
+   local result="$1"
+   local expect="$2"
+
+   if [ "${result}" != "${expect}" ]
+   then
+      fail "Expected scopes:
+${C_RESET}${expect}
+${C_ERROR}differ from result:
+${C_RESET}${result}"
+   fi
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+   directory="${directory:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight || exit 1
+
+   local result
+   local expect
+
+   expect="plugin
+plugin-os-${MULLE_UNAME}
+global
+os-${MULLE_UNAME}
+host-${MULLE_HOSTNAME}
+user-${LOGNAME}"
+   result="`run_mulle_env scope list --all`" || exit 1
+   fail_if_not_equal "${result}" "${expect}"
+
+   log_verbose "----- #1 PASSED -----"
+
+   expect="plugin"
+   result="`run_mulle_env scope get plugin`" || exit 1
+   fail_if_not_equal "${result}" "${expect}"
+
+   expect="global"
+   result="`run_mulle_env scope get global`" || exit 1
+   fail_if_not_equal "${result}" "${expect}"
+
+   log_verbose "----- #2 PASSED -----"
+
+   run_mulle_env scope add --priority 0 --etc foo       || exit 1
+   run_mulle_env scope add --priority 10000 --share bar || exit 1
+
+   expect="plugin
+plugin-os-${MULLE_UNAME}
+bar
+foo
+global
+os-${MULLE_UNAME}
+host-${MULLE_HOSTNAME}
+user-${LOGNAME}"
+   result="`run_mulle_env scope list --all`" || exit 1
+   fail_if_not_equal "${result}" "${expect}"
+
+   log_verbose "----- #3 PASSED -----"
+
+   if run_mulle_env scope remove unknown
+   then
+      fail "Scope removal of unknown succeeded unexpectedly"
+   fi
+
+   if run_mulle_env scope remove plugin
+   then
+      fail "Scope removal of plugin succeeded unexpectedly"
+   fi
+
+   run_mulle_env scope remove foo  || exit 1
+   run_mulle_env scope remove bar  || exit 1
+
+   if run_mulle_env scope remove foo
+   then
+      fail "Scope removeal of foo succeeded unexpectedly"
+   fi
+
+   expect="plugin
+plugin-os-${MULLE_UNAME}
+global
+os-${MULLE_UNAME}
+host-${MULLE_HOSTNAME}
+user-${LOGNAME}"
+   result="`run_mulle_env scope list --all`" || exit 1
+   fail_if_not_equal "${result}" "${expect}"
+
+   log_verbose "----- #4 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
+

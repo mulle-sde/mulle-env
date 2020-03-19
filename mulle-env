@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="2.6.0"
+MULLE_ENV_VERSION="3.0.0"
 
 #
 # The default for first time mulle-env
@@ -559,7 +559,7 @@ __check_version()
          exit 1
       ;;
 
-      0\.*|1\.*)
+      0\.*|1\.*|2\.*)
          # incompatible change of -c execution, otherwise try to support
          # and make this a warning
          fail "This environment with version ${version} is too old for
@@ -569,11 +569,12 @@ ${C_RESET_BOLD}   cd \"${MULLE_VIRTUAL_ROOT}\"
 ${C_RESET_BOLD}   mulle-env upgrade"
       ;;
 
-      2\.*)
+      3\.*)
       ;;
 
       *)
-         fail "This environment requires a newer mulle-env version >= ${version}"
+         fail "This environment requires a newer mulle-env version >= ${version}.
+   ${C_RESET_BOLD}You are running mulle-env version ${MULLE_ENV_VERSION}."
       ;;
    esac
 }
@@ -1660,6 +1661,15 @@ wild"
 
       reset)
          reset "$@"
+         return $?
+      ;;
+
+      scope)
+         # shellcheck source=src/mulle-env-scope.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh" || exit 1
+
+         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         env_scope_main "$@"
          return $?
       ;;
 

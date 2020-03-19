@@ -1,3 +1,9 @@
+# 3.0.0
+
+* added scope command
+* project file (mulle-sde) moves from share to etc, which is an incompatible change
+
+
 ## 2.6.0
 
 * improved setting of comment text for `environment set`
