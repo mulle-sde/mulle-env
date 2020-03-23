@@ -186,6 +186,7 @@ print_none_include_environment_sh()
 # .mulle/etc/env                        | .mulle/share/env
 # --------------------------------------|--------------------
 #                                       | environment-plugin.sh
+#                                       | environment-plugin-os-\${MULLE_UNAME}.sh
 # environment-global.sh                 |
 # environment-os-\${MULLE_UNAME}.sh      |
 # environment-host-\${MULLE_HOSTNAME}.sh |
@@ -201,6 +202,13 @@ then
    . "\${MULLE_ENV_SHARE_DIR}/environment-plugin.sh"
 fi
 
+#
+# The plugin file, if present is to be set by a mulle-env plugin
+#
+if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-plugin-os\${MULLE_UNAME}.sh" ]
+then
+   . "\${MULLE_ENV_SHARE_DIR}/environment-plugin-os\${MULLE_UNAME}.sh"
+fi
 
 #
 # Global user settings

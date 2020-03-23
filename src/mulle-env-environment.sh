@@ -444,12 +444,15 @@ env_environment_set_main()
 {
    log_entry "env_environment_set_main" "$@"
 
-   local scope="$1"; shift
+   local scopename="$1"; shift
 
    local OPTION_COMMENT_OUT_EMPTY='NO'
    local OPTION_ADD_EMPTY='YES'
    local OPTION_ADD='NO'
    local OPTION_SEPARATOR=":"  # convenient for PATH like behaviour
+
+   # shellcheck source=src/mulle-env-scope.sh
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
 
    while :
    do
@@ -468,19 +471,6 @@ env_environment_set_main()
 
          -c|--comment-out-empty)
             OPTION_COMMENT_OUT_EMPTY='YES'
-         ;;
-
-         --share)
-            case "${scope}" in
-               'DEFAULT'|'merged'|'include')
-                  fail "You can't set --share with scope ${scope}"
-               ;;
-
-               [es]:*)
-                  scope="${scope:2}"
-               ;;
-            esac
-            scope="s:${scope}"
          ;;
 
          -p|--prepend)
@@ -508,8 +498,6 @@ env_environment_set_main()
 
    [ $# -lt 2 -o $# -gt 3 ] && env_environment_set_usage
 
-   # shellcheck source=src/mulle-env-scope.sh
-   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
 
    # unprotect files
    if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${MULLE_ENV_SHARE_DIR}" ]
@@ -527,13 +515,12 @@ env_environment_set_main()
 
       assert_valid_environment_key "${key}"
 
-
       if [ "${OPTION_ADD}" != 'NO' ]
       then
          local prev
          local oldvalue
 
-         prev="`env_environment_get_main "${scope}" "${key}"`"
+         prev="`env_environment_get_main "${scopename}" "${key}"`"
          log_debug "Previous value is \"${prev}\""
 
          case "${value}" in
@@ -547,7 +534,7 @@ env_environment_set_main()
 
          for oldvalue in ${prev}
          do
-            set +f; IFS="${DEFAULT_IFS}"
+            set +o noglob; IFS="${DEFAULT_IFS}"
             if [ "${oldvalue}" = "${value}" ]
             then
                log_fluff "\"${value}\" already set"
@@ -555,7 +542,7 @@ env_environment_set_main()
             fi
          done
 
-         set +f; IFS="${DEFAULT_IFS}"
+         set +o noglob; IFS="${DEFAULT_IFS}"
 
          if [ "${OPTION_ADD}" = 'APPEND' ]
          then
@@ -571,9 +558,9 @@ env_environment_set_main()
 
    #   log_verbose "Use \`mulle-env-reload\` to get the actual value in your shell"
 
-      log_debug "Environment scope \"${scope}\" set $key=\"${value}\""
+      log_debug "Environment scope \"${scopename}\" set $key=\"${value}\""
 
-      if [ "${scope}" = 'DEFAULT' ]
+      if [ "${scopename}" = 'DEFAULT' ]
       then
          filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
          _env_environment_set "${filename}" "${key}" "${value}" "${comment}" &&
@@ -584,16 +571,15 @@ env_environment_set_main()
       local scopeprefix
       local rval
 
-      r_scopeprefix_for_scope "${scope}"
-      scopeprefix="${RVAL}"
-
-      if [ -z "${RVAL}" ]
+      if ! r_filename_for_scopeid "${scopename}"
       then
-         fail "Unknown scope \"${scope}\" (use -f to create a new one)"
+         if scope_is_keyword "${scopename}"
+         then
+            fail "You can't set values in scope \"${scopename}\""
+         fi
+         fail "Unknown scope \"${scopename}\""
       fi
-
-      r_directory_for_scopeprefix "${scopeprefix}"
-      filename="${RVAL}/environment-${scope}.sh"
+      filename="${RVAL}"
 
       _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
       rval=$?
@@ -627,7 +613,7 @@ env_environment_mset_main()
 {
    log_entry "env_environment_mset_main" "$@"
 
-   local scope="$1"; shift
+   local scopename="$1"; shift
 
    local key
    local value
@@ -685,7 +671,7 @@ env_environment_mset_main()
          comment="`sed -e 's/^/# /' <<< "${comment}"`"
       fi
 
-      env_environment_set_main "${scope}" ${option} "${key}" "${value}" "${comment}"
+      env_environment_set_main "${scopename}" ${option} "${key}" "${value}" "${comment}"
 
       shift
    done
@@ -859,7 +845,7 @@ env_environment_get_main()
 {
    log_entry "env_environment_get_main" "$@"
 
-   local scope="$1"; shift
+   local scopename="$1"; shift
 
    local infix="_"
    local getter
@@ -922,14 +908,14 @@ env_environment_get_main()
    local filename
    local filenames
 
-   case "${scope}" in
-      include|s:include)
+   case "${scopename}" in
+      include)
          ${getter} "${MULLE_ENV_SHARE_DIR}/include-environment.sh" "${key}"
          return
       ;;
    esac
 
-   r_get_existing_scope_files ${reverse} "${scope}"
+   r_get_existing_scope_files ${reverse} "${scopename}"
    filenames="${RVAL}"
 
    local rval
@@ -937,10 +923,10 @@ env_environment_get_main()
    local prevfiles
 
    rval=1
-   set -f ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for filename in ${filenames}
    do
-      set +f; IFS="${DEFAULT_IFS}"
+      set +o noglob; IFS="${DEFAULT_IFS}"
       if value="`eval ${getter} "'${filename}'" "'${key}'" "${prevfiles}"`"
       then
          rval=0
@@ -955,7 +941,7 @@ env_environment_get_main()
       r_concat "${prevfiles}" "'${filename}'"
       prevfiles="${RVAL}"
    done
-   set +f; IFS="${DEFAULT_IFS}"
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    if [ "${rval}" -eq 0 ]
    then
@@ -1027,7 +1013,7 @@ env_environment_remove_main()
 {
    log_entry "env_environment_remove_main" "$@"
 
-   local scope="$1"; shift
+   local scopename="$1"; shift
 
    local OPTION_REMOVE_FILE='DEFAULT'
 
@@ -1065,11 +1051,11 @@ env_environment_remove_main()
 
    local filename
    local filenames
-   if [ "${scope}" = "DEFAULT" ]
+   if [ "${scopename}" = "DEFAULT" ]
    then
       r_get_existing_scope_files "--with-inferiors" "global"
    else
-      r_get_existing_scope_files "${scope}"
+      r_get_existing_scope_files "${scopename}"
    fi
 
    r_reverse_lines "${RVAL}"
@@ -1078,10 +1064,10 @@ env_environment_remove_main()
    local rval
 
    rval=1
-   set -f ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for filename in ${filenames}
    do
-      set +f; IFS="${DEFAULT_IFS}"
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       if _env_file_defines_key "${filename}" "${key}"
       then
@@ -1092,7 +1078,7 @@ env_environment_remove_main()
          fi
       fi
   done
-   set +f; IFS="${DEFAULT_IFS}"
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    return $rval
 }
@@ -1184,15 +1170,15 @@ _env_environment_combined_list_main()
    r_get_existing_scope_files "DEFAULT"
    filenames="${RVAL}"
 
-   set -f ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for filename in ${filenames}
    do
-      set +f; IFS="${DEFAULT_IFS}"
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       r_concat "${cmdline}" "'${filename}'"
       cmdline="${RVAL}"
    done
-   set +f; IFS="${DEFAULT_IFS}"
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    eval "${cmdline}"
 }
@@ -1202,27 +1188,27 @@ _env_environment_list()
 {
    log_entry "_env_environment_list" "$@"
 
-   local scopetype="$1"; shift
+   local scopeprefix="$1"; shift
 
-   local scope
+   local s
 
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
       then
          log_verbose "$1"
+
       	r_basename "$1"
+         s="${RVAL}"
+         s="${scopename%.sh}"
+         s="${s#environment-}"
 
-         scope="${RVAL}"
-         scope="${scope%.sh}"
-         scope="${scope#environment-}"
-
-         if [ "${scopetype}" = 'e' ]
+         if [ "${scopeprefix}" = 'e' ]
          then
-            log_info "${C_MAGENTA}${C_BOLD}${scope}"
+            log_info "${C_MAGENTA}${C_BOLD}${s}"
             printf "${C_RESET}"
          else
-            log_info "${C_RESET_BOLD}${scope}"
+            log_info "${C_RESET_BOLD}${s}"
             printf "${C_FAINT}"
          fi
 
@@ -1318,7 +1304,7 @@ env_environment_list_main()
 {
    log_entry "env_environment_list_main" "$@"
 
-   local scope="$1"; shift
+   local scopename="$1"; shift
 
    local lister
 
@@ -1333,25 +1319,25 @@ env_environment_list_main()
 
          --output-eval)
             lister="_env_environment_eval_list"
-            if [ "${scope}" = "DEFAULT" ]
+            if [ "${scopename}" = "DEFAULT" ]
             then
-               scope="include"
+               scopename="include"
             fi
          ;;
 
          --output-sed)
             lister="_env_environment_sed_list"
-            if [ "${scope}" = "DEFAULT" ]
+            if [ "${scopename}" = "DEFAULT" ]
             then
-               scope="include"
+               scopename="include"
             fi
          ;;
 
          --output-command)
             lister="_env_environment_command_list"
-            if [ "${scope}" = "DEFAULT" ]
+            if [ "${scopename}" = "DEFAULT" ]
             then
-               scope="include"
+               scopename="include"
             fi
          ;;
 
@@ -1392,9 +1378,9 @@ env_environment_list_main()
    BASH="`command -v "bash"`"
    BASH="${BASH:-/usr/bin/bash}"  # panic fallback
 
-   log_debug "scope: \"${scope}\""
+   log_debug "scope: \"${scopename}\""
 
-   case "${scope}" in
+   case "${scopename}" in
       "merged")
          _env_environment_combined_list_main "merge_environment_text" "$@"
       ;;
@@ -1410,13 +1396,13 @@ env_environment_list_main()
          local i
          local i_name
 
-         set -f; IFS=$'\n'
+         set -o noglob; IFS=$'\n'
          for i in ${scopes}
          do
-            IFS="${DEFAULT_IFS}"; set +f
+            set +o noglob; IFS="${DEFAULT_IFS}"
 
             i_name="${i:2}"
-            if [ "${scope}" != "DEFAULT" -a "${i_name}" != "${scope}" ]
+            if [ "${scopename}" != "DEFAULT" -a "${i_name}" != "${scopename}" ]
             then
                continue
             fi
@@ -1431,7 +1417,7 @@ env_environment_list_main()
                ;;
             esac
          done
-         IFS="${DEFAULT_IFS}"; set +f
+         set +o noglob; IFS="${DEFAULT_IFS}"
       ;;
 
    esac

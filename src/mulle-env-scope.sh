@@ -32,9 +32,21 @@
 MULLE_ENV_SCOPE_SH="included"
 
 
-
+# Internally:
 #
+# scope        : scopeprefix ':' scopeid
+# scopename    : keyword | scopeid
+# keyword      : "DEFAULT" | "include" | "merged" | "custom"
+# scopeprefix  : 'e' | 's'
+# scopeid      : [A-Za-z_-][A-Za-z0-9_-]*
 #
+# An auxscope file looks pedantically like this:
+#
+# auxscope     : lines
+# lines        : line | line lines
+# line         : ( '#' .* | scopeline ) '\n'
+# scopeline    : scopeid ';' priority
+# priority     : [0-9]+
 #
 env_scope_usage()
 {
@@ -97,9 +109,9 @@ Usage:
    Retrieve a scope.
 
 Options:
-   --prefix         : also return the internal prefix
-   --quiet          : only return the status, no output
-   --aux-only       : only list non-builtin scopes
+   --prefix   : also return the internal prefix
+   --quiet    : only return the status, no output
+   --aux-only : only list non-builtin scopes
 EOF
    exit 1
 }
@@ -116,7 +128,7 @@ Usage:
    Remove a scope.
 
 Options:
-   -h               : show this usage
+   -h : show this usage
 EOF
    exit 1
 }
@@ -137,6 +149,46 @@ Options:
 
 EOF
    exit 1
+}
+
+
+scope_is_scopeid()
+{
+   local scopeid="$1"
+
+   if [ ! -z "${scopeid}" ]
+   then
+      local firstchar
+
+      firstchar="${scopeid:0:1}"
+      if [ -z "${firstchar//[A-Za-z_-]/}" -a -z "${scopeid//[A-Z0-9a-z_-]/}" ]
+      then
+         return 0
+      fi
+   fi
+
+   return 1
+}
+
+
+scope_is_priority()
+{
+   local priority="$1"
+
+   [ ! -z "${priority}" -a -z "${priority//[0-9]/}" ]
+}
+
+
+scope_is_keyword()
+{
+   local scopeid="$1"
+
+   case "${scopeid}" in
+      'DEFAULT'|'include'|'merged'|'custom')
+         return 0
+      ;;
+   esac
+   return 1
 }
 
 
@@ -166,10 +218,10 @@ r_read_auxscope_file()
    local order
 
    order=100
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for aux_scope in ${tmp}
    do
-      IFS="${DEFAULT_IFS}"; set +f
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       if [ ! -z "${aux_scope}" ]
       then
@@ -195,7 +247,7 @@ r_read_auxscope_file()
          r_add_line "${RVAL}" "${aux_scope}"
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +f
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
 }
 
@@ -213,19 +265,19 @@ r_read_auxscope_file()
 #  80  | environment-host-${MULLE_HOSTNAME}.sh |
 #  100 | environment-user-${USER}.sh           |
 #
-r_priority_for_scope()
+r_priority_for_scopeid()
 {
-   log_entry "r_priority_for_scope" "$@"
+   log_entry "r_priority_for_scopeid" "$@"
 
-   local scope="$1"
+   local scopeid="$1"
 
-   case "${scope}" in
+   case "${scopeid}" in
       *:*)
          internal_fail "Need unprefixed scope"
       ;;
    esac
 
-   case "${scope}" in
+   case "${scopeid}" in
       'plugin')
          RVAL=10
          return 0
@@ -325,21 +377,27 @@ r_directory_for_scopeprefix()
 {
    log_entry "r_directory_for_scopeprefix" "$@"
 
-   local prefix="$1"
+   local scopeprefix="$1"
 
    RVAL="${MULLE_ENV_ETC_DIR}"
-   if [ "${prefix:0:1}" = "s" ]
+   if [ "${scopeprefix:0:1}" = "s" ]
    then
       RVAL="${MULLE_ENV_SHARE_DIR}"
    fi
 }
 
 
-r_scopeprefix_for_scope()
+r_scopeprefix_for_scopeid()
 {
-   log_entry "r_scopeprefix_for_scope" "$@"
+   log_entry "r_scopeprefix_for_scopeid" "$@"
 
-   local scope="$1"
+   local scopeid="$1"
+
+   case "${scopeid}" in
+      *:*)
+         internal_fail "Need unprefixed scope"
+      ;;
+   esac
 
    local scopes
 
@@ -349,19 +407,64 @@ r_scopeprefix_for_scope()
 
    local i
 
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for i in ${scopes}
    do
-      IFS="${DEFAULT_IFS}"; set +f
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
-      if [ "${i:2}" = "${scope}" ]
+      if [ "${i:2}" = "${scopeid}" ]
       then
          RVAL="${i:0:1}" # continue, get last one (why ?)
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +f
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    [ ! -z "${RVAL}" ]
+}
+
+
+r_filename_for_scope()
+{
+   log_entry "r_filename_for_scope" "$@"
+
+   local scope="$1"
+
+   case "${scope}" in
+      *:*)
+      ;;
+
+      *)
+         internal_fail "Need prefixed scope ($scope is not prefixed)"
+      ;;
+   esac
+
+   local scopeid
+
+   scopeid="${scope:2}"
+   case "${scope}" in
+      's:'*)
+         RVAL="${MULLE_ENV_SHARE_DIR}/environment-${scopeid}.sh"
+      ;;
+
+      'e:'*)
+         RVAL="${MULLE_ENV_ETC_DIR}/environment-${scopeid}.sh"
+      ;;
+
+      *)
+         internal_fail "invalid scope \"${scope}\""
+      ;;
+   esac
+}
+
+
+r_filename_for_scopeid()
+{
+   log_entry "r_filename_for_scopeid" "$@"
+
+   local scopeid="$1"
+
+   r_scopeprefix_for_scopeid "${scopeid}"
+   r_filename_for_scope "${RVAL}:${scopeid}"
 }
 
 
@@ -390,9 +493,11 @@ r_get_existing_scope_files()
       shift
    done
 
-   local searchscope
+   local search_scopename
 
-   searchscope="$1"
+   search_scopename="$1"
+
+   [ -z "${search_scopename}" ] && internal_fail "empty search scope"
 
    local scopes
 
@@ -400,7 +505,7 @@ r_get_existing_scope_files()
    scopes="${RVAL}"
 
    local scope
-   local scopename
+   local scopeid
    local filename
    local skipcheck
    local filenames
@@ -408,37 +513,26 @@ r_get_existing_scope_files()
    filenames=""
    skipcheck='NO'
 
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for scope in ${scopes}
    do
-      IFS="${DEFAULT_IFS}"; set +f
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
-      scopename="${scope:2}"
+      scopeid="${scope:2}"
       if [ "${skipcheck}" = 'NO' ] && \
-         [ "${searchscope}" != "DEFAULT" -a "${scopename}" != "${searchscope}" ]
+         [ "${search_scopename}" != "DEFAULT" -a "${scopeid}" != "${search_scopename}" ]
       then
-         log_debug "\"${searchscope}\" and  \"${scopename}\" don't match"
+         log_debug "\"${search_scopename}\" and  \"${scopeid}\" don't match"
          continue
       fi
-
       skipcheck="${OPTION_INFERIORS}"
-      case "${scope}" in
-         's:'*)
-            filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-         ;;
 
-         'e:'*)
-            filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
-         ;;
-
-         *)
-            internal_fail "invalid scope \"${scope}\""
-         ;;
-      esac
+      r_filename_for_scope "${scope}"
+      filename="${RVAL}"
 
       if [ -f "${filename}" ]
       then
-         log_debug "\"${filename}\" for \"${scope}\" exists"
+         log_debug "\"${filename}\" for \"${scopeid}\" exists"
          if [ "${OPTION_REVERSE}" = 'YES' ]
          then
             r_add_line "${filename}" "${filenames}"
@@ -447,10 +541,10 @@ r_get_existing_scope_files()
          fi
          filenames="${RVAL}"
       else
-         log_fluff "\"${filename}\" for \"${scope}\" does not exist"
+         log_fluff "\"${filename}\" for \"${scopeid}\" does not exist"
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +f
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    log_debug "filenames: ${filenames}"
    RVAL="${filenames}"
@@ -601,31 +695,24 @@ env_scope_list_main()
       fi
    fi
 
-   local scopename
+   local scopeid
    local scope
    local filename
 
-   set -f
-   IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for scope in ${scopes}
    do
-      IFS="${DEFAULT_IFS}"
+      set +o noglob; IFS="${DEFAULT_IFS}"
+
       filename=
-      scopename="${scope:2}"
+      scopeid="${scope:2}"
 
       if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
       then
-         case "${scope}" in
-            'e:'*)
-               filename="${MULLE_ENV_ETC_DIR}/environment-${scopename}.sh"
-            ;;
+         r_filename_for_scope "${scope}"
+         filename="${RVAL}"
 
-            's:'*)
-               filename="${MULLE_ENV_SHARE_DIR}/environment-${scopename}.sh"
-            ;;
-         esac
-
-         log_debug "scopename: ${scopename}"
+         log_debug "scopeid: ${scopeid}"
          log_debug "filename : ${filename}"
          log_debug "scope    : ${scope}"
 
@@ -635,11 +722,10 @@ env_scope_list_main()
          fi
       fi
 
-      concat "${scopename}" "${filename#${MULLE_USER_PWD}/}" ";"
+      concat "${scopeid}" "${filename#${MULLE_USER_PWD}/}" ";"
    done
 
-   IFS="${DEFAULT_IFS}"
-   set +f
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    return 0
 }
@@ -684,29 +770,31 @@ env_scope_get_main()
       shift
    done
 
-   local name
-   [ ! -z "$1"  ] || env_scope_get_usage "Missing scope name"
+   local search_scopeid
+   [ ! -z "$1"  ] || env_scope_get_usage "Missing scope identifier"
 
-   name="$1"
+   search_scopeid="$1"
    shift
 
    [ "$#" -eq 0 ] || env_scope_get_usage "Superflous arguments \"$*\""
 
    local scopes
    local scope
+   local scopeid
    local protect
 
    r_get_scopes
    scopes="${RVAL}"
 
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for scope in ${scopes}
    do
-      IFS="${DEFAULT_IFS}"; set +f
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       [ -z "${scope}" ] && continue
 
-      if [ "${scope:2}" = "${name}" ]
+      scopeid="${scope:2}"
+      if [ "${scopeid}" = "${search_scopeid}" ]
       then
          if [ "${OPTION_AUX_ONLY}" = 'YES' ]
          then
@@ -719,12 +807,12 @@ env_scope_get_main()
                ;;
             esac
 
-            r_escaped_grep_pattern "${scope}"
+            r_escaped_grep_pattern "${scopeid}"
             if ! rexekutor egrep -q -s "^${RVAL}\;"  "${filename}"
             then
                if [ "${OPTION_QUIET}" = 'NO' ]
                then
-                  log_fluff "Scope ${name} not part of auxscope"
+                  log_fluff "Scope ${scopeid} not part of auxscope"
                fi
                return 1
             fi
@@ -736,18 +824,18 @@ env_scope_get_main()
             then
                echo "${scope}"
             else
-               echo "${name}"
+               echo "${scopeid}"
             fi
          fi
          return 0
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +f
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
 
    if [ "${OPTION_QUIET}" = 'NO' ]
    then
-      log_verbose "Scope ${C_RESET_BOLD}${name}${C_VERBOSE} is unknown"
+      log_verbose "Scope ${C_RESET_BOLD}${search_scopeid}${C_VERBOSE} is unknown"
    fi
    return 1
 }
@@ -761,6 +849,7 @@ env_scope_add_main()
    log_entry "env_scope_add_main" "$@"
 
    local OPTION_IF_MISSING='NO'
+   local OPTION_CREATE_FILE='YES'
 
    local priority=DEFAULT
    local protect='NO'
@@ -773,9 +862,12 @@ env_scope_add_main()
             env_scope_add_usage
          ;;
 
-         --share)
-            filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-            protect='YES'
+         --create-file)
+            OPTION_CREATE_FILE='YES'
+         ;;
+
+         --no-create-file)
+            OPTION_CREATE_FILE='NO'
          ;;
 
          --etc)
@@ -783,19 +875,24 @@ env_scope_add_main()
             protect='NO'
          ;;
 
+         --if-missing)
+            OPTION_IF_MISSING='YES'
+         ;;
+
          --priority)
             [ $# -eq 1 ] && template_usage "Missing argument to \"$1\""
             shift
 
-            priority="$1"
-            if [ -z "${priority}" -o ! -z "${priority//[0-9]/}" ]
+            if ! scope_is_priority "$1"
             then
                fail "priority must be a number"
             fi
+            priority="$1"
          ;;
 
-         --if-missing)
-            OPTION_IF_MISSING='YES'
+         --share)
+            filename="${MULLE_ENV_SHARE_DIR}/auxscope"
+            protect='YES'
          ;;
 
          -*)
@@ -810,38 +907,36 @@ env_scope_add_main()
       shift
    done
 
-   local name
+   local scopeid
    [ ! -z "$1"  ] || env_scope_add_usage "Missing scope name"
 
-   name="$1"
+   scopeid="$1"
    shift
 
    [ "$#" -eq 0 ] || env_scope_add_usage "Superflous arguments \"$*\""
 
-   if env_scope_get_main -q "${name}"
+   if env_scope_get_main -q "${scopeid}"
    then
       if [ "${OPTION_IF_MISSING}" = 'YES' ]
       then
          return 0
       fi
-      fail "Scope \"${name}\" already exists"
+      fail "Scope \"${scopeid}\" already exists"
    fi
 
-   r_identifier "${name}"
-   if [ "${RVAL}" != "${name}" ]
+   if ! scope_is_scopeid "${scopeid}"
    then
-      fail "\"${name}\" is not a valid identifier"
+      fail "\"${scopeid}\" is not a valid scope identifier"
    fi
 
-   case "${name}" in
-      'DEFAULT'|'include'|'merged'|'custom')
-         fail "\"${name}\" is a non reusable keyword"
-      ;;
-   esac
+   if scope_is_keyword "${scopeid}"
+   then
+      fail "\"${scopeid}\" is a non reusable keyword"
+   fi
 
    if [ "${priority}" = 'DEFAULT' ]
    then
-      if ! r_priority_for_scope "${name}"
+      if ! r_priority_for_scopeid "${scopeid}"
       then
          RVAL=200
       fi
@@ -854,7 +949,16 @@ env_scope_add_main()
    fi
 
    r_mkdir_parent_if_missing "${filename}"
-   redirect_append_exekutor "${filename}" echo "${name};${priority}" || exit 1
+   redirect_append_exekutor "${filename}" echo "${scopeid};${priority}" || exit 1
+
+   if [ "${OPTION_CREATE_FILE}" = 'YES' ]
+   then
+      r_filename_for_scopeid "${scopeid}"
+      if [ ! -f "${RVAL}" ]
+      then
+         redirect_append_exekutor "${RVAL}" echo "# Fill it with mulle-env envirionment --scope ${scopeod} set <key> <value>"
+      fi
+   fi
 
    if [ "${protect}" = 'YES' ]
    then
@@ -868,6 +972,7 @@ scope_remove_scope()
    log_entry "scope_remove_scope" "$@"
 
    local scope="$1"
+   local remove_file="$2"
 
    local filename
    local protect
@@ -887,10 +992,14 @@ scope_remove_scope()
       ;;
    esac
 
-   r_escaped_grep_pattern "${scope:2}"
+   local scopeid
+
+   scopeid="${scope:2}"
+
+   r_escaped_grep_pattern "${scopeid}"
    if ! rexekutor egrep -q "^${RVAL}\;"  "${filename}"
    then
-      fail "Scope \"$name\" is built-in and can not be deleted"
+      fail "Scope \"${scopeid}\" is built-in and can not be deleted"
    fi
 
    if [ "${protect}" = 'YES' ]
@@ -898,8 +1007,14 @@ scope_remove_scope()
       unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
    fi
 
-   r_escaped_sed_pattern "${scope:2}"
+   r_escaped_sed_pattern "${scopeid}"
    inplace_sed -e "/^${RVAL}\;/d" "${filename}" || exit 1
+
+   if [ "${remove_file}" = 'YES' ]
+   then
+      r_filename_for_scope "${scope}"
+      remove_file_if_present "${RVAL}"
+   fi
 
    if [ "${protect}" = 'YES' ]
    then
@@ -913,6 +1028,7 @@ env_scope_remove_main()
    log_entry "env_scope_remove_main" "$@"
 
    local OPTION_IS_EXISTS='NO'
+   local OPTION_REMOVE_FILE='YES'
 
    while :
    do
@@ -921,9 +1037,16 @@ env_scope_remove_main()
             env_scope_remove_usage
          ;;
 
-
          --if-exists)
             OPTION_IF_EXISTS='YES'
+         ;;
+
+         --keep-file)
+            OPTION_REMOVE_FILE='NO'
+         ;;
+
+         --remove-file)
+            OPTION_REMOVE_FILE='YES'
          ;;
 
          -*)
@@ -938,10 +1061,10 @@ env_scope_remove_main()
       shift
    done
 
-   local name
+   local scopeid
    [ ! -z "$1"  ] || env_scope_remove_usage "Missing scope name"
 
-   name="$1"
+   scopeid="$1"
    shift
 
    [ "$#" -eq 0 ] || env_scope_remove_usage "Superflous arguments \"$*\""
@@ -953,28 +1076,27 @@ env_scope_remove_main()
    r_get_scopes
    scopes="${RVAL}"
 
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for scope in ${scopes}
    do
-      IFS="${DEFAULT_IFS}"; set +f
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       [ -z "${scope}" ] && continue
 
-      if [ "${scope:2}" = "${name}" ]
+      if [ "${scope:2}" = "${scopeid}" ]
       then
-         scope_remove_scope "${scope}"
+         scope_remove_scope "${scope}" "${OPTION_REMOVE_FILE}"
          return 0
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +f
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    if [ "${OPTION_IF_EXISTS}" = 'YES' ]
    then
       return
    fi
 
-
-   fail "Scope \"$name\" is unknown"
+   fail "Scope \"${scopeid}\" is unknown"
 }
 
 

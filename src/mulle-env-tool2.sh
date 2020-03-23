@@ -628,12 +628,12 @@ env_tool2_compile()
 
       lines="`rexekutor egrep -v '^#' "${file}"`"
 
-      set -f; IFS=$'\n'
+      set -o noglob; IFS=$'\n'
       local i
 
       for i in ${lines}
       do
-         set +f; IFS=':'
+         set +o noglob; IFS=':'
 
          case "${i}" in
             *';remove')
@@ -657,7 +657,7 @@ env_tool2_compile()
          esac
       done
 
-      set +f; IFS=':'
+      set +o noglob; IFS=':'
    done
    IFS="${DEFAULT_IFS}"
 
@@ -687,7 +687,7 @@ r_env_tool2_get()
       [ ! -f "${file}" ]  && continue
 
       lines="`egrep -v '^#' "${file}" | egrep "^${tool}$|^${tool};" `"
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
       for i in ${lines}
       do
          case "${i}" in
@@ -898,10 +898,10 @@ env_tool2_link_tools()
 
    mkdir_if_missing "${bindir}"
 
-   set -f ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for toolline in ${toollines}
    do
-      set +f ; IFS="${DEFAULT_IFS}"
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       isrequired='YES'
       operation="link"
@@ -921,7 +921,7 @@ env_tool2_link_tools()
       env_tool2_${operation}_tool "${toolname}" "${bindir}" "${isrequired}"
    done
 
-   set +f ; IFS="${DEFAULT_IFS}"
+   set +o noglob; IFS="${DEFAULT_IFS}"
 
    rmdir_if_empty "${bindir}"
 }

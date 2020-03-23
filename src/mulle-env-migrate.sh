@@ -275,12 +275,12 @@ env_migrate_from_v2_2_to_v3()
    # auxscopes have changed
    #
    lines="`rexekutor egrep -v '^#' ".mulle/share/env/auxscope" 2> /dev/null`"
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for scope in ${lines}
    do
       case "${scope}" in
          extension|s:extension)
-            r_priority_for_scope 'extension'
+            r_priority_for_scopeid 'extension'
             r_add_unique_line "${share_lines}" 'extension;${RVAL}'
             share_lines="${RVAL}"
          ;;
@@ -292,7 +292,7 @@ env_migrate_from_v2_2_to_v3()
          ;;
 
          'e:'*)
-            if ! r_priority_for_scope "${scope:2}"
+            if ! r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))
@@ -302,7 +302,7 @@ env_migrate_from_v2_2_to_v3()
          ;;
 
          's:'*)
-            if ! r_priority_for_scope "${scope:2}"
+            if ! r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))
@@ -321,12 +321,12 @@ env_migrate_from_v2_2_to_v3()
 
    order=100
    lines="`rexekutor egrep -v '^#' ".mulle/etc/env/auxscope" 2> /dev/null`"
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for scope in ${lines}
    do
       case "${scope}" in
          'e:'*)
-            if ! r_priority_for_scope "${scope:2}"
+            if ! r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))
@@ -336,7 +336,7 @@ env_migrate_from_v2_2_to_v3()
          ;;
 
          's:'*)
-            if ! r_priority_for_scope "${scope:2}"
+            if ! r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))

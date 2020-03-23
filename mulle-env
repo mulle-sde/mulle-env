@@ -566,7 +566,7 @@ __check_version()
 mulle-env ${MULLE_ENV_VERSION}.
 ${C_INFO}You can upgrade to ${MULLE_ENV_VERSION} with:
 ${C_RESET_BOLD}   cd \"${MULLE_VIRTUAL_ROOT}\"
-${C_RESET_BOLD}   mulle-env upgrade"
+${C_RESET_BOLD}   ${MULLE_USAGE_NAME} upgrade"
       ;;
 
       3\.*)
@@ -833,7 +833,7 @@ r_censored_path()
    do
       for j in ${RESTRICTED_PATH}
       do
-         set +f ; IFS="${DEFAULT_IFS}"
+         set +o noglob; IFS="${DEFAULT_IFS}"
 
          if [ "$i" = "$j" ]
          then
@@ -844,7 +844,7 @@ r_censored_path()
       done
    done
 
-   set +f ; IFS="${DEFAULT_IFS}"
+   set +o noglob; IFS="${DEFAULT_IFS}"
 }
 
 

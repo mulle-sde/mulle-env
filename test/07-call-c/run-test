@@ -23,7 +23,7 @@ main()
    local vardir
 
    directory="`make_tmp_directory`" || exit 1
-   directory="${directory:-/tmp/exekutor}"
+   directory="`physicalpath "${directory:-/tmp/exekutor}"`"
 
    cd "${directory}" || exit 1
 

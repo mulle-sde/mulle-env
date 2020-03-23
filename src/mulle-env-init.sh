@@ -82,14 +82,14 @@ custom_environment_init()
    #
    # use custom environment values to set environment
    #
-   set -f; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for keyvalue in ${CUSTOM_ENVIRONMENT}
    do
-      set +f; IFS="${DEFAULT_IFS}"
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       eval "export ${keyvalue}"
    done
-   set +f; IFS="${DEFAULT_IFS}"
+   set +o noglob; IFS="${DEFAULT_IFS}"
 }
 
 
