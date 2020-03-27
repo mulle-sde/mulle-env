@@ -49,7 +49,7 @@ Usage:
    You can not manage tools from the inside of a virtual environment.
 
 Options:
-   --common    : specify this command for the common toolset only
+   --global    : specify this command for the global toolset only
    --current   : specify this command for the current OS (default)
    --os <os>   : specify this command for the specified OS, e.g. darwin
    --plugin    : use plugin scope instead of etc for add/remove
@@ -1246,7 +1246,7 @@ env_tool2_main()
             OPTION_SCOPE="${1:2}"
          ;;
 
-         --common)
+         --global|--common)
             OPTION_OS="DEFAULT"
          ;;
 

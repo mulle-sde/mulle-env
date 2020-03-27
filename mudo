@@ -6,12 +6,14 @@ if [ $# -eq 0 ]
 then
    cat <<EOF >&2
 usage:
-   mudo [-e] <command> ...
+   mudo [-e|-f] <command> ...
 
    mudo lets you execute commands with an unrestricted PATH from within a
    mulle-env environment.
    With the -e option you can replace the current environment with the
    unrestricted user environment.
+   With the -f option you can run mudo even if there is no current environment
+   making mudo basicaly a no-op. This can be useful in scripts.
 
    See the difference by comparing \`env\` with \`mudo env\` and \`mudo -e env\`.
 
@@ -21,9 +23,21 @@ fi
 
 if [ -z "${MULLE_VIRTUAL_ROOT}" -o -z "${MULLE_HOSTNAME}" ]
 then
+   if [ "$1" = "-f" ]
+   then
+      shift
+      exec "$@"
+   fi
    echo "error: mudo must be run from within the mulle virtual environment" >&2
    exit 1
 fi
+
+# we are in a virtual env, so if -f is given remove it
+if [ "$1" = "-f" ]
+then
+   shift
+fi
+
 
 if [ "$1" != "-e" ]
 then
@@ -40,6 +54,13 @@ then
 fi
 
 shift
+
+# we are in a virtual env, so if -f is given remove it (do it one more time)
+if [ "$1" = "-f" ]
+then
+   shift
+fi
+
 
 # get mulle-env paths into this shell script environment like f.i.:
 #

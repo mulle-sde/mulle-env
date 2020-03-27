@@ -1200,7 +1200,7 @@ _env_environment_list()
 
       	r_basename "$1"
          s="${RVAL}"
-         s="${scopename%.sh}"
+         s="${s%.sh}"
          s="${s#environment-}"
 
          if [ "${scopeprefix}" = 'e' ]

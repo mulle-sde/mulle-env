@@ -135,6 +135,23 @@ EOF
 
 
 
+env_scope_file_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} scope file [options] <scope>
+
+   Print path to environment file of given scope.
+
+Options:
+   -h : show this usage
+EOF
+   exit 1
+}
+
+
 env_scope_list_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -967,6 +984,84 @@ env_scope_add_main()
 }
 
 
+scope_file_scope()
+{
+   log_entry "scope_file_scope" "$@"
+
+   local scope="$1"
+   local if_exists="$2"
+
+   r_filename_for_scope "${scope}"
+   if [ "${if_exists}" = 'YES' ] && [ ! -f "${RVAL}" ]
+   then
+      return 1
+   fi
+
+   printf "%s\n" "${RVAL}"
+}
+
+
+env_scope_file_main()
+{
+   log_entry "env_scope_file_main" "$@"
+
+   local OPTION_IS_EXISTS='NO'
+
+   while :
+   do
+      case "$1" in
+         -h|--help|help)
+            env_scope_remove_usage
+         ;;
+
+         --if-exists)
+            OPTION_IF_EXISTS='YES'
+         ;;
+
+         -*)
+            env_scope_remove_usage "Unknown option \"$1\""
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   local scopeid
+   [ ! -z "$1"  ] || env_scope_remove_usage "Missing scope name"
+
+   scopeid="$1"
+   shift
+
+   [ "$#" -eq 0 ] || env_scope_remove_usage "Superflous arguments \"$*\""
+
+   local scopes
+   local scope
+
+   r_get_scopes
+   scopes="${RVAL}"
+
+   set -o noglob; IFS=$'\n'
+   for scope in ${scopes}
+   do
+      set +o noglob; IFS="${DEFAULT_IFS}"
+
+      [ -z "${scope}" ] && continue
+
+      if [ "${scope:2}" = "${scopeid}" ]
+      then
+         scope_file_scope "${scope}" "${OPTION_IF_EXISTS}"
+         return $?
+      fi
+   done
+   set +o noglob; IFS="${DEFAULT_IFS}"
+}
+
+
+
 scope_remove_scope()
 {
    log_entry "scope_remove_scope" "$@"
@@ -1136,7 +1231,7 @@ env_scope_main()
    [ $# -ne 0 ] && shift
 
    case "${cmd}" in
-      add|get|remove|list)
+      add|file|get|remove|list)
          env_scope_${cmd}_main "$@"
       ;;
 

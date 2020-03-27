@@ -2,7 +2,10 @@
 
 * added scope command
 * project file (mulle-sde) moves from share to etc, which is an incompatible change
-
+* mudo gains the -f flag so you can run mudo outside of environments
+* remove --share opion from environment commands
+* add --if-missing to environment add command
+* add --create-file to environment add command
 
 ## 2.6.0
 
