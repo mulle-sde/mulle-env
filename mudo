@@ -53,6 +53,7 @@ then
    exit $?
 fi
 
+# remove -e
 shift
 
 # we are in a virtual env, so if -f is given remove it (do it one more time)
