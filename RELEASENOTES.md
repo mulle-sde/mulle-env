@@ -6,6 +6,7 @@
 * remove --share opion from environment commands
 * add --if-missing to environment add command
 * add --create-file to environment add command
+* pass-thru NO_COLORS environment variable
 
 ## 2.6.0
 

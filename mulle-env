@@ -1165,25 +1165,26 @@ undefined (old mulle-bashfunctions)"
       ;;
 
       */relax|*/restrict|*/inherit)
-         [ ! -z "${DISPLAY}" ]   && r_concat "${s}" "DISPLAY='${DISPLAY}'" && s="${RVAL}"
-         [ ! -z "${EDITOR}" ]    && r_concat "${s}" "EDITOR='${EDITOR}'" && s="${RVAL}"
-         [ ! -z "${HOME}" ]      && r_concat "${s}" "HOME='${HOME}'" && s="${RVAL}"
-         [ ! -z "${LOGNAME}" ]   && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
-         [ ! -z "${LS_COLORS}" ] && r_concat "${s}" "LS_COLORS='${LS_COLORS}'" && s="${RVAL}"
-         [ ! -z "${PS1}" ]       && r_concat "${s}" "PS1='${PS1}'" && s="${RVAL}"
+         [ ! -z "${DISPLAY}" ]         && r_concat "${s}" "DISPLAY='${DISPLAY}'" && s="${RVAL}"
+         [ ! -z "${EDITOR}" ]          && r_concat "${s}" "EDITOR='${EDITOR}'" && s="${RVAL}"
+         [ ! -z "${HOME}" ]            && r_concat "${s}" "HOME='${HOME}'" && s="${RVAL}"
+         [ ! -z "${LOGNAME}" ]         && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
+         [ ! -z "${LS_COLORS}" ]       && r_concat "${s}" "LS_COLORS='${LS_COLORS}'" && s="${RVAL}"
+         [ ! -z "${NO_COLOR}" ]        && r_concat "${s}" "NO_COLOR='${NO_COLOR}'" && s="${RVAL}"
+         [ ! -z "${PS1}" ]             && r_concat "${s}" "PS1='${PS1}'" && s="${RVAL}"
          [ ! -z "${SSH_CONNECTION}" ] \
-                                 && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
-         [ ! -z "${SSH_TTY}" ]   && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
+                                       && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
+         [ ! -z "${SSH_TTY}" ]         && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
          [ ! -z "${MULLE_ENV_PLUGIN_PATH}" ]    && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
          [ ! -z "${MULLE_SDE_EXTENSION_PATH}" ] && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
          [ ! -z "${MULLE_USER_PWD}" ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
          [ ! -z "${MULLE_NO_COLOR}" ]  && r_concat "${s}" "MULLE_NO_COLOR='${MULLE_NO_COLOR}'" && s="${RVAL}"
-         [ ! -z "${TERM}" ]      && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
-         [ ! -z "${TMPDIR}" ]    && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
-         [ ! -z "${USER}" ]      && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
-         [ ! -z "${VISUAL}" ]    && r_concat "${s}" "VISUAL='${VISUAL}'" && s="${RVAL}"
+         [ ! -z "${TERM}" ]            && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
+         [ ! -z "${TMPDIR}" ]          && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
+         [ ! -z "${USER}" ]            && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
+         [ ! -z "${VISUAL}" ]          && r_concat "${s}" "VISUAL='${VISUAL}'" && s="${RVAL}"
          [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
-                                 && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
+                                       && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
       ;;
 
    esac
