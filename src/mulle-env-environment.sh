@@ -667,7 +667,7 @@ env_environment_mset_main()
 
       if [ ! -z "${comment}" ]
       then
-         comment="`sed 's/\\\n/\n/g' <<< "${comment}"`"
+         comment="${comment//\\n/$'\n'}"
          comment="`sed -e 's/^/# /' <<< "${comment}"`"
       fi
 
