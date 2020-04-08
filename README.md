@@ -100,11 +100,21 @@ mulle-env init -d /tmp/xxx
 mulle-env -d /tmp/xxx -c env
 ```
 
-This environment is modified by reading a profile file
-`.mulle/share/env/environment.sh`. With this file new environment variables,
-especially PATH and aliases can be defined. Usually you do not manually edit
-this files. You typically use mulle-env commands and mulle-env plugins to
-customize the environment to your liking.
+The environment is modified by reading a profile file
+`.mulle/share/env/environment.sh`, which in turn will read othe files in 
+`.mulle/share/env` and `.mulle/etc/env`. These files define new environment variables,
+and aliases. Usually you do not manually edit this files, but use mulle-env *commands*
+and to customize these environment files to your liking.
+
+If you want to go manual, it's suggested you use `.mulle/etc/env/environment-global.sh`
+as a starting point:
+
+Example:
+
+```
+mkdir -p .mulle/etc/env
+echo "FOO=xxx" > .mulle/etc/env/environment-global.sh
+```
 
 
 ## Prepare a directory to use mulle-env
