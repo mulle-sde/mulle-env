@@ -109,6 +109,11 @@ Usage:
    The "DEFAULT" scope will check the user and host scopes first before
    looking into the global scope and then the other scopes.
 
+   To get at the fully evaluated value, do not use this command but rather
+   the unix `env` command:
+
+      mulle-env -c env | sed -n 's/^MULLE_FETCH_SEARCH_PATH=\(.*\)/\1/p'
+
 Options:
    --output-eval : resolve value with other environment variables. This will
                    not evaluate values from other scopes though

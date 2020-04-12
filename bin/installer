@@ -196,7 +196,7 @@ main()
 
    for i in src/mulle*
    do
-      install -v -m "${mode}" "${i}" "${libexec}" || exit 1
+      install ${VERBOSE} -m "${mode}" "${i}" "${libexec}" || exit 1
    done
 
 
@@ -204,12 +204,12 @@ main()
    mkdir -p "${PLUGIN_DIR}" 2> /dev/null
    for i in src/plugins/*.sh
    do
-      install -v -m "${mode}" "${i}" "${PLUGIN_DIR}" || exit 1
+      install ${VERBOSE} -m "${mode}" "${i}" "${PLUGIN_DIR}" || exit 1
    done
 
    PLUGIN_DIR="${share}/plugins"
    mkdir -p "${PLUGIN_DIR}" 2> /dev/null
-   install -v -m "${mode}" "src/PLUGIN_README.md" "${PLUGIN_DIR}" || exit 1
+   install ${VERBOSE} -m "${mode}" "src/PLUGIN_README.md" "${PLUGIN_DIR}" || exit 1
 }
 
 main "$@"

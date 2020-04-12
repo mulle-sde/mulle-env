@@ -414,6 +414,11 @@ r_scopeprefix_for_scopeid()
       *:*)
          internal_fail "Need unprefixed scope"
       ;;
+
+     host-*|os-*|user-*)
+         RVAL="e"
+         return
+      ;;
    esac
 
    local scopes

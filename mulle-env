@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="3.0.0"
+MULLE_ENV_VERSION="3.1.0"
 
 #
 # The default for first time mulle-env
@@ -283,6 +283,8 @@ _setup_environment()
    #
    # MULLE_ENV_VAR_DIR is for mulle-sde tools (bash scripts)
    # MULLE_ENV_HOST_VAR_DIR for all the rest
+   # these can be overidden by command line parameters, for special needs
+   # people with read-only read/write setups
    #
    case "${MULLE_UNAME}" in
       windows)
@@ -294,14 +296,17 @@ _setup_environment()
          #
          # Use physicaldir for shasum calc
          #
-         hash="`shasum -a 256 -b <<< "${physicaldir}" | cut -c1-8`"
-         MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}-${hash}.var/${MULLE_HOSTNAME}/env"
-         MULLE_ENV_VAR_DIR="${HOME}/.mulle/${directory##*/}.var/.env"
+         if [ -z "${MULLE_ENV_HOST_VAR_DIR}" ]
+         then
+            hash="`shasum -a 256 -b <<< "${physicaldir}" | cut -c1-8`"
+            MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}-${hash}.var/${MULLE_HOSTNAME}/env"
+         fi
+         MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-${HOME}/.mulle/${directory##*/}.var/.env}"
       ;;
 
       *)
-         MULLE_ENV_HOST_VAR_DIR="${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env"
-         MULLE_ENV_VAR_DIR="${physicaldir}/.mulle/var/.env"
+         MULLE_ENV_HOST_VAR_DIR="${MULLE_ENV_HOST_VAR_DIR:-${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env}"
+         MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-${physicaldir}/.mulle/var/.env}"
       ;;
    esac
 
@@ -1403,13 +1408,32 @@ main()
             OPTION_DIRECTORY="$1"
          ;;
 
+         --defines)
+            [ $# -eq 1 ] && usage "Missing argument to $1"
+            shift
+
+            local arg
+
+            while read -r arg
+            do
+               arg="${arg#-D}"
+               arg="${arg## }"
+               if [ ! -z "${arg}" ]
+               then
+                  if ! define_custom_environment "${arg}"
+                  then
+                     exit 1
+                  fi
+               fi
+            done <<< "$1"
+         ;;
+
          -D*)
-            local keyvalue
+            local arg
 
-            local argument
-
-            argument="`LC_ALL=C sed -e s'/^-D[ ]*//' <<< "$1" `"
-            if ! define_custom_environment "${argument}"
+            arg="${1#-D}"
+            arg="${arg## }"
+            if ! define_custom_environment "${arg}"
             then
                exit 1
             fi
@@ -1535,6 +1559,16 @@ restrict
 tight
 wild"
          return 0
+      ;;
+
+      # shortcuts for environment
+      get|set|list)
+         # shellcheck source=src/mulle-env-environment.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
+
+         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         env_environment_main "${arg}" "$@"
+         return $?
       ;;
 
       hostname)
