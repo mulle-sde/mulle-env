@@ -1,3 +1,10 @@
+## 3.2.0
+
+* add --search-here, mostly for calling mulle-tool-env
+* there are now shortcut commands get/set/list for environment get/set/list
+* the var directories can be rerouted outside of the project by setting `MULLE_ENV_HOST_VAR_DIR` and `MULLE_ENV_VAR_DIR`
+
+
 # 3.0.0
 
 * added scope command

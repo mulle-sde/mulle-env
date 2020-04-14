@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="3.1.0"
+MULLE_ENV_VERSION="3.2.0"
 
 #
 # The default for first time mulle-env
@@ -156,6 +156,7 @@ EOF
 #            SUPERIOR: find highes PARENT
 #            DEFAULT:  NEAREST with added defer for master/minion configuration
 #            AS_IS:    NEAREST with fallback to start
+#            HERE:     just this without checks
 #
 r_find_best_environment()
 {
@@ -173,6 +174,11 @@ r_find_best_environment()
    directory="${RVAL}"  # paranoia
 
    case "${searchmode}" in
+      'HERE')
+         RVAL="${start}"
+         return
+      ;;
+
       'AS_IS')
          best="${start}"
       ;;
@@ -1474,6 +1480,10 @@ main()
             shift
 
             OPTION_STYLE="$1"
+         ;;
+
+         --search-here)
+            OPTION_SEARCHMODE='HERE'
          ;;
 
          --search-as-is)
