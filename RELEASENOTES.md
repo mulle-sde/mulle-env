@@ -1,3 +1,8 @@
+### 3.2.1
+
+* fix PATH for tight/restrict/inherit to include .env/bin (again)
+* tight now forwards LOGNAME, because environment files and style command needs it
+
 ## 3.2.0
 
 * add --search-here, mostly for calling mulle-tool-env
