@@ -65,7 +65,7 @@ EOF
 
 #
 # relax has this problem, that on linux cmake is installed in /bin
-# and everything works find and then you go to darwin where its in
+# and everything works fine and then you go to darwin where its in
 # /usr/local/bin and things fail
 #
 usage()
@@ -492,8 +492,8 @@ _env_tool2_status()
 #
 # Check that any symlink in .mulle/var/etc/bin is still valid
 # returns 0 if OK
-# The contents of MULLE_ENV_VAR_DIR/bin are actually installed by the mulle.sh plugin
-# so this code should also move to the plugin.
+# The contents of MULLE_ENV_VAR_DIR/bin are actually installed by the mulle.sh
+# plugin so this code should also move to the plugin.
 #
 _env_symlink_status()
 {

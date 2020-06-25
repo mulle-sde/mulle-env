@@ -56,7 +56,7 @@ Options:
    --extension : use extension scope instead of etc for/add remove
 
 Commands:
-   add        : add a tool
+   add        : add tools
    compile    : compile tool lists into .mulle/var
    get        : check for tool existence
    link       : use compiled tool list to link commands into environment
@@ -93,10 +93,10 @@ env_tool2_add_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} tool add [options] <tool>
+   ${MULLE_USAGE_NAME} tool add [options] <tool> ...
 
-   Add a tool to the list of tools available to the subshell. This will
-   install the tool on the next "link".
+   Add a tool or multiple tools to the list of tools available to the subshell.
+   The additions will be available on the next "link".
 
    You can change the optionality of a tool with options.
 
@@ -1006,7 +1006,7 @@ env_tool2_link()
 }
 
 
-_list_tool_file()
+_env_list_tool_file()
 {
    local filename="$1"
    local color="$2"
@@ -1127,7 +1127,7 @@ _env_tool2_list()
 
       log_info "${directory}/${name}"
 
-      _list_tool_file "${file}" "${color}" "${csv}" "${builtin}"
+      _env_list_tool_file "${file}" "${color}" "${csv}" "${builtin}"
    done
 
    IFS="${DEFAULT_IFS}"

@@ -32,9 +32,30 @@
 MULLE_ENV_CLEAN_SH="included"
 
 
+#
+env_clean_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} clean
+
+   Clears all mulle-env 'var' directories.
+
+EOF
+
+   exit 1
+}
+
 env_clean_main()
 {
    rmdir_safer "env_clean_main" "$@"
+
+   if [ $# -ne 0 ]
+   then
+      env_clean_usage
+   fi
 
    rmdir_safer "${MULLE_ENV_VAR_DIR}"
    rmdir_safer "${MULLE_ENV_HOST_VAR_DIR}" # this has hostname in it
