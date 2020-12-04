@@ -538,7 +538,14 @@ env_tool2_add()
             exit 1
          fi
 
-         log_verbose "Tool \"${tool}\" added"
+         if [ "${OPTION_OPTIONALITY}" = 'YES' ]
+         then
+            log_verbose "Tool \"${tool}\" added"
+         else
+            log_info "Requirement for tool \"${tool}\" added. 
+The project will not be usable without it being installed.
+Use ${C_RESET_BOLD}--optional${C_INFO} to add tools that aren't required."
+         fi
       done
    )
    rval=$?
@@ -824,10 +831,15 @@ env_tool2_link_tool()
       "")
          if [ "${isrequired}" = 'YES' ]
          then
-            fail "Required tool \"${toolname}\" not found"
+            if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
+            then
+               fail "Required tool \"${toolname}\" not found"
+            else
+               log_warning "Required tool \"${toolname}\" not found"
+            fi
+         else
+            log_fluff "\"${toolname}\" not found, but it's optional"
          fi
-
-         log_fluff "\"${toolname}\" not found, but it's optional"
          return 0
       ;;
 
