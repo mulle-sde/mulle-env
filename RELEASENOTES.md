@@ -1,3 +1,8 @@
+## 3.3.0
+
+* allow entry of environment if required tool is missing with -f
+
+
 ### 3.2.1
 
 * fix PATH for tight/restrict/inherit to include .env/bin (again)
