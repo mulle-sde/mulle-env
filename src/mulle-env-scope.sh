@@ -978,7 +978,7 @@ env_scope_add_main()
       r_filename_for_scopeid "${scopeid}"
       if [ ! -f "${RVAL}" ]
       then
-         redirect_append_exekutor "${RVAL}" echo "# Fill it with mulle-env envirionment --scope ${scopeod} set <key> <value>"
+         redirect_append_exekutor "${RVAL}" echo "# Fill it with mulle-env environment --scope ${scopeid} set <key> <value>"
       fi
    fi
 

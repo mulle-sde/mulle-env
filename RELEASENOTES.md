@@ -1,3 +1,7 @@
+### 3.3.1
+
+* improve info for tools a bit
+
 ## 3.3.0
 
 * allow entry of environment if required tool is missing with -f

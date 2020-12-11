@@ -100,8 +100,10 @@ Usage:
 
    You can change the optionality of a tool with options.
 
-   Example:
-      ${MULLE_USAGE_NAME} tool --os linux add --optional ninja
+Examples:
+   ${MULLE_USAGE_NAME} tool --os linux add --optional ninja
+
+   ${MULLE_USAGE_NAME} tool --global add cmake
 
 Options:
    --optional : it's not a fatal error if command is not available
@@ -206,13 +208,10 @@ env_link_mulle_tool()
 
    local srclibexecdir
    local parentdir
-   local srclibname
 
    srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
    r_dirname "${srclibdir}"
    srclibexecdir="${RVAL}"
-   r_basename "${srclibdir}"
-   srclibname="${RVAL}"
 
    local dstbindir
    local dstexefile
@@ -540,11 +539,33 @@ env_tool2_add()
 
          if [ "${OPTION_OPTIONALITY}" = 'YES' ]
          then
-            log_verbose "Tool \"${tool}\" added"
+            case "${os}" in
+               'DEFAULT')
+                  log_info "Tool \"${tool}\" added.
+Use ${C_RESET_BOLD}tool --os <os>${C_INFO} to restrict tool to a certain OS."
+               ;;
+
+               *)
+                  log_info "Tool \"${tool}\" added for ${C_MAGENTA_BOLD}${os}${C_INFO}.
+Use ${C_RESET_BOLD}tool --global${C_VERBOSE} to make tool available on all platforms."
+               ;;
+            esac
          else
-            log_info "Requirement for tool \"${tool}\" added. 
-The project will not be usable without it being installed.
-Use ${C_RESET_BOLD}--optional${C_INFO} to add tools that aren't required."
+            case "${os}" in
+               'DEFAULT')
+                  log_info "Requirement for tool \"${tool}\" added.
+${C_VERBOSE}The project will not be usable without it being installed.
+Use ${C_RESET_BOLD}add --optional${C_INFO} to add tools that aren't required.
+Use ${C_RESET_BOLD}tool --os <os>${C_INFO} to restrict requirement for a certain OS."
+               ;;
+
+               *)
+                  log_info "Requirement for tool \"${tool}\" added for ${C_MAGENTA_BOLD}${os}${C_INFO}.
+${C_VERBOSE}The project will not be usable on ${C_MAGENTA}${C_BOLD}${os}${C_VERBOSE} without it being installed.
+Use ${C_RESET_BOLD}add --optional${C_VERBOSE} to add tools that aren't required.
+Use ${C_RESET_BOLD}tool --global${C_VERBOSE} to extend requirement to all platforms."
+               ;;
+            esac
          fi
       done
    )
