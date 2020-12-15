@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="3.3.1"
+MULLE_ENV_VERSION="3.3.2"
 
 #
 # The default for first time mulle-env
@@ -1390,7 +1390,7 @@ main()
             # the only way to preserve empty lines properly is read AFAIK
             # -C doesn't expand contents
             #
-            while read -r arg
+            while IFS= read -r arg
             do
                printf -v arg "%q" "${arg}"
                if [ -z "${OPTION_SHELL_COMMAND}" ]

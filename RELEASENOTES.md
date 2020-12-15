@@ -1,3 +1,7 @@
+### 3.3.2
+
+* preserve leading whitespace on -C arguments
+
 ### 3.3.1
 
 * improve info for tools a bit
