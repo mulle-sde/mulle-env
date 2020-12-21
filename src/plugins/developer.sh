@@ -70,7 +70,7 @@ print_developer_tools_sh()
 
 #
 # somewhat arbitrarily hand-picked. Rule of thumb: if a mulle script uses
-# it, it's in here for sure (like base64 by mulle-sourcetree)
+# it, it's in here for sure (like base64 by mulle-sourcetree) and not optional
 # on a bare minimum ubuntu, the following commands are not there:
 #  ed, vi
 #
@@ -90,8 +90,8 @@ find
 fgrep
 grep
 head
-less
-more
+less;optional
+more;optional
 readlink
 sleep
 sort
