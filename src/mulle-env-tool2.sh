@@ -651,7 +651,6 @@ env_tool2_compile()
 
    __get_tool_filepath "${MULLE_UNAME}"
 
-
    local lines
    local result
    local file

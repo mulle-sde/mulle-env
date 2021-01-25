@@ -273,6 +273,7 @@ r_read_auxscope_file()
 # Also make rightt odd tenners, and left even tenners
 #
 # -----|---------------------------------------|--------------------
+#   0  |                                       | <hardcoded>
 #  10  |                                       | environment-plugin.sh
 #  15  |                                       | environment-plugin-os-\${MULLE_UNAME}.sh
 #  20  | environment-project.sh                |
@@ -295,6 +296,11 @@ r_priority_for_scopeid()
    esac
 
    case "${scopeid}" in
+      'hardcoded')
+         RVAL=0
+         return 0
+      ;;
+
       'plugin')
          RVAL=10
          return 0
@@ -305,7 +311,17 @@ r_priority_for_scopeid()
          return 0
       ;;
 
-      'global'*)
+      'project')
+         RVAL=20
+         return 0
+      ;;
+
+      'extension')
+         RVAL=30
+         return 0
+      ;;
+
+      'global')
          RVAL=40
          return 0
       ;;
@@ -345,15 +361,22 @@ r_get_scopes()
    local option_share_aux="${2:-YES}"
    local option_user="${3:-YES}"
    local option_etc_aux="${4:-YES}"
+   local option_hardcoded="${5:-NO}"
 
    local etc_scopes
    local share_scopes
    local aux_scopes
 
+   if [ "${option_hardcoded}" = 'YES' ]
+   then
+      share_scopes="h:hardcoded;0"
+   fi
+
    if [ "${option_plugin}" = 'YES' ]
    then
-      share_scopes="s:plugin;10
-s:plugin-os-${MULLE_UNAME};15"
+      r_add_line "${share_scopes}" "s:plugin;10"
+      r_add_line "${RVAL}" "s:plugin-os-${MULLE_UNAME};15"
+      share_scopes="${RVAL}"
    fi
 
    if [ "${option_share_aux}" = 'YES' ]
@@ -423,7 +446,7 @@ r_scopeprefix_for_scopeid()
 
    local scopes
 
-   r_get_scopes
+   r_get_scopes "YES" "YES" "YES" "YES" "YES"
    scopes="${RVAL}"
    RVAL=""
 
@@ -573,6 +596,42 @@ r_get_existing_scope_files()
 }
 
 
+env_validate_scope_write()
+{
+   log_entry "env_validate_scope_write" "$@"
+
+   local scope="$1"; shift
+
+   local scopes
+   local line
+
+   r_get_scopes "YES" "YES" "YES" "YES" "YES"
+   scopes="${RVAL}"
+
+   set -o noglob; IFS=$'\n'
+   for line in ${scopes}
+   do
+      case "${line:0:1}" in
+         's')
+            if [ "${line:2}" = "${scope}" ]
+            then
+               fail "Use -f to make environment variable changes, that will be lost in the next upgrade"
+            fi
+         ;;
+
+         'h')
+            if [ "${line:2}" = "${scope}" ]
+            then
+               fail "Changing hardcoded values is not possible. Use a different scope to override. ($*)"
+            fi
+         ;;
+      esac
+
+   done
+   set +o noglob; IFS="${DEFAULT_IFS}"
+}
+
+
 env_scope_list_main()
 {
    log_entry "env_scope_list_main" "$@"
@@ -583,6 +642,7 @@ env_scope_list_main()
    local OPTION_SHARE_AUX_SCOPES='NO'
    local OPTION_ETC_AUX_SCOPES='YES'
    local OPTION_PLUGIN_SCOPES='NO'
+   local OPTION_HARDCODED_SCOPES='NO'
    local OPTION_EXISTING_FILENAME='NO'
 
    while :
@@ -597,6 +657,7 @@ env_scope_list_main()
             OPTION_SHARE_AUX_SCOPES='YES'
             OPTION_PLUGIN_SCOPES='YES'
             OPTION_USER_SCOPES='YES'
+            OPTION_HARDCODED_SCOPES='YES'
          ;;
 
          --output-filename)
@@ -625,6 +686,14 @@ env_scope_list_main()
 
          --no-etc-aux)
             OPTION_ETC_AUX_SCOPES='NO'
+         ;;
+
+         --hardcoded)
+            OPTION_HARDCODED_SCOPES='YES'
+         ;;
+
+         --no-hardcoded)
+            OPTION_HARDCODED_SCOPES='NO'
          ;;
 
          --share-aux)
@@ -690,7 +759,8 @@ env_scope_list_main()
    r_get_scopes "${OPTION_PLUGIN_SCOPES}" \
                 "${OPTION_SHARE_AUX_SCOPES}" \
                 "${OPTION_USER_SCOPES}" \
-                "${OPTION_ETC_AUX_SCOPES}"
+                "${OPTION_ETC_AUX_SCOPES}" \
+                "${OPTION_HARDCODED_SCOPES}"
 
    scopes="${RVAL}"
 
@@ -702,14 +772,16 @@ env_scope_list_main()
    if [ "${OPTION_USER_SCOPES}" = 'YES' -a \
         "${OPTION_ETC_AUX_SCOPES}" = 'YES' -a \
         "${OPTION_PLUGIN_SCOPES}" = 'NO' -a \
-        "${OPTION_SHARE_AUX_SCOPES}" = 'NO' ]
+        "${OPTION_SHARE_AUX_SCOPES}" = 'NO' -a \
+        "${OPTION_HARDCODED_SCOPES}" = 'NO' ]
    then
       log_info "User Scopes"
    else
       if [ "${OPTION_SHARE_AUX_SCOPES}" = 'YES' -a \
            "${OPTION_ETC_AUX_SCOPES}" = 'YES' -a \
            "${OPTION_PLUGIN_SCOPES}" = 'YES' -a \
-           "${OPTION_USER_SCOPES}" = 'YES' ]
+           "${OPTION_USER_SCOPES}" = 'YES' -a \
+           "${OPTION_HARDCODED_SCOPES}" = 'YES' ]
       then
          log_info "All Scopes"
       else
@@ -826,6 +898,10 @@ env_scope_get_main()
                ;;
                'e:'*)
                   filename="${MULLE_ENV_ETC_DIR}/auxscope"
+               ;;
+
+               'h:'*)
+                  fail "Hardcoded values can't be read from a file"
                ;;
             esac
 
@@ -978,7 +1054,8 @@ env_scope_add_main()
       r_filename_for_scopeid "${scopeid}"
       if [ ! -f "${RVAL}" ]
       then
-         redirect_append_exekutor "${RVAL}" echo "# Fill it with mulle-env environment --scope ${scopeid} set <key> <value>"
+         redirect_append_exekutor "${RVAL}" \
+            echo "# Fill it with mulle-env environment --scope ${scopeid} set <key> <value>"
       fi
    fi
 

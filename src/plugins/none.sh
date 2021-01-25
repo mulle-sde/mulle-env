@@ -187,6 +187,7 @@ print_none_include_environment_sh()
 # --------------------------------------|--------------------
 #                                       | environment-plugin.sh
 #                                       | environment-plugin-os-\${MULLE_UNAME}.sh
+# environment-project.sh                |
 # environment-global.sh                 |
 # environment-os-\${MULLE_UNAME}.sh      |
 # environment-host-\${MULLE_HOSTNAME}.sh |
@@ -209,6 +210,16 @@ if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-plugin-os\${MULLE_UNAME}.sh" ]
 then
    . "\${MULLE_ENV_SHARE_DIR}/environment-plugin-os\${MULLE_UNAME}.sh"
 fi
+
+#
+# The project file, if present is to be set by mulle-sde init itself
+# w/o extensions
+#
+if [ -f "\${MULLE_ENV_ETC_DIR}/environment-project.sh" ]
+then
+   . "\${MULLE_ENV_ETC_DIR}/environment-project.sh"
+fi
+
 
 #
 # Global user settings

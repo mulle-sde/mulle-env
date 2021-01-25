@@ -106,17 +106,16 @@ EOF
    cat <<EOF >&2
 
 Commands:
+   clean         : force relink of tools on next entry
    environment   : manage subshell environment variables
    envstyles     : list available environment styles
    init          : set up the subshell for the first time
-   clean         : force relink of tools on next entry
-   reset         : force relink of tools immediately
    style         : show style of directory (PWD)
    subenv        : enter a sub environment
    tool          : manage subshell tools
    toolstyles    : list available tool styles (including plugins)
-   upgrade       : upgrade a subshell to a newer mulle-env version
    uname         : return the ${MULLE_USAGE_NAME} specific uname
+   upgrade       : upgrade a subshell to a newer mulle-env version
    version       : return the ${MULLE_USAGE_NAME} version
    --            : enter the subshell
 EOF
@@ -364,7 +363,7 @@ protect_dir_if_exists()
 
    local directory="$1"
 
-   if [ "${OPTION_PROTECT}" != 'NO' ]
+   if [ "${OPTION_PROTECT}" = 'YES' ]
    then
       if [ -d "${directory}" ]
       then
@@ -380,7 +379,7 @@ unprotect_dir_if_exists()
 
    local directory="$1"
 
-   if [ "${OPTION_PROTECT}" != 'NO' ]
+   if [ "${OPTION_PROTECT}" = 'YES' ]
    then
       if [ -d "${directory}" ]
       then
@@ -844,7 +843,7 @@ r_censored_path()
    do
       for j in ${RESTRICTED_PATH}
       do
-         set +o noglob; IFS="${DEFAULT_IFS}"
+         set +f; IFS="${DEFAULT_IFS}"
 
          if [ "$i" = "$j" ]
          then
@@ -855,7 +854,7 @@ r_censored_path()
       done
    done
 
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   set +f; IFS="${DEFAULT_IFS}"
 }
 
 
@@ -1330,7 +1329,7 @@ main()
    local MULLE_FLAG_MAGNUM_FORCE=
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCHMODE="DEFAULT"
-   local OPTION_PROTECT="DEFAULT"
+   local OPTION_PROTECT="YES"
 
    local MULLE_TRACE
    local MULLE_FLAG_EXEKUTOR_DRY_RUN
@@ -1473,10 +1472,15 @@ main()
             NO_MOTD='YES'
          ;;
 
+         # the default anyway
          --protect)
             OPTION_PROTECT='YES'
          ;;
 
+         # here the idea is that a tool that issues multiple mulle-env calls
+         # uses this to indicate that env should a) not validate accesses
+         # and b) not protect/unprotect files
+         #
          --no-protect)
             OPTION_PROTECT='NO'
          ;;
@@ -1563,7 +1567,7 @@ main()
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
 
          _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
-         env_environment_main "$@"
+         env_environment_main --protect-flag "${OPTION_PROTECT}" "$@"
          return $?
       ;;
 
@@ -1583,7 +1587,7 @@ wild"
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
 
          _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
-         env_environment_main "${arg}" "$@"
+         env_environment_main --protect-flag "${OPTION_PROTECT}" "${arg}" "$@"
          return $?
       ;;
 

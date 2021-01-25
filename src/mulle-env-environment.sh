@@ -294,6 +294,208 @@ key_values_to_sed()
 }
 
 
+env_execute_with_unprotected_files_in_dir()
+{
+   log_entry "env_execute_with_unprotected_files_in_dir" "$@"
+
+   local directory="$1"; shift
+
+   [ -z "${directory}" ] && internal_fail "directory is empty"
+
+   local protect
+   local rval
+
+   # unprotect files
+   if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' -o "${OPTION_PROTECT}" != 'NO' ] \
+      && [ -d "${directory}" ]
+   then
+      protect='YES'
+      exekutor find "${directory}" -type f -exec chmod ug+w {} \;
+   fi
+
+   (
+      "$@"
+   )
+   rval=$?
+      # protect files only, chmoding the share directory is bad for git
+   if [ "${protect}" = 'YES' ]
+   then
+      exekutor find "${directory}" -type f -exec chmod a-w {} \;
+   fi
+   return $rval
+}
+
+
+r_mkdir_if_missing_or_unprotect()
+{
+   log_entry "r_mkdir_if_missing_or_unprotect" "$@"
+
+   local directory="$1"
+
+   [ -z "${directory}" ] && internal_fail "directory is empty"
+   [ "${directory}" = '/' ] && fail "Won't touch root"
+
+   RVAL=
+   if [ -w "${directory}" ]
+   then
+      return 0
+   fi
+
+   if [ ! -d "${directory}" ]
+   then
+      r_dirname "${directory}"
+      parentdir="${RVAL}"
+
+      r_mkdir_if_missing_or_unprotect "${parentdir}"
+
+      if ! exekutor mkdir "${directory}"
+      then
+         return 1
+      fi
+   else
+      if ! exekutor chmod ug+wX "${directory}"
+      then
+         return 1
+      fi
+   fi
+
+   r_add_line "${RVAL}" "${directory}"
+   return 0
+}
+
+
+env_safe_create_file()
+{
+   log_entry "env_safe_create_file" "$@"
+
+   local filename="$1"; shift
+
+   [ -z "${filename}" ] && internal_fail "filename is empty"
+
+   local directory
+
+   r_dirname "${filename}"
+   directory="${RVAL}"
+
+   if [ "${OPTION_PROTECT}" = 'NO' ]
+   then
+      r_mkdir_parent_if_missing "${directory}" &&
+      "$@"
+      return $?
+   fi
+
+   local protectfile
+   local protectdirs
+   local rval
+
+   r_mkdir_if_missing_or_unprotect "${directory}"
+   protectdirs="${RVAL}"
+
+   rval=0
+   protectfile='YES'
+   if [ -f "${filename}" ]
+   then
+      if [ -w "${filename}" ]
+      then
+         protectfile='NO'
+      else
+         exekutor chmod ug+w "${filename}"
+         rval=$?
+      fi
+   fi
+
+   if [ $rval -eq 0 ]
+   then
+      (
+         "$@"
+      )
+      rval=$?
+   fi
+
+   if [ "${protectfile}" = 'YES' ]
+   then
+      if ! exekutor chmod a-w "${filename}"
+      then
+         rval=1
+      fi
+   fi
+
+   IFS=$'\n'
+   set -f
+   for directory in ${protectdirs}
+   do
+      if ! exekutor chmod a-w "${directory}"
+      then
+         rval=1
+      fi
+   done
+
+   IFS="${DEFAULT_IFS}"
+   set +f
+
+   return ${rval}
+}
+
+
+env_safe_write_file()
+{
+   log_entry "env_safe_write_file" "$@"
+
+   local filename="$1"; shift
+
+   if [ "${OPTION_PROTECT}" = 'NO' ]
+   then
+      "$@"
+      return $?
+   fi
+
+   local protect
+   local rval
+
+   rval=0
+   if [ ! -w "${filename}" ]
+   then
+      [ -e "${filename}" ] || internal_fail "File must exist for write"
+
+      protect='YES'
+      exekutor chmod ug+w "${filename}"
+      rval=$?
+   fi
+
+   if [ $rval -eq 0 ]
+   then
+      (
+         "$@"
+      )
+      rval=$?
+   fi
+
+   if [ "${protect}" = 'YES' ]
+   then
+      if ! exekutor chmod a-w "${filename}"
+      then
+         rval=1
+      fi
+   fi
+   return ${rval}
+}
+
+
+env_safe_create_or_write_file()
+{
+   log_entry "env_safe_create_or_write_file" "$@"
+
+   local filename="$1"
+
+   if [ ! -f "${filename}" ]
+   then
+      env_safe_create_file "$@"
+   else
+      env_safe_write_file "$@"
+   fi
+}
+
+
 #
 # Set
 #
@@ -363,7 +565,8 @@ shell environment"
          return 4
       fi
 
-      inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
+      env_safe_write_file "${filename}" \
+         inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
       return $?
    fi
@@ -375,7 +578,8 @@ shell environment"
    then
       if _env_file_defines_key "${filename}" "${key}"
       then
-         inplace_sed -e "s/^[ #]*export *${sed_escaped_key}=.*/\
+         env_safe_write_file "${filename}" \
+            inplace_sed -e "s/^[ #]*export *${sed_escaped_key}=.*/\
 export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
          return $?
       fi
@@ -413,8 +617,10 @@ ${comment}
 export ${key}=${value}
 
 "
-   r_mkdir_parent_if_missing "${filename}"
-   redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
+   # unprotect if needed
+   env_safe_create_or_write_file "${filename}" \
+      redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
+   # protect if unprotected
 }
 
 
@@ -503,112 +709,96 @@ env_environment_set_main()
 
    [ $# -lt 2 -o $# -gt 3 ] && env_environment_set_usage
 
+   local protect
 
-   # unprotect files
-   if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${MULLE_ENV_SHARE_DIR}" ]
+   local key="$1"
+   local value="$2"
+   local comment="$3"
+
+   [ -z "${key}" ] && env_environment_set_usage "empty key for set"
+
+   assert_valid_environment_key "${key}"
+
+   if [ "${OPTION_ADD}" != 'NO' ]
    then
-      exekutor find "${MULLE_ENV_SHARE_DIR}" -type f -exec chmod ug+w {} \;
+      local prev
+      local oldvalue
+
+      prev="`env_environment_get_main "${scopename}" "${key}"`"
+      log_debug "Previous value is \"${prev}\""
+
+      case "${value}" in
+         *:*)
+            fail "${value} contains ':', which is not possible for addition \
+(can not be escaped either)"
+         ;;
+      esac
+
+      set -f; IFS="${OPTION_SEPARATOR}"
+
+      for oldvalue in ${prev}
+      do
+         set +o noglob; IFS="${DEFAULT_IFS}"
+         if [ "${oldvalue}" = "${value}" ]
+         then
+            log_fluff "\"${value}\" already set"
+            return 0
+         fi
+      done
+
+      set +o noglob; IFS="${DEFAULT_IFS}"
+
+      if [ "${OPTION_ADD}" = 'APPEND' ]
+      then
+         r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
+         value="${RVAL}"
+      else
+         r_concat "${value}" "${prev}" "${OPTION_SEPARATOR}"
+         value="${RVAL}"
+      fi
    fi
 
-   # this shell protects from exits, that leave share unprotected
-   (
-      local key="$1"
-      local value="$2"
-      local comment="$3"
-
-      [ -z "${key}" ] && env_environment_set_usage "empty key for set"
-
-      assert_valid_environment_key "${key}"
-
-      if [ "${OPTION_ADD}" != 'NO' ]
-      then
-         local prev
-         local oldvalue
-
-         prev="`env_environment_get_main "${scopename}" "${key}"`"
-         log_debug "Previous value is \"${prev}\""
-
-         case "${value}" in
-            *:*)
-               fail "${value} contains ':', which is not possible for addition \
-(can not be escaped either)"
-            ;;
-         esac
-
-         set -f; IFS="${OPTION_SEPARATOR}"
-
-         for oldvalue in ${prev}
-         do
-            set +o noglob; IFS="${DEFAULT_IFS}"
-            if [ "${oldvalue}" = "${value}" ]
-            then
-               log_fluff "\"${value}\" already set"
-               return 0
-            fi
-         done
-
-         set +o noglob; IFS="${DEFAULT_IFS}"
-
-         if [ "${OPTION_ADD}" = 'APPEND' ]
-         then
-            r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
-            value="${RVAL}"
-         else
-            r_concat "${value}" "${prev}" "${OPTION_SEPARATOR}"
-            value="${RVAL}"
-         fi
-      fi
-
-      local filename
+   local filename
 
    #   log_verbose "Use \`mulle-env-reload\` to get the actual value in your shell"
 
-      log_debug "Environment scope \"${scopename}\" set $key=\"${value}\""
+   log_debug "Environment scope \"${scopename}\" set $key=\"${value}\""
 
-      if [ "${scopename}" = 'DEFAULT' ]
+   if [ "${scopename}" = 'DEFAULT' ]
+   then
+      filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
+      _env_environment_set "${filename}" "${key}" "${value}" "${comment}" &&
+      env_environment_remove_from_global_subscopes "${key}"
+      return $?
+   fi
+
+   local scopeprefix
+   local rval
+
+   if ! r_filename_for_scopeid "${scopename}"
+   then
+      if scope_is_keyword "${scopename}"
       then
-         filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
-         _env_environment_set "${filename}" "${key}" "${value}" "${comment}" &&
-         env_environment_remove_from_global_subscopes "${key}"
-         return $?
+         fail "You can't set values in scope \"${scopename}\""
       fi
+      fail "Unknown scope \"${scopename}\""
+   fi
+   filename="${RVAL}"
 
-      local scopeprefix
-      local rval
-
-      if ! r_filename_for_scopeid "${scopename}"
-      then
-         if scope_is_keyword "${scopename}"
-         then
-            fail "You can't set values in scope \"${scopename}\""
-         fi
-         fail "Unknown scope \"${scopename}\""
-      fi
-      filename="${RVAL}"
-
-      _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
-      rval=$?
-
-      if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-      then
-         log_trace2 "filename : ${filename}"
-         cat "${filename}" >&2
-      fi
-
-      return $rval
-   )
+   _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
    rval=$?
 
-   # protect files only, chmoding the share directory is bad for git
-   if [ "${OPTION_PROTECT}" != 'NO' ]  && [ -d "${MULLE_ENV_SHARE_DIR}" ]
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      exekutor find "${MULLE_ENV_SHARE_DIR}" -type f -exec chmod a-w {} \;
+      log_trace2 "filename : ${filename}"
+      cat "${filename}" >&2
    fi
 
    [ $rval -eq 1 ] && exit 1
 
    return $rval
 }
+
 
 
 #
@@ -624,6 +814,8 @@ env_environment_mset_main()
    local value
    local comment
    local option
+   local protect
+   local rval
 
    while [ $# -ne 0 ]
    do
@@ -834,13 +1026,6 @@ _env_environment_sed_get()
 }
 
 
-r_unescaped_doublequotes()
-{
-   RVAL="${*//\\\"/\"}"
-   RVAL="${RVAL//\\\\/\\}"
-}
-
-
 #
 # TODO: make sure the quoting and unquoting of values read and put into
 #       the environment files is a the proper level. Not sure if
@@ -986,14 +1171,6 @@ _env_environment_remove()
    r_escaped_sed_pattern "${key}"
    sed_escaped_key="${RVAL}"
 
-   if [ ! -w "${filename}" ]
-   then
-      log_warning "${filename#${MULLE_USER_PWD}/} defines \"${key}\" but its not writable.
-${C_INFO}Maybe override this setting with the same key in the global scope ?
-${C_RESET_BOLD}   ${MULLE_USAGE_NAME} environment --global set ${key} \"\""
-      return 1
-   fi
-
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "filename : ${filename}"
@@ -1005,7 +1182,8 @@ ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} environment --global set ${key} \"\""
    #       probably easier to do with a cleanup path that removes
    #       three comments above an empty line, that's why we don't
    #       delete here
-   inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)//" "${filename}"
+   env_safe_write_file "${filename}" \
+      inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)//" "${filename}"
 
    if [ "${OPTION_REMOVE_FILE}" != 'NO' ]
    then
@@ -1137,6 +1315,7 @@ _env_environment_combined_list()
 
    local text
    local contents
+
    while [ "$#" -ne 0 ]
    do
       if [ -f "$1" ]
@@ -1208,14 +1387,17 @@ _env_environment_list()
          s="${s%.sh}"
          s="${s#environment-}"
 
-         if [ "${scopeprefix}" = 'e' ]
-         then
-            log_info "${C_MAGENTA}${C_BOLD}${s}"
-            printf "${C_RESET}"
-         else
-            log_info "${C_RESET_BOLD}${s}"
-            printf "${C_FAINT}"
-         fi
+         case "${scopeprefix}" in
+            'e')
+               log_info "${C_MAGENTA}${C_BOLD}${s}"
+               printf "${C_RESET}"
+            ;;
+
+            *)
+               log_info "${C_RESET_BOLD}${s}"
+               printf "${C_FAINT}"
+            ;;
+         esac
 
          merge_environment_file "$1"
       else
@@ -1379,7 +1561,6 @@ env_environment_list_main()
 
    log_info "Environment"
 
-
    BASH="`command -v "bash"`"
    BASH="${BASH:-/usr/bin/bash}"  # panic fallback
 
@@ -1395,7 +1576,7 @@ env_environment_list_main()
       ;;
 
       *)
-         r_get_scopes
+         r_get_scopes "YES" "YES" "YES" "YES" "YES"
          scopes="${RVAL}"
 
          local i
@@ -1419,6 +1600,14 @@ env_environment_list_main()
 
                's:'*)
                  "${lister}" "${i:0:1}" "${MULLE_ENV_SHARE_DIR}/environment-${i_name}.sh"
+               ;;
+
+               'h:'*)
+                  log_info "${C_RESET_BOLD}${i:2}"
+                  printf "${C_FAINT}"
+                  echo "MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\""
+                  echo "MULLE_UNAME=\"${MULLE_UNAME}\""
+                  echo "MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\""
                ;;
             esac
          done
@@ -1447,6 +1636,7 @@ env_environment_main()
    local infix="_"
    local OPTION_SED_KEY_PREFIX
    local OPTION_SED_KEY_SUFFIX
+   local OPTION_PROTECT='YES'
 
    #
    # handle options
@@ -1478,11 +1668,17 @@ env_environment_main()
             OPTION_SCOPE="user-${USER}"
          ;;
 
-
          --os)
             assert_default_scope
 
             OPTION_SCOPE="os-${MULLE_UNAME}"
+         ;;
+
+         --protect-flag)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            OPTION_PROTECT="$1"
          ;;
 
          --scope)
@@ -1522,7 +1718,24 @@ env_environment_main()
          printf "%s\n" "${MULLE_UNAME}"
       ;;
 
-      get|list|mset|remove|set)
+
+      mset|remove|set)
+         _setup_environment
+
+         [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
+
+         if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a "${OPTION_PROTECT}" = 'YES' ]
+         then
+            # shellcheck source=src/mulle-env-scope.sh
+            [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+
+            env_validate_scope_write "${OPTION_SCOPE}" "$@"
+         fi
+         env_environment_${cmd}_main "${OPTION_SCOPE}" "$@"
+      ;;
+
+
+      get|list)
          _setup_environment
 
          [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"

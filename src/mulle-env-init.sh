@@ -156,7 +156,7 @@ env_init_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || fail "Superflous arguments $*"
+   [ "$#" -eq 0 ] || fail "Superflous arguments \"$*\""
 
    #
    # command line parameters added via -D will just be exported here
