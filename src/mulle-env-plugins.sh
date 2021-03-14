@@ -38,7 +38,7 @@ MULLE_ENV_PLUGINS_SH="included"
 #
 r_plugin_installdir()
 {
-   log_entry "r_plugin_installdir"
+#   log_entry "r_plugin_installdir"
 
    local dev="${1:-YES}"
 
@@ -55,16 +55,20 @@ r_plugin_installdir()
 
    r_resolve_symlinks "$0"
    r_simplified_path "${RVAL}/../../share/mulle-env/plugins"
-   log_debug "plugin install directory: ${RVAL}"
+#   log_debug "plugin install directory: ${RVAL}"
 }
 
 
 r_plugin_searchpath()
 {
-   log_entry "r_plugin_searchpath"
+#   log_entry "r_plugin_searchpath"
+
+   if [ ! -z "${_ENV_PLUGIN_SEARCHPATH}" ]
+   then
+      RVAL="${_ENV_PLUGIN_SEARCHPATH}"
+   fi
 
 	local searchpath
-	local sharedir
 
 	searchpath="${MULLE_ENV_PLUGIN_PATH}"
 
@@ -90,7 +94,7 @@ r_plugin_searchpath()
    r_colon_concat "${searchpath}" "${RVAL}"
    searchpath="${RVAL}"
 
-   log_debug "plugin searchpath: ${searchpath}"
+#   log_debug "plugin searchpath: ${searchpath}"
    RVAL="${searchpath}"
 }
 
@@ -208,3 +212,15 @@ env_upgrade_plugin()
    fi
 }
 
+
+# cache this PATH
+env_plugin_initialize()
+{
+   r_plugin_searchpath
+
+   _ENV_PLUGIN_SEARCHPATH="${RVAL}"
+}
+
+env_plugin_initialize
+
+:

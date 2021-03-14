@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_ENV_VERSION="3.3.2"
+MULLE_ENV_VERSION="3.4.0"
 
 #
 # The default for first time mulle-env
@@ -318,14 +318,14 @@ _setup_environment()
    MULLE_ENV_SHARE_DIR="${physicaldir}/.mulle/share/env"
    MULLE_ENV_ETC_DIR="${physicaldir}/.mulle/etc/env"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "MULLE_VIRTUAL_ROOT     set to \"${MULLE_VIRTUAL_ROOT}\""
-      log_trace2 "MULLE_ENV_ETC_DIR      set to \"${MULLE_ENV_ETC_DIR}\""
-      log_trace2 "MULLE_ENV_SHARE_DIR    set to \"${MULLE_ENV_SHARE_DIR}\""
-      log_trace2 "MULLE_ENV_VAR_DIR      set to \"${MULLE_ENV_VAR_DIR}\""
-      log_trace2 "MULLE_ENV_HOST_VAR_DIR set to \"${MULLE_ENV_HOST_VAR_DIR}\""
-   fi
+#   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+#   then
+#      log_trace2 "MULLE_VIRTUAL_ROOT:     \"${MULLE_VIRTUAL_ROOT}\""
+#      log_trace2 "MULLE_ENV_ETC_DIR:      \"${MULLE_ENV_ETC_DIR}\""
+#      log_trace2 "MULLE_ENV_SHARE_DIR:    \"${MULLE_ENV_SHARE_DIR}\""
+#      log_trace2 "MULLE_ENV_VAR_DIR:      \"${MULLE_ENV_VAR_DIR}\""
+#      log_trace2 "MULLE_ENV_HOST_VAR_DIR: \"${MULLE_ENV_HOST_VAR_DIR}\""
+#   fi
 }
 
 
@@ -761,10 +761,14 @@ __load_flavor_plugin()
 
    local flavor="$1"
 
-   # shellcheck source=src/mulle-env-plugins.sh
-   . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+   if [ -z "${MULLE_ENV_PLUGINS_SH}" ]
+   then
+      # shellcheck source=src/mulle-env-plugins.sh
+      . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugins.sh" || exit 1
+   fi
 
    local searchpath
+
    r_plugin_searchpath
    searchpath="${RVAL}"
 
@@ -1543,6 +1547,7 @@ main()
 
    options_setup_trace "${MULLE_TRACE}"
 
+
    export MULLE_TRACE
 
    local arg
@@ -1550,6 +1555,15 @@ main()
 
    arg="$1"
    [ $# -ne 0 ] && shift
+
+   #
+   # if directory is there go there, except if we are doing an init
+   #
+   if [ ! -z "${OPTION_DIRECTORY}" -a "$arg" != "init" ] && [ -d "${OPTION_DIRECTORY}" ]
+   then
+      rexekutor cd "${OPTION_DIRECTORY}"
+      OPTION_DIRECTORY=""
+   fi
 
    case "${arg}" in
       --)

@@ -72,7 +72,7 @@ Options:
    --host            : narrow scope to this host only ($MULLE_HOSTNAME)
    --host-<name>     : host with name
    --os              : narrow scope to this operating system only ($MULLE_UNAME)
-   --os-<name>       : os swith name
+   --os-<name>       : os with name
    --scope <name>    : use an arbitrarily named scope
    --user            : narrow scope to this user only ($USER)
    --user-<name>     : user with name
@@ -219,9 +219,9 @@ Scopes:
    project            : set by mulle-sde on init
    extension          : set by mulle-sde extensions
    global             : global settings (user defined)
-   os-<platform>      : platform specific settings (user defined)
-   host-<hostname>    : host specific settings (user defined)
-   user-<username>    : user specific settings (user defined)
+   os-<name>          : operating system specific settings (user defined)
+   host-<name>        : host specific settings (user defined)
+   user-<name>        : user specific settings (user defined)
 
 Options:
    --all              : show also plugin, project and extension scopes
@@ -707,13 +707,27 @@ env_environment_set_main()
       shift
    done
 
-   [ $# -lt 2 -o $# -gt 3 ] && env_environment_set_usage
-
    local protect
 
    local key="$1"
    local value="$2"
    local comment="$3"
+
+   # allow also key=value
+   case "${key}" in
+      *=*)
+         value="${key#*=}"
+         key="${key%%=*}"
+         comment="$2"
+
+         [ $# -lt 1 -o $# -gt 2 ] && env_environment_set_usage
+      ;;
+
+      *)
+         [ $# -lt 2 -o $# -gt 3 ] && env_environment_set_usage
+      ;;
+   esac
+
 
    [ -z "${key}" ] && env_environment_set_usage "empty key for set"
 
