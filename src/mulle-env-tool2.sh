@@ -561,7 +561,7 @@ Use ${C_RESET_BOLD}tool --os <os>${C_INFO} to restrict requirement for a certain
 
                *)
                   log_info "Requirement for tool \"${tool}\" added for ${C_MAGENTA_BOLD}${os}${C_INFO}.
-${C_VERBOSE}The project will not be usable on ${C_MAGENTA}${C_BOLD}${os}${C_VERBOSE} without it being installed.
+${C_VERBOSE}The project will not be usable on ${C_MAGENTA}${C_BOLD}${os}${C_VERBOSE} without ${tool} being installed.
 Use ${C_RESET_BOLD}add --optional${C_VERBOSE} to add tools that aren't required.
 Use ${C_RESET_BOLD}tool --global${C_VERBOSE} to extend requirement to all platforms."
                ;;

@@ -1642,7 +1642,6 @@ wild"
          return 1
       ;;
 
-
       mulle-tool-env)
          [ $# -eq 0 ] && usage "Missing argument to \"${arg}\""
          [ $# -ne 1 ] && usage "Superflous arguments to \"${arg}\""
