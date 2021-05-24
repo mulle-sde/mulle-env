@@ -1055,7 +1055,7 @@ env_scope_add_main()
       if [ ! -f "${RVAL}" ]
       then
          redirect_append_exekutor "${RVAL}" \
-            echo "# Fill it with mulle-env environment --scope ${scopeid} set <key> <value>"
+            echo "# Edit with: mulle-env environment --scope ${scopeid} set <key> <value>"
       fi
    fi
 

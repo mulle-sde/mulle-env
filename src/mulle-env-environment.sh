@@ -742,9 +742,10 @@ env_environment_set_main()
       log_debug "Previous value is \"${prev}\""
 
       case "${value}" in
-         *:*)
-            fail "${value} contains ':', which is not possible for addition \
-(can not be escaped either)"
+         *${OPTION_SEPARATOR}*)
+            fail "${value} contains '${OPTION_SEPARATOR}', which is not possible for addition \
+as this is used to concatenate values.
+${C_INFO}Tip: use multiple addition statements."
          ;;
       esac
 

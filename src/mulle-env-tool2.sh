@@ -542,12 +542,12 @@ env_tool2_add()
             case "${os}" in
                'DEFAULT')
                   log_info "Tool \"${tool}\" added.
-Use ${C_RESET_BOLD}tool --os <os>${C_INFO} to restrict tool to a certain OS."
+Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict tool to a certain OS."
                ;;
 
                *)
                   log_info "Tool \"${tool}\" added for ${C_MAGENTA_BOLD}${os}${C_INFO}.
-Use ${C_RESET_BOLD}tool --global${C_VERBOSE} to make tool available on all platforms."
+Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platforms."
                ;;
             esac
          else
@@ -556,14 +556,14 @@ Use ${C_RESET_BOLD}tool --global${C_VERBOSE} to make tool available on all platf
                   log_info "Requirement for tool \"${tool}\" added.
 ${C_VERBOSE}The project will not be usable without it being installed.
 Use ${C_RESET_BOLD}add --optional${C_INFO} to add tools that aren't required.
-Use ${C_RESET_BOLD}tool --os <os>${C_INFO} to restrict requirement for a certain OS."
+Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict requirement for a certain OS."
                ;;
 
                *)
                   log_info "Requirement for tool \"${tool}\" added for ${C_MAGENTA_BOLD}${os}${C_INFO}.
 ${C_VERBOSE}The project will not be usable on ${C_MAGENTA}${C_BOLD}${os}${C_VERBOSE} without ${tool} being installed.
 Use ${C_RESET_BOLD}add --optional${C_VERBOSE} to add tools that aren't required.
-Use ${C_RESET_BOLD}tool --global${C_VERBOSE} to extend requirement to all platforms."
+Use ${C_RESET_BOLD}--global add${C_VERBOSE} to extend requirement to all platforms."
                ;;
             esac
          fi
