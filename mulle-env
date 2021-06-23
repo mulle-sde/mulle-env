@@ -527,6 +527,7 @@ _env_symlink_status()
    return $rval
 }
 
+
 #
 # dealing with styles and flavors and their changes
 #
@@ -537,14 +538,24 @@ _r_get_saved_version()
    local sharedir="$1"
    local fallbackroot="$2"
 
-   RVAL="`egrep -v '^#' "${sharedir}/version" 2> /dev/null`"
+   RVAL="`rexekutor egrep -v '^#' "${sharedir}/version" 2> /dev/null`"
    if [ "${RVAL}" = "" ]
    then
       # old location
-      RVAL="`egrep -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
+      RVAL="`rexekutor egrep -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
    fi
 
-   [ "${RVAL}" != "" ]
+   case "${RVAL}" in
+      "")
+         return 1
+      ;;
+
+      *[^0-9.]*)
+         fail "Old version ${RVAL} looks corrupted"
+      ;;
+   esac
+
+   return 0
 }
 
 

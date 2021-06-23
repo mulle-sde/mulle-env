@@ -380,7 +380,9 @@ env_safe_create_file()
    if [ "${OPTION_PROTECT}" = 'NO' ]
    then
       r_mkdir_parent_if_missing "${directory}" &&
-      "$@"
+      (
+         exekutor "$@"
+      )
       return $?
    fi
 
@@ -407,7 +409,7 @@ env_safe_create_file()
    if [ $rval -eq 0 ]
    then
       (
-         "$@"
+         exekutor "$@"
       )
       rval=$?
    fi
@@ -445,30 +447,30 @@ env_safe_write_file()
 
    if [ "${OPTION_PROTECT}" = 'NO' ]
    then
-      "$@"
+      (
+         exekutor "$@"
+      )
       return $?
    fi
 
    local protect
    local rval
 
-   rval=0
    if [ ! -w "${filename}" ]
    then
       [ -e "${filename}" ] || internal_fail "File must exist for write"
 
       protect='YES'
-      exekutor chmod ug+w "${filename}"
-      rval=$?
+      if ! exekutor chmod ug+w "${filename}"
+      then
+         return 1
+      fi
    fi
 
-   if [ $rval -eq 0 ]
-   then
-      (
-         "$@"
-      )
-      rval=$?
-   fi
+   (
+      exekutor "$@"
+   )
+   rval=$?
 
    if [ "${protect}" = 'YES' ]
    then
@@ -494,6 +496,121 @@ env_safe_create_or_write_file()
       env_safe_write_file "$@"
    fi
 }
+
+
+#
+# as write file but also unprotect directory
+#
+env_safe_modify_file()
+{
+   log_entry "env_safe_modify_file" "$@"
+
+   local filename="$1"; shift
+
+   if [ "${OPTION_PROTECT}" = 'NO' ]
+   then
+      (
+         exekutor "$@"
+      )
+      return $?
+   fi
+
+   local protect
+   local dir_protect
+   local rval
+   local dir
+
+   r_dirname "${filename}"
+   dir="${RVAL}"
+
+   if [ ! -w "${dir}" ]
+   then
+      dir_protect='YES'
+      if ! exekutor chmod ug+wX "${dir}"
+      then
+         return 1
+      fi
+   fi
+
+   rval=0
+   if [ ! -w "${filename}" ]
+   then
+      [ -e "${filename}" ] || internal_fail "File must exist for write"
+
+      protect='YES'
+      exekutor chmod ug+w "${filename}"
+      rval=$?
+   fi
+
+   if [ $rval -eq 0 ]
+   then
+      (
+         exekutor "$@"
+      )
+      rval=$?
+   fi
+
+   if [ "${protect}" = 'YES' ]
+   then
+      if ! exekutor chmod a-w "${filename}"
+      then
+         rval=1
+      fi
+   fi
+
+   if [ "${dir_protect}" = 'YES' ]
+   then
+      if ! exekutor chmod a-w "${dir}"
+      then
+         rval=1
+      fi
+   fi
+   return ${rval}
+}
+
+
+env_safe_remove_file_if_present()
+{
+   log_entry "env_safe_modify_file" "$@"
+
+   local filename="$1"
+
+   if [ "${OPTION_PROTECT}" = 'NO' ]
+   then
+      remove_file_if_present "${filename}"
+      return $?
+   fi
+
+   local dir_protect
+   local rval
+   local dir
+
+   r_dirname "${filename}"
+   dir="${RVAL}"
+
+   if [ ! -w "${dir}" ]
+   then
+      dir_protect='YES'
+      if ! exekutor chmod ug+wX "${dir}"
+      then
+         return 1
+      fi
+   fi
+
+   remove_file_if_present "${filename}"
+   rval=$?
+
+   if [ "${dir_protect}" = 'YES' ]
+   then
+      if ! exekutor chmod a-w "${dir}"
+      then
+         rval=1
+      fi
+   fi
+
+   return ${rval}
+}
+
 
 
 #
@@ -565,7 +682,9 @@ shell environment"
          return 4
       fi
 
-      env_safe_write_file "${filename}" \
+      # inplace sed creates a temporary file, so we need create to unprotect
+      # the parent
+      env_safe_modify_file "${filename}" \
          inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
       return $?
@@ -578,7 +697,9 @@ shell environment"
    then
       if _env_file_defines_key "${filename}" "${key}"
       then
-         env_safe_write_file "${filename}" \
+         # inplace sed creates a temporary file, so we need create to unprotect
+         # the parent
+         env_safe_modify_file "${filename}" \
             inplace_sed -e "s/^[ #]*export *${sed_escaped_key}=.*/\
 export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
          return $?
@@ -1169,7 +1290,7 @@ remove_environmentfile_if_empty()
    contents="`egrep -v '^#' "${filename}" | sed '/^[ ]*$/d'`"
    if [ -z "${contents}" ]
    then
-      remove_file_if_present "${filename}"
+      env_safe_remove_file_if_present "${filename}"
    fi
 }
 
@@ -1197,7 +1318,7 @@ _env_environment_remove()
    #       probably easier to do with a cleanup path that removes
    #       three comments above an empty line, that's why we don't
    #       delete here
-   env_safe_write_file "${filename}" \
+   env_safe_modify_file "${filename}" \
       inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)//" "${filename}"
 
    if [ "${OPTION_REMOVE_FILE}" != 'NO' ]

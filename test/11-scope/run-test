@@ -46,7 +46,8 @@ main()
    local result
    local expect
 
-   expect="plugin
+   expect="hardcoded
+plugin
 plugin-os-${MULLE_UNAME}
 global
 os-${MULLE_UNAME}
@@ -71,6 +72,7 @@ user-${LOGNAME}"
    run_mulle_env scope add --priority 10000 --share bar || exit 1
 
    expect="foo
+hardcoded
 plugin
 plugin-os-${MULLE_UNAME}
 global
@@ -101,7 +103,8 @@ bar"
       fail "Scope removeal of foo succeeded unexpectedly"
    fi
 
-   expect="plugin
+   expect="hardcoded
+plugin
 plugin-os-${MULLE_UNAME}
 global
 os-${MULLE_UNAME}
