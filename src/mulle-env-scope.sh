@@ -508,7 +508,10 @@ r_filename_for_scopeid()
 
    local scopeid="$1"
 
-   r_scopeprefix_for_scopeid "${scopeid}"
+   if ! r_scopeprefix_for_scopeid "${scopeid}"
+   then
+      return 1
+   fi
    r_filename_for_scope "${RVAL}:${scopeid}"
 }
 
@@ -1006,6 +1009,7 @@ env_scope_add_main()
    done
 
    local scopeid
+
    [ ! -z "$1"  ] || env_scope_add_usage "Missing scope name"
 
    scopeid="$1"
@@ -1051,7 +1055,11 @@ env_scope_add_main()
 
    if [ "${OPTION_CREATE_FILE}" = 'YES' ]
    then
-      r_filename_for_scopeid "${scopeid}"
+      if ! r_filename_for_scopeid "${scopeid}"
+      then
+         fail "Unknown scopeid \"${scopeid}\""
+      fi
+
       if [ ! -f "${RVAL}" ]
       then
          redirect_append_exekutor "${RVAL}" \

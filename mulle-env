@@ -145,6 +145,35 @@ EOF
 }
 
 
+env_style_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} [options] style 
+
+   Print the style currently used by the mulle-env environment. The style
+   is a pair of tool-style/env-style.
+
+Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
+   none          : a fairly empty virtual environment
+   minimal       : a minimal set of tools (like cd, ls)
+   developer     : a common set of tools (like cd, ls, awk, man) (default)
+
+Env-style:
+   tight         : all environment variables must be user defined
+   restrict      : inherit some environment (e.g. SSH_TTY) (default)
+   relax         : restrict plus all /bin and /usr/bin tools.
+   inherit       : relax plus all tools in PATH
+   wild          : no restrictions
+
+EOF
+
+  exit 1
+}
+
+
 #
 # start:     starting directory
 # search:    NONE (doesn't climb), NEAREST, PARENT, SUPERIOR, DEFAULT
@@ -1779,7 +1808,7 @@ wild"
 
          case "${directory}" in
             --help|help|-h)
-               usage
+               env_style_usage
             ;;
          esac
 
