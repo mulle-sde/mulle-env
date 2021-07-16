@@ -50,7 +50,7 @@ emit_options()
    -ef <file>    : use a different environment file (${ENVFILENAME})
    -aef <file>   : add another environment file to an interactive subshell
    -N            : search for nearest enclosing environment
-   -P            : search for parent enivronment
+   -P            : search for parent environment
    -p <path>     : specify an additional plugin search path
    -S            : search for superior environment
    --style <t/e> : enter and change subshell style (${MULLE_ENV_DEFAULT_STYLE})
@@ -372,9 +372,9 @@ _default_setup_environment()
    then
       if [ "${failonerror}" = 'YES' ]
       then
-         return 1
+         fail "No suitable environment found for ${directory} (init it first)"
       fi
-      fail "No suitable environment found for ${directory} (init it first)"
+      return 1
    fi
 
    [ ! -d "${RVAL}" ] && fail "${RVAL} does not exist (init it first)"
