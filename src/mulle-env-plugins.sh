@@ -205,7 +205,7 @@ env_upgrade_plugin()
    local functionname
 
    functionname="env_${flavor}_migrate"
-   if [ "`type -t "${functionname}"`" = "function" ]
+   if shell_is_function "${functionname}"
    then
       log_fluff "Migrating ${flavor} plugin"
       rexekutor "${functionname}" "${oldversion}" "${version}"

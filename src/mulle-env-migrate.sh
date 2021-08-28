@@ -169,22 +169,22 @@ env_migrate_from_v1_to_v2()
 
    local craftinfo
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for craftinfo in craftinfo/*/mulle-make*
    do
       env_convert_directory_if_present "${craftinfo}" "${craftinfo//mulle-make/definition}"
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 
    local i
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for i in craftinfo/*/CMakeLists.txt
    do
       inplace_sed -e 's/mulle-make/definition/g' \
                   -e 's/BUILDINFO_DIRS/DEFINITION_DIRS/g' "${i}"
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 
    # move mulle-project to .mulle to
    env_convert_directory_if_present "mulle-project" ".mulle/etc/project"
@@ -198,7 +198,7 @@ env_migrate_from_v1_to_v2()
    remove_file_if_present .mulle-env/share/environment-global.sh  # only etc!
 
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for i in .mulle-env/share/environment*.sh .mulle-env/etc/environment*.sh
    do
       if egrep -q '^MULLE_SOURCETREE_SHARE_DIR=' "$i"
@@ -206,7 +206,7 @@ env_migrate_from_v1_to_v2()
          inplace_sed 's/^MULLE_SOURCETREE_SHARE_DIR=/MULLE_SOURCETREE_STASH_DIRNAME=/' "${i}"
       fi
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 
    #
    # hack .gitignore for new paths, also remove some superflous stuff and
@@ -275,7 +275,7 @@ env_migrate_from_v2_2_to_v3()
    # auxscopes have changed
    #
    lines="`rexekutor egrep -v '^#' ".mulle/share/env/auxscope" 2> /dev/null`"
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for scope in ${lines}
    do
       case "${scope}" in
@@ -321,7 +321,7 @@ env_migrate_from_v2_2_to_v3()
 
    order=100
    lines="`rexekutor egrep -v '^#' ".mulle/etc/env/auxscope" 2> /dev/null`"
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for scope in ${lines}
    do
       case "${scope}" in

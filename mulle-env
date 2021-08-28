@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /bin/sh
 #
 #   Copyright (c) 2015 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -30,6 +30,67 @@
 #   POSSIBILITY OF SUCH DAMAGE.
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+####
+#
+# Prelude to be placed at top of each script. Rerun this script either in
+# bash or zsh, if not already running in either (which can happen!)
+# Allows script to run on systems that either have bash (linux) or
+# zsh (macOS) only by default.
+
+if [ "$1" != --no-auto-shell ]
+then
+   if [ -z "${BASH_VERSION}" -a -z "${ZSH_VERSION}" ]
+   then
+      exe_shell="`command -v "bash" `"
+      exe_shell="${exe_shell:-`command -v "zsh" `}"
+
+      script="$0"
+
+      #
+      # Quote incoming arguments for shell expansion
+      #
+      args=""
+      for arg in "$@"
+      do
+         # True bourne sh doesn't know ${a//b/c} and <<<
+         case "${arg}" in
+            *\'*)
+               # Use cat instead of echo to avoid possible echo -n
+               # problems. Escape single quotes in string.
+               arg="`cat <<EOF | sed -e s/\'/\'\\\"\'\\\"\'/g
+${arg}
+EOF
+`"
+            ;;
+         esac
+         if [ -z "${args}" ]
+         then
+            args="'${arg}'"
+         else
+            args="${args} '${arg}'"
+         fi
+      done
+
+      #
+      # bash/zsh will use arg after -c <arg> as $0, convenient!
+      #
+
+      exec "${exe_shell:-bash}" -c ". ${script} --no-auto-shell ${args}" "${script}"
+   fi
+   if [ ! -z "${BASH_VERSION}" ]
+   then
+      set +o posix
+   fi
+else
+   shift    # get rid of --no-auto-shell
+fi
+
+
+#
+# Main script to follow, runs now either in zsh or bash
+#
+####
 
 MULLE_ENV_VERSION="3.4.0"
 
@@ -304,8 +365,10 @@ _setup_environment()
 
    local physicaldir
 
-   physicaldir="`physicalpath "${directory}" `"
-   [ ! -d "${physicaldir}" ]  && internal_fail "physicalpath failed"
+   r_physicalpath "${directory:-${PWD}}" || internal_fail "physicalpath failed"
+   physicaldir="${RVAL}"
+
+   [ ! -d "${physicaldir}" ]  && fail "\"${directory}\" is not a directory"
    [ "${physicaldir}" = "/" ] && fail "Running in / which is not supported"
 
    if [ "${setroot}" = 'YES' ]
@@ -367,10 +430,15 @@ _default_setup_environment()
    local setroot="${3:-YES}"
    local failonerror="${4:-YES}"
 
+   if [ ! -d "${directory}" ]
+   then
+      fail "Can't access \"${directory:-current directory}\""
+   fi
+
    r_find_best_environment "${directory}" "${searchmode}"
    if [ -z "${RVAL}" ]
    then
-      if [ "${failonerror}" = 'YES' ]
+      if [ "${failonerror}" = 'YES' -a "${FLAG_OUTSIDE_ENV}" != 'YES' ]
       then
          fail "No suitable environment found for ${directory} (init it first)"
       fi
@@ -534,10 +602,10 @@ _env_symlink_status()
    local filename
    local resolved
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for filename in "${MULLE_ENV_VAR_DIR}/bin/"*
    do
-      shopt -u nullglob
+      shell_disable_nullglob
 
       # quick check, assume either all symlinks or none
       if [ -L "${filename}" ]
@@ -551,7 +619,7 @@ _env_symlink_status()
       fi
       break # first file decides
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 
    return $rval
 }
@@ -698,7 +766,7 @@ check your tool list.
 	         local callback
 
 	         callback="env_setup_${flavor}_tools"
-	         if [ "`type -t "${callback}"`" = "function" ]
+	         if shell_is_function "${callback}"
 	         then
 	            ${callback} "${bindir}" "${libexecdir}" || exit 1
 	         fi
@@ -842,7 +910,7 @@ apply_style_to_directory()
    local callback
 
    callback="env_${flavor}_enter_subshell"
-   if [ "`type -t "${callback}"`" = "function" ]
+   if shell_is_function "${callback}"
    then
       ${callback} "${directory}" "${style}"
    fi
@@ -866,7 +934,7 @@ r_apply_flavor_to_runpath()
 
    RVAL="${runpath}"
    callback="env_r_${flavor}_add_runpath"
-   if [ "`type -t "${callback}"`" = "function" ]
+   if shell_is_function "${callback}"
    then
       ${callback} "${directory}" "${RVAL}"
    fi
@@ -882,23 +950,23 @@ r_censored_path()
 
    RVAL=""
 
-   set -f ; IFS=':'
+   shell_disable_glob ; IFS=':'
    for i in $*
    do
       for j in ${RESTRICTED_PATH}
       do
-         set +f; IFS="${DEFAULT_IFS}"
+         shell_enable_glob; IFS="${DEFAULT_IFS}"
 
          if [ "$i" = "$j" ]
          then
             r_colon_concat "${RVAL}" "${i}"
          fi
 
-         set -f ; IFS=':'
+         shell_disable_glob ; IFS=':'
       done
    done
 
-   set +f; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 }
 
 
@@ -984,7 +1052,12 @@ _print_env()
       if [ ! -z "${key}" ]
       then
          # indirection bash feature
-         value="${!key}"
+         if [ ! -z "${ZSH_VERSION}" ]
+         then
+            value="${(P)key}"
+         else
+            value="${!key}"
+         fi
          if [ ! -z "${value}" ]
          then
             printf "${sep}%s=%q" "${key}" "${value}"
@@ -1382,7 +1455,7 @@ main()
    local MULLE_FLAG_LOG_TERSE
    local OPTION_COPY_MULLE_TOOL='NO'
    local CUSTOM_ENVIRONMENT
-
+   local FLAG_OUTSIDE_ENV
    local RESTRICTED_PATH
 
    # mingw needs different values here
@@ -1408,6 +1481,26 @@ main()
       case "$1" in
          -h*|--help|help)
             usage
+         ;;
+
+         -e|--environment-override)
+            FLAG_OUTSIDE_ENV='YES'
+         ;;
+
+         --shell)
+            if [ ! -z "${ZSH_VERSION}" ]
+            then
+               echo "zsh"
+            else
+               echo "bash"
+            fi
+            exit 0
+         ;;
+
+         --echo-args)
+            shift
+            printf "%s\n" "$@"
+            exit 0
          ;;
 
          -c)
@@ -1585,9 +1678,7 @@ main()
       shift
    done
 
-   options_setup_trace "${MULLE_TRACE}"
-
-
+   options_setup_trace "${MULLE_TRACE}" && set -x
    export MULLE_TRACE
 
    local arg
@@ -1941,41 +2032,58 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 ###
 _init()
 {
-   if [ "$1" = "version" ]
-   then
-      printf "%s\n" "${MULLE_ENV_VERSION}"
-      exit 0
-   fi
+   #
+   # leading backslash ? looks like we're getting called from
+   # mingw via a .BAT or so
+   #
+   case "$PATH" in
+      '\\'*)
+         PATH="${PATH//\\/\/}"
+      ;;
+   esac
 
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir 2> /dev/null`"
    [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && \
       echo "mulle-bashfunctions-env not installed" >&2 && \
       exit 1
 
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" "minimal" || exit 1
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || exit 1
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 
-   r_get_libexec_dir "$0" "mulle-env" "mulle-env-shell"
-   MULLE_ENV_LIBEXEC_DIR="${RVAL}"
-
-   #
-   # minimal setup exit
-   #
-   if [ "$1" = "libexec-dir" ]
+   if [ -z "${MULLE_ENV_LIBEXEC_DIR}" ]
    then
-      printf "%s\n" "${MULLE_ENV_LIBEXEC_DIR}"
-      exit 0
+      r_get_libexec_dir "${MULLE_EXECUTABLE}" "mulle-env" "mulle-env-shell"
+      MULLE_ENV_LIBEXEC_DIR="${RVAL}"
    fi
 
-   set -o pipefail
+   #
+   # commands with minimal trap setup
+   #
+   if [ $# -eq 1 ]
+   then
+      case "${1}" in
+         libexec-dir|library-path)
+            printf "%s\n" "${MULLE_ENV_LIBEXEC_DIR}"
+            exit 0
+         ;;
+
+         version)
+            printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
+            exit 0
+         ;;
+      esac
+   fi
+
+   shell_enable_pipefail
+   shell_enable_extglob
 
    call_main "${MULLE_ENV_FLAGS}" "$@"
 }
-
-_init "$@"
 
 ###
 ### INIT
 ###
 ########
+
+MULLE_EXECUTABLE="${MULLE_EXECUTABLE:-${BASH_SOURCE[0]:-${(%):-%x}}}"
+
+_init "$@"

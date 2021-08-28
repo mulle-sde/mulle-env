@@ -423,7 +423,7 @@ env_safe_create_file()
    fi
 
    IFS=$'\n'
-   set -f
+   shell_disable_glob
    for directory in ${protectdirs}
    do
       if ! exekutor chmod a-w "${directory}"
@@ -433,7 +433,7 @@ env_safe_create_file()
    done
 
    IFS="${DEFAULT_IFS}"
-   set +f
+   shell_enable_glob
 
    return ${rval}
 }
@@ -757,15 +757,15 @@ env_environment_remove_from_global_subscopes()
 
    local i
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for i in ${MULLE_ENV_ETC_DIR}/environment-os-*.sh \
             ${MULLE_ENV_ETC_DIR}/environment-host-*.sh \
             ${MULLE_ENV_ETC_DIR}/environment-user-*.sh
    do
-      shopt -u nullglob
+      shell_disable_nullglob
       _env_environment_remove "$i" "${key}"
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 }
 
 
@@ -870,11 +870,11 @@ ${C_INFO}Tip: use multiple addition statements."
          ;;
       esac
 
-      set -f; IFS="${OPTION_SEPARATOR}"
+      shell_disable_glob; IFS="${OPTION_SEPARATOR}"
 
       for oldvalue in ${prev}
       do
-         set +o noglob; IFS="${DEFAULT_IFS}"
+         shell_enable_glob; IFS="${DEFAULT_IFS}"
          if [ "${oldvalue}" = "${value}" ]
          then
             log_fluff "\"${value}\" already set"
@@ -882,7 +882,7 @@ ${C_INFO}Tip: use multiple addition statements."
          fi
       done
 
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       if [ "${OPTION_ADD}" = 'APPEND' ]
       then
@@ -1249,10 +1249,10 @@ env_environment_get_main()
    local prevfiles
 
    rval=1
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for filename in ${filenames}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
       if value="`eval ${getter} "'${filename}'" "'${key}'" "${prevfiles}"`"
       then
          rval=0
@@ -1267,7 +1267,7 @@ env_environment_get_main()
       r_concat "${prevfiles}" "'${filename}'"
       prevfiles="${RVAL}"
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    if [ "${rval}" -eq 0 ]
    then
@@ -1383,10 +1383,10 @@ env_environment_remove_main()
    local rval
 
    rval=1
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for filename in ${filenames}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       if _env_file_defines_key "${filename}" "${key}"
       then
@@ -1397,7 +1397,7 @@ env_environment_remove_main()
          fi
       fi
   done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    return $rval
 }
@@ -1490,15 +1490,15 @@ _env_environment_combined_list_main()
    r_get_existing_scope_files "DEFAULT"
    filenames="${RVAL}"
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for filename in ${filenames}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       r_concat "${cmdline}" "'${filename}'"
       cmdline="${RVAL}"
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    eval "${cmdline}"
 }
@@ -1718,10 +1718,10 @@ env_environment_list_main()
          local i
          local i_name
 
-         set -o noglob; IFS=$'\n'
+         shell_disable_glob; IFS=$'\n'
          for i in ${scopes}
          do
-            set +o noglob; IFS="${DEFAULT_IFS}"
+            shell_enable_glob; IFS="${DEFAULT_IFS}"
 
             i_name="${i:2}"
             if [ "${scopename}" != "DEFAULT" -a "${i_name}" != "${scopename}" ]
@@ -1747,7 +1747,7 @@ env_environment_list_main()
                ;;
             esac
          done
-         set +o noglob; IFS="${DEFAULT_IFS}"
+         shell_enable_glob; IFS="${DEFAULT_IFS}"
       ;;
 
    esac

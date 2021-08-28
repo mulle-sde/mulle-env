@@ -17,13 +17,14 @@ main()
 {
    MULLE_ENV_FLAGS="$@"
 
-   _options_mini_main "$@"
+   _options_mini_main "$@" && set -x
 
    local directory
    local vardir
 
-   directory="`make_tmp_directory`" || exit 1
-   directory="`physicalpath "${directory:-/tmp/exekutor}"`"
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
 
    cd "${directory}" || exit 1
 

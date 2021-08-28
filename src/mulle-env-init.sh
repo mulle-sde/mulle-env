@@ -82,14 +82,14 @@ custom_environment_init()
    #
    # use custom environment values to set environment
    #
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for keyvalue in ${CUSTOM_ENVIRONMENT}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       eval "export ${keyvalue}"
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 }
 
 
@@ -137,7 +137,8 @@ env_init_main()
             [ $# -eq 1 ] && fail "missing argument to $1"
             shift
 
-            OPTION_OTHER_TOOLS="`add_line "${OPTION_OTHER_TOOLS}" "$1" `"
+            r_add_line "${OPTION_OTHER_TOOLS}" "$1"
+            OPTION_OTHER_TOOLS="${RVAL}"
          ;;
 
          --upgrade)
@@ -313,7 +314,7 @@ env_init_main()
       for os in darwin freebsd linux mingw
       do
          callback="print_${flavor}_environment_os_${os}_sh"
-         if [ "`type -t "${callback}"`" = "function" ]
+         if shell_is_function "${callback}"
          then
             local pluginosfile
 

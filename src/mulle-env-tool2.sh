@@ -293,7 +293,7 @@ r_env_tool2_oslist()
    local filename
    local filenames
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for filename in "${MULLE_ENV_SHARE_DIR}"/tool* \
                    "${MULLE_ENV_ETC_DIR}"/tool*
    do
@@ -306,7 +306,7 @@ r_env_tool2_oslist()
       r_add_unique_line "${filenames}" "${name}"
       filenames="${RVAL}"
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 
    RVAL="${filenames}"
 }
@@ -479,17 +479,17 @@ env_tool2_add()
             extension=".${os}"
          fi
 
-         local exists
+         local doesexist
 
-         exists='NO'
+         doesexist='NO'
          if r_env_tool2_scoped_get "${scope}" "${os}" "${tool}"
          then
-            exists='YES'
+            doesexist='YES'
          fi
 
          case "${mark}" in
             remove)
-               if [ "${exists}" = 'NO' ]
+               if [ "${doesexist}" = 'NO' ]
                then
                   log_verbose "\"${tool}\" is already deinstalled"
                   continue
@@ -497,7 +497,7 @@ env_tool2_add()
             ;;
 
             *)
-               if [ "${exists}" = 'YES' ]
+               if [ "${doesexist}" = 'YES' ]
                then
                   if [ "${OPTION_IF_MISSING}" = 'YES' ]
                   then
@@ -546,7 +546,7 @@ Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict tool to a certain OS."
                ;;
 
                *)
-                  log_info "Tool \"${tool}\" added for ${C_MAGENTA_BOLD}${os}${C_INFO}.
+                  log_info "Tool \"${tool}\" added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
 Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platforms."
                ;;
             esac
@@ -560,7 +560,7 @@ Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict requirement for a certain 
                ;;
 
                *)
-                  log_info "Requirement for tool \"${tool}\" added for ${C_MAGENTA_BOLD}${os}${C_INFO}.
+                  log_info "Requirement for tool \"${tool}\" added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
 ${C_VERBOSE}The project will not be usable on ${C_MAGENTA}${C_BOLD}${os}${C_VERBOSE} without ${tool} being installed.
 Use ${C_RESET_BOLD}add --optional${C_VERBOSE} to add tools that aren't required.
 Use ${C_RESET_BOLD}--global add${C_VERBOSE} to extend requirement to all platforms."
@@ -667,12 +667,12 @@ env_tool2_compile()
 
       lines="`rexekutor egrep -v '^#' "${file}"`"
 
-      set -o noglob; IFS=$'\n'
+      shell_disable_glob; IFS=$'\n'
       local i
 
       for i in ${lines}
       do
-         set +o noglob; IFS=':'
+         shell_enable_glob; IFS=':'
 
          case "${i}" in
             *';remove')
@@ -696,7 +696,7 @@ env_tool2_compile()
          esac
       done
 
-      set +o noglob; IFS=':'
+      shell_enable_glob; IFS=':'
    done
    IFS="${DEFAULT_IFS}"
 
@@ -726,7 +726,7 @@ r_env_tool2_get()
       [ ! -f "${file}" ]  && continue
 
       lines="`egrep -v '^#' "${file}" | egrep "^${tool}$|^${tool};" `"
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
       for i in ${lines}
       do
          case "${i}" in
@@ -942,10 +942,10 @@ env_tool2_link_tools()
 
    mkdir_if_missing "${bindir}"
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for toolline in ${toollines}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       isrequired='YES'
       operation="link"
@@ -965,7 +965,7 @@ env_tool2_link_tools()
       env_tool2_${operation}_tool "${toolname}" "${bindir}" "${isrequired}"
    done
 
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    rmdir_if_empty "${bindir}"
 }

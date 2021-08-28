@@ -110,7 +110,12 @@ r_get_envfile()
 
    local filename
 
-   filename="${!envvar}"
+   if [ ! -z "${ZSH_VERSION}" ]
+   then
+      filename="${(P)envvar}"
+   else
+      filename="${!envvar}"
+   fi
    case "${filename}" in
       ~/*|./*|../*|/*)
          RVAL="${filename}"

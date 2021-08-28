@@ -235,10 +235,10 @@ r_read_auxscope_file()
    local order
 
    order=100
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for aux_scope in ${tmp}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       if [ ! -z "${aux_scope}" ]
       then
@@ -264,7 +264,7 @@ r_read_auxscope_file()
          r_add_line "${RVAL}" "${aux_scope}"
       fi
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
 }
 
@@ -452,17 +452,17 @@ r_scopeprefix_for_scopeid()
 
    local i
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for i in ${scopes}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       if [ "${i:2}" = "${scopeid}" ]
       then
          RVAL="${i:0:1}" # continue, get last one (why ?)
       fi
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    [ ! -z "${RVAL}" ]
 }
@@ -561,10 +561,10 @@ r_get_existing_scope_files()
    filenames=""
    skipcheck='NO'
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for scope in ${scopes}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       scopeid="${scope:2}"
       if [ "${skipcheck}" = 'NO' ] && \
@@ -592,7 +592,7 @@ r_get_existing_scope_files()
          log_fluff "\"${filename}\" for \"${scopeid}\" does not exist"
       fi
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    log_debug "filenames: ${filenames}"
    RVAL="${filenames}"
@@ -611,7 +611,7 @@ env_validate_scope_write()
    r_get_scopes "YES" "YES" "YES" "YES" "YES"
    scopes="${RVAL}"
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for line in ${scopes}
    do
       case "${line:0:1}" in
@@ -631,7 +631,7 @@ env_validate_scope_write()
       esac
 
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 }
 
 
@@ -747,7 +747,7 @@ env_scope_list_main()
    if [ "${OPTION_EXISTING}" = 'YES' ]
    then
       (
-         shopt -s nullglob
+         shell_enable_nullglob
 
          rexekutor ls -1 "${MULLE_ENV_SHARE_DIR}"/environment-*.sh \
                          "${MULLE_ENV_ETC_DIR}"/environment-*.sh \
@@ -796,10 +796,10 @@ env_scope_list_main()
    local scope
    local filename
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for scope in ${scopes}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       filename=
       scopeid="${scope:2}"
@@ -822,7 +822,7 @@ env_scope_list_main()
       concat "${scopeid}" "${filename#${MULLE_USER_PWD}/}" ";"
    done
 
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    return 0
 }
@@ -883,10 +883,10 @@ env_scope_get_main()
    r_get_scopes
    scopes="${RVAL}"
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for scope in ${scopes}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       [ -z "${scope}" ] && continue
 
@@ -931,7 +931,7 @@ env_scope_get_main()
          return 0
       fi
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
 
    if [ "${OPTION_QUIET}" = 'NO' ]
@@ -1134,10 +1134,10 @@ env_scope_file_main()
    r_get_scopes
    scopes="${RVAL}"
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for scope in ${scopes}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       [ -z "${scope}" ] && continue
 
@@ -1147,7 +1147,7 @@ env_scope_file_main()
          return $?
       fi
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 }
 
 
@@ -1261,10 +1261,10 @@ env_scope_remove_main()
    r_get_scopes
    scopes="${RVAL}"
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for scope in ${scopes}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       [ -z "${scope}" ] && continue
 
@@ -1274,7 +1274,7 @@ env_scope_remove_main()
          return 0
       fi
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 
    if [ "${OPTION_IF_EXISTS}" = 'YES' ]
    then
