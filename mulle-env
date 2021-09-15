@@ -454,6 +454,7 @@ _default_setup_environment()
 }
 
 
+
 protect_dir_if_exists()
 {
    log_entry "protect_dir_if_exists" "$@"
@@ -1437,6 +1438,21 @@ reset()
 }
 
 
+#
+# it assumed flags are parsed and the command like "envrionment" is
+# also parsed
+#
+is_help_request_commandline()
+{
+   case "$1" in
+      -h|--help|help)
+         return 0
+      ;;
+   esac
+   return 1
+}
+
+
 main()
 {
    # todo rename these to FLAG
@@ -1711,7 +1727,11 @@ main()
          # shellcheck source=src/mulle-env-environment.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
 
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         if ! is_help_request_commandline "$@"
+         then
+            _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         fi
+
          env_environment_main --protect-flag "${OPTION_PROTECT}" "$@"
          return $?
       ;;
@@ -1731,7 +1751,10 @@ wild"
          # shellcheck source=src/mulle-env-environment.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
 
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         if ! is_help_request_commandline "$@"
+         then
+            _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         fi
          env_environment_main --protect-flag "${OPTION_PROTECT}" "${arg}" "$@"
          return $?
       ;;
@@ -1746,7 +1769,7 @@ wild"
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
          env_init_main --style "${OPTION_STYLE}" "$@" || return $?
-         clean
+         ( cd "${RVAL}" && clean )
          return $?
       ;;
 
@@ -1867,7 +1890,10 @@ wild"
          # shellcheck source=src/mulle-env-scope.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh" || exit 1
 
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         if ! is_help_request_commandline "$@"
+         then
+            _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         fi
          env_scope_main "$@"
          return $?
       ;;
@@ -1950,7 +1976,10 @@ ${C_INFO}Hint: Use --style to switch styles."
 
       tool)
          # do not set MULLE_VIRTUAL_ROOT if not already set
-         _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}" 'NO'
+         if ! is_help_request_commandline "$@"
+         then
+            _default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}" 'NO'
+         fi
 
          # shellcheck source=src/mulle-env-tool.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool2.sh" || exit 1

@@ -69,13 +69,13 @@ Example:
 Options:
    -h                : show this usage
    --global          : scope for general environments variables
-   --host            : narrow scope to this host only ($MULLE_HOSTNAME)
-   --host-<name>     : host with name
-   --os              : narrow scope to this operating system only ($MULLE_UNAME)
-   --os-<name>       : os with name
+   --host <name>     : narrow scope to host with name
+   --host-this       : narrow scope to this host ($MULLE_HOSTNAME)
+   --os <name>       : narrow scope to operating system ($MULLE_UNAME)
+   --os-this         : narrow scope to this operating system
    --scope <name>    : use an arbitrarily named scope
-   --user            : narrow scope to this user only ($USER)
-   --user-<name>     : user with name
+   --user <name>     : narrow scope to user with name
+   --user-this       : user with name ($USER)
 
 Commands:
 EOF
@@ -1784,19 +1784,43 @@ env_environment_main()
             env_environment_usage
          ;;
 
-         --global|--host-*|--os-*|--user-*)
+         --global)
             assert_default_scope
 
             OPTION_SCOPE="${1:2}"
          ;;
 
          --host)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            assert_default_scope
+            OPTION_SCOPE="host-$1"
+         ;;
+
+         --os)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            assert_default_scope
+            OPTION_SCOPE="os-$1"
+         ;;
+
+         --user)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            assert_default_scope
+            OPTION_SCOPE="user-$1"
+         ;;
+
+         --host-this|--this-host)
             assert_default_scope
 
             OPTION_SCOPE="host-${MULLE_HOSTNAME}"
          ;;
 
-         --user)
+         --user-this|--this-user|--me|--myself)
             assert_default_scope
 
             [ -z "${USER}" ] && fail "USER environment variable not set"
@@ -1804,7 +1828,7 @@ env_environment_main()
             OPTION_SCOPE="user-${USER}"
          ;;
 
-         --os)
+         --os-this|--this-os)
             assert_default_scope
 
             OPTION_SCOPE="os-${MULLE_UNAME}"
@@ -1854,7 +1878,6 @@ env_environment_main()
          printf "%s\n" "${MULLE_UNAME}"
       ;;
 
-
       mset|remove|set)
          _setup_environment
 
@@ -1869,7 +1892,6 @@ env_environment_main()
          fi
          env_environment_${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
-
 
       get|list)
          _setup_environment
