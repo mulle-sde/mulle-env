@@ -30,17 +30,17 @@ main()
 
    local value
 
-   run_mulle_env environment --user set FOO ""
-   run_mulle_env environment --user set BAR "bar with spaces"
+   run_mulle_env environment --me set FOO ""
+   run_mulle_env environment --me set BAR "bar with spaces"
 
-   if run_mulle_env environment --user remove UNKNOWN
+   if run_mulle_env environment --me remove UNKNOWN
    then
       fail "Positive value for remove with unknown key"
    fi
 
    log_verbose "----- #1 PASSED -----"
 
-   if ! run_mulle_env environment --user remove FOO
+   if ! run_mulle_env environment --me remove FOO
    then
       fail "Negative value for remove with empty value"
    fi
@@ -48,12 +48,12 @@ main()
    log_verbose "----- #2 PASSED -----"
 
 
-   if ! run_mulle_env environment --user remove BAR
+   if ! run_mulle_env environment --me remove BAR
    then
       fail "Negative rval for remove"
    fi
 
-   value="`run_mulle_env environment --user get BAR`"
+   value="`run_mulle_env environment --me get BAR`"
    if [ ! -z "${value}" ]
    then
       fail "Did not remove value"

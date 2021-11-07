@@ -16,12 +16,12 @@ run_mulle_env()
 test_simple()
 {
    run_mulle_env environment --global set FOO "global"
-   run_mulle_env environment --host set FOO "host"
-   run_mulle_env environment --user set FOO "user"
+   run_mulle_env environment --this-host set FOO "host"
+   run_mulle_env environment --this-user set FOO "user"
 
    if [ "`run_mulle_env environment --global get FOO`" != "global" -o \
-        "`run_mulle_env environment --host get FOO`"   != "host" -o \
-        "`run_mulle_env environment --user get FOO`"   != "user" ]
+        "`run_mulle_env environment --this-host get FOO`"   != "host" -o \
+        "`run_mulle_env environment --this-user get FOO`"   != "user" ]
    then
       fail "setup failed"
    fi
@@ -32,11 +32,11 @@ test_simple()
    value="`run_mulle_env environment get --output-eval FOO`"
    [ "${value}" != "user" ] && internal_fail "Wrong value \"${value}\" from get"
 
-   run_mulle_env environment --user remove FOO
+   run_mulle_env environment --this-user remove FOO
    value="`run_mulle_env environment get FOO`"
    [ "${value}" != "host" ] && internal_fail "Wrong value \"${value}\" from get"
 
-   run_mulle_env environment --host remove FOO
+   run_mulle_env environment --this-host remove FOO
    value="`run_mulle_env environment get FOO`"
    [ "${value}" != "global" ] && internal_fail "Wrong value \"${value}\" from get"
 

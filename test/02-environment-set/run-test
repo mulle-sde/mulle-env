@@ -30,17 +30,17 @@ main()
 
    local value
 
-   value="`run_mulle_env environment --user get FOO`"
+   value="`run_mulle_env environment --me get FOO`"
    if [ ! -z "${value}" ]
    then
       fail "Non empty return value for get"
    fi
 
-   if ! run_mulle_env environment --user set FOO ""
+   if ! run_mulle_env environment --me set FOO ""
    then
       fail "Negative return value for empty set"
    fi
-   if ! value="`run_mulle_env environment --user get FOO`"
+   if ! value="`run_mulle_env environment --me get FOO`"
    then
       fail "Negative return value for get with empty value"
    fi
@@ -52,11 +52,11 @@ main()
    log_verbose "----- #1 PASSED -----"
 
 
-   if ! run_mulle_env environment --user set FOO "foo with spaces"
+   if ! run_mulle_env environment --me set FOO "foo with spaces"
    then
       fail "Negative return value for empty set"
    fi
-   if ! value="`run_mulle_env environment --user get FOO`"
+   if ! value="`run_mulle_env environment --me get FOO`"
    then
       fail "Negative return value for get with value"
    fi
@@ -68,11 +68,11 @@ main()
    log_verbose "----- #2 PASSED -----"
 
 
-   if ! run_mulle_env environment --user set FOO "bar with spaces"
+   if ! run_mulle_env environment --me set FOO "bar with spaces"
    then
       fail "Negative return value for empty set"
    fi
-   if ! value="`run_mulle_env environment --user get FOO`"
+   if ! value="`run_mulle_env environment --me get FOO`"
    then
       fail "Negative return value for get with value"
    fi

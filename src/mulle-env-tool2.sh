@@ -58,11 +58,12 @@ Options:
 Commands:
    add        : add tools
    compile    : compile tool lists into .mulle/var
+   doctor     : check links of linked tools
    get        : check for tool existence
    link       : use compiled tool list to link commands into environment
    list       : list tools, files and specified OSs (default)
    remove     : remove a tool
-   status     : check status of tool system
+   status     : quick check status of tool system
 EOF
    exit 1
 }
@@ -139,6 +140,22 @@ EOF
 }
 
 
+env_tool2_doctor_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} tool doctor
+
+   Check if the tools linked are still available.
+
+EOF
+   exit 1
+}
+
+
+
 # new tool file format
 # <tool>
 # <tool>;optional
@@ -179,7 +196,7 @@ env_link_mulle_tool()
    local copystyle="${4:-tool}"
    local optional="$5"
 
-   if [ -e "${bindir}/${toolname}" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
+   if [ -e "${dstbindir}/${toolname}" -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
    then
       log_fluff "Mulle tool \"${toolname}\" already present"
       return 0
@@ -213,7 +230,6 @@ env_link_mulle_tool()
    r_dirname "${srclibdir}"
    srclibexecdir="${RVAL}"
 
-   local dstbindir
    local dstexefile
    local dstlibname
 
@@ -266,6 +282,7 @@ env_link_mulle_tool()
    log_fluff "Creating symlink \"${dstlibdir}\""
    exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}" || exit 1
 }
+
 
 
 ## tool_delete_list()
@@ -904,7 +921,7 @@ env_tool2_link_tool()
       script="#! /bin/sh
 
 exec '${filename}' \"\$@\""
-      redirect_exekutor "${bindir}/${toolname}" echo "${script}" || exit 1
+      redirect_exekutor "${bindir}/${toolname}" printf "%s\n" "${script}" || exit 1
       exekutor chmod 755 "${bindir}/${toolname}"  || exit 1
    else
       log_fluff "Creating symlink \"${bindir}/${toolname}\""
@@ -1028,13 +1045,49 @@ env_tool2_link()
 
    toolfile="${MULLE_ENV_HOST_VAR_DIR}/tool"
 
-   toollines="`egrep -v '^#' "${toolfile}" `" || fail "\"${toolfile}\" is missing"
+   toollines="`egrep -v '^#' "${toolfile}" 2> /dev/null`"
    if [ -z "${toollines}" ]
    then
-      log_warning "No tools defined in \"${toolfile}\""
+      log_info "No tools defined in \"${toolfile}\""
+      return
    fi
 
    env_tool2_link_tools "${toollines}" "${bindir}"
+}
+
+
+env_tool2_doctor()
+{
+   log_entry "env_tool2_doctor" "$@"
+
+   local bindir="$1"
+
+   local symlink
+   local rval
+
+   rval=0
+   for symlink in "${bindir}"/*
+   do
+      #https://stackoverflow.com/questions/8049132/how-can-i-detect-whether-a-symlink-is-broken-in-bash
+      if [ ! -e "${symlink}" ]
+      then
+         rval=1
+
+         r_basename "${symlink}"
+
+         found="`mudo which "${RVAL}" `"
+         if [ ! -z "${found}" ]
+         then
+            log_error "Tool ${C_RESET_BOLD}${RVAL}${C_ERROR} is in a different place
+${C_INFO}You can probably fix this with
+${C_RESET_BOLD}   mulle-sde tool link"
+         else
+            log_error "Tool ${C_RESET_BOLD}${RVAL}${C_ERROR} is not available"
+         fi
+      fi
+   done
+
+   return $rval
 }
 
 
@@ -1344,6 +1397,10 @@ env_tool2_main()
          protect_dir_if_exists "${bindir}"
          protect_dir_if_exists "${libexecdir}"
          return $rval
+      ;;
+
+      doctor)
+         env_tool2_doctor "${bindir}"
       ;;
 
       compile)

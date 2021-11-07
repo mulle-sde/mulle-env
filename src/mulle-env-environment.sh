@@ -44,11 +44,6 @@ SHOWN_COMMANDS="\
    scope             : add remove and list scopes
 "
 
-HIDDEN_COMMANDS="\
-   host              : show current host value
-   user              : show current user value
-   uname             : show current operating system value
-"
     cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} environment [options] [command]*
@@ -75,17 +70,13 @@ Options:
    --os-this         : narrow scope to this operating system
    --scope <name>    : use an arbitrarily named scope
    --user <name>     : narrow scope to user with name
-   --user-this       : user with name ($USER)
+   --user-this       : user with name ($MULLE_USERNAME)
 
 Commands:
 EOF
 
    (
       printf "%s\n" "${SHOWN_COMMANDS}"
-      if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
-      then
-         printf "%s\n" "${HIDDEN_COMMANDS}"
-      fi
    ) | sed '/^$/d' | LC_ALL=C sort >&2
 
    cat <<EOF >&2
@@ -1560,7 +1551,7 @@ _env_environment_eval_list()
    cmdline="env -i MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\" \
 MULLE_UNAME=\"${MULLE_UNAME}\" \
 MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\" \
-USER=\"${USER}\" \
+MULLE_USERNAME\"${MULLE_USERNAME}\" \
 \"${BASH}\" -c '"
 
    [ "$#" -eq 0 ] && internal_fail "No environment files specified"
@@ -1602,7 +1593,7 @@ USER=\"${USER}\" \
                                                -e '/^SHLVL=/d' \
                                                -e '/^MULLE_UNAME=/d' \
                                                -e '/^MULLE_HOSTNAME=/d' \
-                                               -e '/^USER=/d' \
+                                               -e '/^MULLE_USERNAME=/d' \
                                                -e '/^MULLE_VIRTUAL_ROOT=/d'
 }
 
@@ -1823,9 +1814,9 @@ env_environment_main()
          --user-this|--this-user|--me|--myself)
             assert_default_scope
 
-            [ -z "${USER}" ] && fail "USER environment variable not set"
+            [ -z "${MULLE_USERNAME}" ] && fail "MULLE_USERNAME environment variable not set"
 
-            OPTION_SCOPE="user-${USER}"
+            OPTION_SCOPE="user-${MULLE_USERNAME}"
          ;;
 
          --os-this|--this-os)
@@ -1866,21 +1857,7 @@ env_environment_main()
 
 
    case "${cmd}" in
-      host|hostname)
-         hostname
-      ;;
-
-      user)
-         printf "%s\n" "${USER}"
-      ;;
-
-      os|uname)
-         printf "%s\n" "${MULLE_UNAME}"
-      ;;
-
       mset|remove|set)
-         _setup_environment
-
          [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
 
          if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a "${OPTION_PROTECT}" = 'YES' ]
@@ -1894,16 +1871,12 @@ env_environment_main()
       ;;
 
       get|list)
-         _setup_environment
-
          [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
 
          env_environment_${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
       scope|scopes)
-         _setup_environment
-
          # shellcheck source=src/mulle-env-scope.sh
          [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
 

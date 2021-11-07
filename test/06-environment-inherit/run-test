@@ -30,7 +30,7 @@ main()
 
    local value
    run_mulle_env environment --global set FOO 'x'
-   run_mulle_env environment --user set FOO '${FOO}y'
+   run_mulle_env environment --me set FOO '${FOO}y'
 
    value="`run_mulle_env -c env | sed -n -e 's/^FOO=//p'`"
    if [ "${value}" != 'xy' ]

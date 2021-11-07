@@ -30,7 +30,7 @@ main()
 
    local value
 
-   if value="`run_mulle_env environment --user get FOO`"
+   if value="`run_mulle_env environment --me get FOO`"
    then
       fail "Positive return value for failed get"
    fi

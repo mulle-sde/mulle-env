@@ -280,7 +280,7 @@ r_find_best_environment()
       searchfile="${directory}/.mulle/share/env/environment.sh"
       if [ -f "${searchfile}" ]
       then
-         log_debug "Found \"${searchfile}"
+         log_debug "Found \"${searchfile}\""
 
          case "${searchmode}" in
             'PARENT')
@@ -425,14 +425,17 @@ _default_setup_environment()
 {
    log_entry "_default_setup_environment" "$@"
 
-   local directory="${1:-${PWD}}"
+   local indirectory="$1"
    local searchmode="$2"
    local setroot="${3:-YES}"
    local failonerror="${4:-YES}"
 
-   if [ ! -d "${directory}" ]
+   local directory
+
+   directory="${indirectory:-${PWD}}"
+   if [ ! -d "${directory:-${PWD}}" ]
    then
-      fail "Can't access \"${directory:-current directory}\""
+      fail "Can't access \"${indirectory:-current directory}\""
    fi
 
    r_find_best_environment "${directory}" "${searchmode}"
@@ -1024,6 +1027,7 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
       "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
         "'${MULLE_UNAME}'" \
         "'${MULLE_HOSTNAME}'" \
+        "'${MULLE_USERNAME}'" \
         "'${MULLE_VIRTUAL_ROOT}'" \
         "'${MULLE_ENV_HOST_VAR_DIR}'" \
         "'${PATH}'" \
@@ -1347,6 +1351,7 @@ undefined (old mulle-bashfunctions)"
           "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
             "'${MULLE_UNAME}'" \
             "'${MULLE_HOSTNAME}'" \
+            "'${MULLE_USERNAME}'" \
             "'${MULLE_VIRTUAL_ROOT}'" \
             "'${MULLE_ENV_HOST_VAR_DIR}'" \
             "'${runpath}'" \
@@ -2006,8 +2011,13 @@ ${C_INFO}Hint: Use --style to switch styles."
          return $?
       ;;
 
-      uname)
+      uname|osname)
          printf "%s\n" "${MULLE_UNAME}"
+         return 0
+      ;;
+
+      username)
+         printf "%s\n" "${MULLE_USERAME}"
          return 0
       ;;
 

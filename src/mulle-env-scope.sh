@@ -281,7 +281,7 @@ r_read_auxscope_file()
 #  40  | environment-global.sh                 |
 #  60  | environment-os-${MULLE_UNAME}.sh      |
 #  80  | environment-host-${MULLE_HOSTNAME}.sh |
-#  100 | environment-user-${USER}.sh           |
+#  100 | environment-user-${MULLE_USERNAME}.sh           |
 #
 r_priority_for_scopeid()
 {
@@ -394,7 +394,7 @@ r_get_scopes()
       etc_scopes="e:global;40
 e:os-${MULLE_UNAME};60
 e:host-${MULLE_HOSTNAME};80
-e:user-${USER};100"
+e:user-${MULLE_USERNAME};100"
    fi
 
    if [ "${option_etc_aux}" = 'YES' ]

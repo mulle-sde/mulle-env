@@ -215,6 +215,7 @@ run_script_shell()
         "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
+        "MULLE_USERNAME='${MULLE_USERNAME}'" \
 	     "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "NO_MOTD='YES'" \
         "PATH='${RUNPATH}'" \
@@ -283,6 +284,7 @@ run_interactive_shell()
         "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
+        "MULLE_USERNAME='${MULLE_USERNAME}'" \
 	     "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
         "NO_MOTD='${NO_MOTD}'" \
         "PATH='${RUNPATH}'" \
@@ -332,7 +334,7 @@ main()
       shift
    done
 
-   [ $# -lt 11 -o $# -gt 12 ] && _fail "API mismatch ($# args: $*)"
+   [ $# -lt 12 -o $# -gt 13 ] && _fail "API mismatch ($# args: $*)"
 
    local MULLE_UNAME
 
@@ -347,61 +349,67 @@ main()
    MULLE_HOSTNAME="$1"     # hostname empty ? we don't care
    shift
 
+   local MULLE_USERNAME
+
    #3
+   MULLE_USERNAME="$1"     # hostname empty ? we don't care
+   shift
+
+   #4
    local MULLE_VIRTUAL_ROOT
 
    MULLE_VIRTUAL_ROOT="$1"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && _fail "empty MULLE_VIRTUAL_ROOT"
    shift
 
-   #4
+   #5
    local MULLE_ENV_HOST_VAR_DIR
 
    MULLE_ENV_HOST_VAR_DIR="$1"
    [ -z "${MULLE_ENV_HOST_VAR_DIR}" ] && _fail "empty MULLE_ENV_HOST_VAR_DIR"
    shift
 
-   #5
+   #6
    local RUNPATH
 
    RUNPATH="$1"
    [ -z "${RUNPATH}" ] && _fail "empty RUNPATH"
    shift
 
-   #6
+   #7
    local MODE  # either SCRIPT or INTERACTIVE
 
    MODE="$1"
    [ -z "${MODE}" ] && _fail "empty MODE"
    shift
 
-   #7
+   #8
    local STYLE  # wild or else
 
    STYLE="$1"
    [ -z "${STYLE}" ] && _fail "empty STYLE"
    shift
 
-   #7
+   #9
    local TRACE  # either YES or usually empty
 
    TRACE="$1"
    shift
 
-   #8
+   #10
    local ENVFILENAME  # environment.sh or so
 
    ENVFILENAME="$1"
    [ -z "${ENVFILENAME}" ] && _fail "empty ENVFILENAME"
    shift
 
-   #9
+   #11
    local AUXENVFILENAME  # usually empty
 
    AUXENVFILENAME="$1"
    shift
 
-   #11
+   #12
    local NO_MOTD  # either YES or usually empty
 
    NO_MOTD="$1"
