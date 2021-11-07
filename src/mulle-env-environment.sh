@@ -65,12 +65,12 @@ Options:
    -h                : show this usage
    --global          : scope for general environments variables
    --host <name>     : narrow scope to host with name
-   --host-this       : narrow scope to this host ($MULLE_HOSTNAME)
-   --os <name>       : narrow scope to operating system ($MULLE_UNAME)
-   --os-this         : narrow scope to this operating system
+   --os <name>       : narrow scope to operating system
    --scope <name>    : use an arbitrarily named scope
    --user <name>     : narrow scope to user with name
-   --user-this       : user with name ($MULLE_USERNAME)
+   --this-host       : narrow scope to this host ($MULLE_HOSTNAME)
+   --this-os         : narrow scope to this operating system ($MULLE_UNAME)
+   --this-user       : user with name ($MULLE_USERNAME)
 
 Commands:
 EOF

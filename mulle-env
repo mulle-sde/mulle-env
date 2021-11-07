@@ -1061,7 +1061,15 @@ _print_env()
          then
             value="${(P)key}"
          else
-            value="${!key}"
+            case "${key}" in 
+               *\!*|*\(*\)*)  
+                  value="${line#*=}" # mingw craziness
+               ;;
+
+               *)
+                  value="${!key}"
+               ;;
+            esac
          fi
          if [ ! -z "${value}" ]
          then
@@ -1320,6 +1328,8 @@ undefined (old mulle-bashfunctions)"
          [ ! -z "${TERM}" ]            && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
          [ ! -z "${TMPDIR}" ]          && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
          [ ! -z "${USER}" ]            && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
+         # mingw is USERNAME
+         [ ! -z "${USERNAME}" ]        && r_concat "${s}" "USERNAME='${USERMAME}'" && s="${RVAL}"
          [ ! -z "${VISUAL}" ]          && r_concat "${s}" "VISUAL='${VISUAL}'" && s="${RVAL}"
          [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
                                        && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"

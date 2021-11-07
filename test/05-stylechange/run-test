@@ -30,30 +30,44 @@ main()
 
    run_mulle_env -s init --style none/tight
    value="`run_mulle_env style`"
-   [ "${value}" != 'none/tight' ] && fail "#1 style not set"
+   [ "${value}" != 'none/tight' ] && fail "#1 style not set (${directory})"
 
-   value="`run_mulle_env -c date 2>/dev/null`"
-   [ ! -z "${value}" ] && fail "#1 date still available"
+   case "${MULLE_UNAME}" in 
+      mingw)
+      ;;
+
+      *)
+         value="`run_mulle_env -c date`"
+         [ ! -z "${value}" ] && fail "#1 date still available (${directory})"
+      ;;
+   esac
 
    log_verbose "----- #1 PASSED -----"
 
    run_mulle_env -s upgrade --style minimal/tight
    value="`run_mulle_env style`"
-   [ "${value}" != 'minimal/tight' ] && fail "#2 style not set"
+   [ "${value}" != 'minimal/tight' ] && fail "#2 style not set (${directory})"
 
    value="`run_mulle_env -c date`"
-   [ -z "${value}" ] && fail "#2 date not available"
+   [ -z "${value}" ] && fail "#2 date not available (${directory})"
 
    log_verbose "----- #2 PASSED -----"
 
 
    run_mulle_env -s upgrade --style none/tight
    value="`run_mulle_env style`"
-   [ "${value}" != 'none/tight' ] && fail "#3 style not set"
+   [ "${value}" != 'none/tight' ] && fail "#3 style not set (${directory})"
 
-   value="`run_mulle_env -c date 2>/dev/null`"
-   [ ! -z "${value}" ] && fail "#3 date still available"
+   case "${MULLE_UNAME}" in 
+      mingw)
+      ;;
 
+      *)
+         value="`run_mulle_env -c date`"
+         [ ! -z "${value}" ] && fail "#3 date still available (${directory})"
+      ;;
+   esac
+   
    log_verbose "----- #3 PASSED -----"
 
    log_info "----- ALL PASSED -----"
