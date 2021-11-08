@@ -155,17 +155,22 @@ _env_load_plugin()
    do
       IFS="${DEFAULT_IFS}"
 
-      pluginpath="${directory}/${flavor}.sh"
+      r_filepath_concat "${directory}" "${flavor}.sh"
+      pluginpath="${RVAL}"
+
       if [ -f "${pluginpath}" ]
       then
+         log_verbose "Loading plugin ${pluginpath#${MULLE_USER_PWD}/}"
          . "${pluginpath}" || exit 1
 
          return 0
+      else
+         log_debug "No plugin found at ${pluginpath#${MULLE_USER_PWD}/}"
       fi
-      IFS=':'
    done
    IFS="${DEFAULT_IFS}"
 
+   log_fluff "No plugin found"
    return 1
 }
 
