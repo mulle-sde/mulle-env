@@ -1201,7 +1201,7 @@ _run_subshell()
 
             *)
                style="${style%/*}/wild"
-               log_info "On ${MULLE_UNAME} only ${style} is possible"
+               log_info "On ${MULLE_UNAME} only style ${style} is possible"
             ;;
       esac
    esac
