@@ -171,6 +171,7 @@ Commands:
    environment   : manage subshell environment variables
    envstyles     : list available environment styles
    init          : set up the subshell for the first time
+   invoke        : execute a shell command with restricted environment
    style         : show style of directory (PWD)
    subenv        : enter a sub environment
    tool          : manage subshell tools
@@ -818,11 +819,11 @@ __fail_get_saved_style_flavor()
 
    if [ -z "${fallback}" ]
    then
-      fail "No properly setup environment found in candidate project \
+      fail "No properly setup environment found in project \
 directory \"${userdir#${MULLE_USER_PWD}/}\" as \"${directory#${MULLE_USER_PWD}/}\" contains no \
 style information."
    else
-      fail "No properly setup environment found in candidate project \
+      fail "No properly setup environment found in project \
 directory \"${userdir#${MULLE_USER_PWD}/}\" as \"${directory#${MULLE_USER_PWD}/}\" or \"${fallback#${MULLE_USER_PWD}/}\" contain no \
 style information."
    fi
@@ -1088,11 +1089,10 @@ _run_subshell()
    # callerdirectory is where we are called from
    local callerdirectory
 
+   callerdirectory="${MULLE_EXECUTABLE_PWD}"
+
    # directory is where we are supposed to execute
    local directory
-
-
-   callerdirectory="${MULLE_EXECUTABLE_PWD}"
 
    if [ ! -z "${OPTION_DIRECTORY}" ]
    then
@@ -1189,10 +1189,6 @@ _run_subshell()
       fi
    fi
 
-   local env_flag
-
-   env_flag="-i"
-
    case "${MULLE_UNAME}" in
       mingw*)
          case "${style}" in
@@ -1209,7 +1205,6 @@ _run_subshell()
    case "${style}" in
       */wild)
          inherit_path="${PATH}"
-         env_flag=""   # do not suppress environment
       ;;
 
       */inherit)
@@ -1283,34 +1278,92 @@ undefined (old mulle-bashfunctions)"
    apply_style_to_directory "${rundirectory}" "${sharedir}" "${style}" "${flavor}"
 
    #
+   # remember old environment in "var" as export statements
+   # for later use by "mudo -e" with env -i (if required)
    #
-   #
+   log_fluff "Saving current environment into ${vardir}/old-environment"
+
+   redirect_exekutor "${vardir}/old-environment" _print_env
+
    local mode
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
       log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" (${MULLE_VIRTUAL_ROOT})"
       mode="SCRIPT"
-      [ -z "${MULLE_USER_PWD}" ] && internal_fail "MULLE_USER_PWD not set"
+      [ -z "${MULLE_USER_PWD}" ] && internal_fail "MULLE_USER_PWD must be set"
    else
-      log_verbose "Starting shell ${env_flag} (${MULLE_VIRTUAL_ROOT})"
+      log_verbose "Starting ${style#*/} shell (${MULLE_VIRTUAL_ROOT})"
       mode="INTERACTIVE"
       unset MULLE_USER_PWD
    fi
 
-   case "${style}" in
-      */wild)
+
+   if [ "${PWD}" != "${rundirectory}" ]
+   then
+      exekutor cd "${rundirectory}" || exit 1
+   fi
+
+   local rval
+
+   _env_invoke_shell "${style#*/}" \
+                     "${CUSTOM_ENVIRONMENT}" \
+                     "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
+                     "'${MULLE_UNAME}'" \
+                     "'${MULLE_HOSTNAME}'" \
+                     "'${MULLE_USERNAME}'" \
+                     "'${MULLE_VIRTUAL_ROOT}'" \
+                     "'${MULLE_ENV_HOST_VAR_DIR}'" \
+                     "'${runpath}'" \
+                     "'${mode}'" \
+                     "'${style}'" \
+                     "'${TRACE}'" \
+                     "'${ENVFILENAME}'" \
+                     "'${AUXENVFILENAME}'" \
+                     "'${NO_MOTD}'" \
+                     "${OPTION_SHELL_COMMAND}"
+   rval=$?
+
+   log_debug "Subshell exited with $rval"
+   return $rval
+}
+
+#
+# this is more lowlevel, it executes with a limited environment a shell command
+# it doesn't use the mulle-env environment. It's rarely useful except to run
+# like env -i with some environments intact.
+#
+# But it doesn't need a .mulle directory
+#
+_env_invoke_shell()
+{
+   local envstyle="$1"
+   local customenvironment="$2"
+
+   shift 2
+
+   local s
+   local env_flag
+
+   env_flag="-i"
+
+   #
+   #
+   #
+   case "${envstyle}" in
+      wild)
          unset MULLE_EXECUTABLE_NAME
          # unset MULLE_ENV_PLUGIN_PATH # don't do this because its needed for mulle-sde upgrade
          unset MULLE_USAGE_NAME
+         env_flag=""   # do not suppress environment
       ;;
 
-      */tight)
+      tight)
          # USERNAME is used by mulle-env to discern environment files and styles
          [ ! -z "${LOGNAME}" ]         && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
       ;;
 
-      */relax|*/restrict|*/inherit)
+      relax|restrict|inherit)
          [ ! -z "${DISPLAY}" ]         && r_concat "${s}" "DISPLAY='${DISPLAY}'" && s="${RVAL}"
          [ ! -z "${EDITOR}" ]          && r_concat "${s}" "EDITOR='${EDITOR}'" && s="${RVAL}"
          [ ! -z "${HOME}" ]            && r_concat "${s}" "HOME='${HOME}'" && s="${RVAL}"
@@ -1335,48 +1388,15 @@ undefined (old mulle-bashfunctions)"
                                        && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
       ;;
 
+      *)
+         fail "unknown envstyle \"${envstyle}\""
+      ;;
    esac
 
-   #
-   # remember old environment in "var" as export statements
-   # for later use by "mudo -e" with env -i (if required)
-   #
-   log_fluff "Saving current environment into ${vardir}/old-environment"
-
-   redirect_exekutor "${vardir}/old-environment" _print_env
-
-   # home is needed for git
-   # otherwise provide a minimal environment, for better reproducability
-   #
-   local rval
-
-   if [ "${PWD}" != "${rundirectory}" ]
-   then
-      exekutor cd "${rundirectory}" || exit 1
-   fi
-
    eval_exekutor env ${env_flag} \
-          "${s}" \
-          "${CUSTOM_ENVIRONMENT}" \
-          "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
-            "'${MULLE_UNAME}'" \
-            "'${MULLE_HOSTNAME}'" \
-            "'${MULLE_USERNAME}'" \
-            "'${MULLE_VIRTUAL_ROOT}'" \
-            "'${MULLE_ENV_HOST_VAR_DIR}'" \
-            "'${runpath}'" \
-            "'${mode}'" \
-            "'${style}'" \
-            "'${TRACE}'" \
-            "'${ENVFILENAME}'" \
-            "'${AUXENVFILENAME}'" \
-            "'${NO_MOTD}'" \
-            "${OPTION_SHELL_COMMAND}" # already escaped!
-
-   rval=$?
-
-   log_debug "Subshell exited with $rval"
-   return $rval
+                     "${s}" \
+                     "${customenvironment}" \
+                     "$@"
 }
 
 
@@ -1798,6 +1818,14 @@ wild"
          return
       ;;
 
+      invoke)
+         define_custom_environment "PATH=${PATH}"
+         _env_invoke_shell "restrict" \
+                           "${CUSTOM_ENVIRONMENT}" \
+                           "$@"
+         return
+      ;;
+
       local)
          # just return a status (not sure what this command is used for..)
          # but NONE seems important. Use project-dir for most cases
@@ -1883,16 +1911,19 @@ wild"
          r_simplified_absolutepath "${fallback}"
          fallback="${RVAL}"
 
-         if ! __get_saved_style_flavor "${envdirectory}" "${fallback}"
+         style="${OPTION_STYLE}"
+         if [ -z "${style}" ]
          then
-            __fail_get_saved_style_flavor "${envdirectory}" "${fallback}"
+            if ! __get_saved_style_flavor "${envdirectory}" "${fallback}"
+            then
+               __fail_get_saved_style_flavor "${envdirectory}" "${fallback}"
+            fi
          fi
-
          # shellcheck source=src/mulle-env-init.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
 
          MULLE_FLAG_MAGNUM_FORCE='YES'
-         env_init_main --style "${style}"
+         env_init_main --style "${style}" --reinit
          return $?
       ;;
 
@@ -1974,7 +2005,6 @@ ${C_INFO}Hint: Use --style to switch styles."
          printf "%s\n" "${style}"
          return 0
       ;;
-
 
       subenv)
          if [ -z "${MULLE_VIRTUAL_ROOT}" ]
@@ -2079,6 +2109,12 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 ###
 ### INIT
 ###
+_fatal()
+{
+   echo "$0 fatal error: $*" >&2
+   exit 1
+}
+
 _init()
 {
    #
@@ -2093,8 +2129,7 @@ _init()
 
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir 2> /dev/null`"
    [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && \
-      echo "mulle-bashfunctions-env not installed" >&2 && \
-      exit 1
+            _fatal "mulle-bashfunctions-env not installed"
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 

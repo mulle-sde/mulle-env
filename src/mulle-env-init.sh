@@ -100,6 +100,7 @@ env_init_main()
    local OPTION_OTHER_TOOLS=
    local OPTION_BLURB="DEFAULT"
    local OPTION_STYLE="DEFAULT"
+   local OPTION_REINIT
 
    local directory
    directory="${PWD}"
@@ -139,6 +140,10 @@ env_init_main()
 
             r_add_line "${OPTION_OTHER_TOOLS}" "$1"
             OPTION_OTHER_TOOLS="${RVAL}"
+         ;;
+
+         --reinit)
+            OPTION_REINIT='YES'
          ;;
 
          --upgrade)
@@ -182,7 +187,7 @@ env_init_main()
    sharedir="${MULLE_ENV_SHARE_DIR}"
    envfile="${sharedir}/environment.sh"
 
-   if [ "${OPTION_UPGRADE}" != 'YES' -a -f "${envfile}" ]
+   if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_REINIT}" != 'YES' -a -f "${envfile}" ]
    then
       log_warning "\"${envfile}\" already exists"
       return 4
@@ -393,7 +398,7 @@ EOF
 
    [ $rval -ne 0 ] && exit $rval
 
-   if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
+   if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_REINIT}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
    then
       log_info "Enter the environment:
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory#${MULLE_USER_PWD}/}\"${C_INFO}"

@@ -81,7 +81,6 @@ sudo apt-get update
 
 ## What mulle-env does in a nutshell
 
-
 mulle-env uses `env` to restrict the environment of the subshell to a minimal
 set of values. With `env -i bash -c env` you can see the restricted environment
 
@@ -96,15 +95,18 @@ LOGNAME or SSH_AUTH_SOCK, so that an interactive shell keeps functioning like
 one would expect to. You can see the effect for yourself with:
 
 ```
-mulle-env init -d /tmp/xxx
-mulle-env -d /tmp/xxx -c env
+mulle-env invoke env  # this does not read a custom environment
 ```
 
-The environment is modified by reading a profile file
-`.mulle/share/env/environment.sh`, which in turn will read othe files in 
-`.mulle/share/env` and `.mulle/etc/env`. These files define new environment variables,
-and aliases. Usually you do not manually edit this files, but use mulle-env *commands*
-and to customize these environment files to your liking.
+### Custom environment
+
+When a mulle-env subshell executes, the environment is modified by reading a 
+profile file `.mulle/share/env/environment.sh`. This file in turn will read 
+other files in `.mulle/share/env` and `.mulle/etc/env`. With these files 
+you define new environment variables and aliases. 
+
+Usually you do not manually edit this files, but use mulle-env *commands*
+to customize these environment files.
 
 If you want to go manual, it's suggested you use `.mulle/etc/env/environment-global.sh`
 as a starting point:

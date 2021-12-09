@@ -37,6 +37,7 @@ main()
       ;;
 
       *)
+         log_info "\"date\" should not be found anymore"
          value="`run_mulle_env -c date`"
          [ ! -z "${value}" ] && fail "#1 date still available (${directory})"
       ;;
@@ -63,6 +64,7 @@ main()
       ;;
 
       *)
+         log_info "\"date\" should not be found anymore"
          value="`run_mulle_env -c date`"
          [ ! -z "${value}" ] && fail "#3 date still available (${directory})"
       ;;

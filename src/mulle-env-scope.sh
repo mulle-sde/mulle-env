@@ -163,7 +163,16 @@ Usage:
    Show currently known scopes.
 
 Options:
-
+   --all                      : show all scopes
+   --output-filename          : show file for scope
+   --output-existing-filename : show file for scope, only if it exists
+   --[no-]aux                 : list auxiliary scopes
+   --[no-]etc-aux             : list custom auxiliary scopes
+   --[no-]hardcoded           : list hardcoded scopes
+   --[no-]share-aux           : list predefined auxiliary scopes
+   --[no-]plugin              : list plugin scopes
+   --[no-]user                : list user scopes
+   --existing                 : list only existing/used scopes
 EOF
    exit 1
 }
@@ -487,6 +496,10 @@ r_filename_for_scope()
 
    scopeid="${scope:2}"
    case "${scope}" in
+      'h:'*)
+         RVAL="none"
+      ;;
+
       's:'*)
          RVAL="${MULLE_ENV_SHARE_DIR}/environment-${scopeid}.sh"
       ;;
@@ -652,10 +665,10 @@ env_scope_list_main()
    do
       case "$1" in
          -h|--help|help)
-            env_scope_scope_usage
+            env_scope_list_usage
          ;;
 
-         --all)
+         -a|--all)
             OPTION_ETC_AUX_SCOPES='YES'
             OPTION_SHARE_AUX_SCOPES='YES'
             OPTION_PLUGIN_SCOPES='YES'
@@ -670,11 +683,6 @@ env_scope_list_main()
          --output-existing-filename)
             OPTION_EXISTING_FILENAME='YES'
          ;;
-
-         --no-directory)
-            OPTION_FILENAME='NO'
-         ;;
-
          --aux)
             OPTION_AUX_SCOPES='YES'
          ;;
@@ -728,7 +736,7 @@ env_scope_list_main()
          ;;
 
          -*)
-            env_scope_scope_usage "Unknown option \"$1\""
+            env_scope_list_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -739,7 +747,7 @@ env_scope_list_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || env_scope_scope_usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || env_scope_list_usage "Superflous arguments \"$*\""
 
    [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
    [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
@@ -809,7 +817,7 @@ env_scope_list_main()
          r_filename_for_scope "${scope}"
          filename="${RVAL}"
 
-         log_debug "scopeid: ${scopeid}"
+         log_debug "scopeid  : ${scopeid}"
          log_debug "filename : ${filename}"
          log_debug "scope    : ${scope}"
 
