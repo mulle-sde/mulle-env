@@ -33,7 +33,7 @@ MULLE_ENV_CLEAN_SH="included"
 
 
 #
-env_clean_usage()
+env::clean::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -48,13 +48,13 @@ EOF
    exit 1
 }
 
-env_clean_main()
+env::clean::main()
 {
-   rmdir_safer "env_clean_main" "$@"
+   rmdir_safer "env::clean::main" "$@"
 
    if [ $# -ne 0 ]
    then
-      env_clean_usage
+      env::clean::usage
    fi
 
    rmdir_safer "${MULLE_ENV_VAR_DIR}"

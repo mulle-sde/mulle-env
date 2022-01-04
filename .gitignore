@@ -8,3 +8,10 @@ build-*.d/
 mulle-project/publisher-info.sh
 *.sublime-workspace
 directory-environment.sh
+
+CMakeCache.txt
+CMakeFiles/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+Makefile
+cmake_install.cmake

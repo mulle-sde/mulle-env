@@ -32,7 +32,7 @@
 MULLE_ENV_INIT_SH="included"
 
 
-env_init_usage()
+env::init::usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -66,14 +66,11 @@ EOF
 }
 
 
-custom_environment_init()
+env::init::init_custom_environment()
 {
-   log_entry "custom_environment_init" "$@"
+   log_entry "env::init::init_custom_environment" "$@"
 
    local keyvalue
-
-   local key
-   local quotedvalue
 
    [ -z "${CUSTOM_ENVIRONMENT}" ] && return
 
@@ -82,20 +79,16 @@ custom_environment_init()
    #
    # use custom environment values to set environment
    #
-   shell_disable_glob; IFS=$'\n'
-   for keyvalue in ${CUSTOM_ENVIRONMENT}
-   do
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
-
+   .foreachline keyvalue in ${CUSTOM_ENVIRONMENT}
+   .do
       eval "export ${keyvalue}"
-   done
-   shell_enable_glob; IFS="${DEFAULT_IFS}"
+   .done
 }
 
 
-env_init_main()
+env::init::main()
 {
-   log_entry "env_init_main" "$@"
+   log_entry "env::init::main" "$@"
 
    local OPTION_OTHER_TOOLS=
    local OPTION_BLURB="DEFAULT"
@@ -109,7 +102,7 @@ env_init_main()
    do
       case "$1" in
          -h*|--help|help)
-            env_init_usage
+            env::init::usage
          ;;
 
          -d|--directory)
@@ -151,7 +144,7 @@ env_init_main()
          ;;
 
          -*)
-            env_init_usage "Unknown option \"$1\""
+            env::init::usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -169,7 +162,7 @@ env_init_main()
    # for orthogonality so they don't get lost, but they won't be persisted
    # in any way
    #
-   custom_environment_init
+   env::init::init_custom_environment
 
    local envfile
    local envincludefile
@@ -200,7 +193,7 @@ env_init_main()
 
       if [ "${OPTION_STYLE}" = 'DEFAULT' ]
       then
-         if ! __get_saved_style_flavor "${mulle_dir}/etc/env" \
+         if ! env::__get_saved_style_flavor "${mulle_dir}/etc/env" \
                                        "${mulle_dir}/share/env"
          then
 
@@ -209,7 +202,7 @@ env_init_main()
             then
                if [ -d "${old_mulleenv_dir}" ]
                then
-                  if ! __get_saved_style_flavor "${old_mulleenv_dir}/etc" \
+                  if ! env::__get_saved_style_flavor "${old_mulleenv_dir}/etc" \
                                                 "${old_mulleenv_dir}/share"
                   then
                      fail "Could not retrieve style from old .mulle-env directory"
@@ -218,7 +211,7 @@ env_init_main()
                   log_warning "Can not determine style of (${MULLE_VIRTUAL_ROOT:-${PWD}})"
                fi
             else
-               __fail_get_saved_style_flavor "${mulle_dir}/etc/env" \
+               env::__fail_get_saved_style_flavor "${mulle_dir}/etc/env" \
                                              "${mulle_dir}/share/env"
             fi
          fi
@@ -230,8 +223,8 @@ env_init_main()
    then
       OPTION_STYLE="${MULLE_ENV_DEFAULT_STYLE}"
    fi
-   __get_style_flavor "${OPTION_STYLE}"
-   __load_flavor_plugin "${flavor}"
+   env::__get_style_flavor "${OPTION_STYLE}"
+   env::__load_flavor_plugin "${flavor}"
 
    case "${style}" in
       */inherit|*/relax|*/restrict|*/tight|*/wild)
@@ -253,7 +246,7 @@ env_init_main()
       # need proper flavor for migration
       if [ "${OPTION_UPGRADE}" = 'YES' ]
       then
-         if ! _r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
+         if ! env::_r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
          then
             fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_SHARE_DIR}/version"
          fi
@@ -261,7 +254,7 @@ env_init_main()
 
          # shellcheck source=src/mulle-env-migrate.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh"
-         env_migrate "${version}" "${MULLE_ENV_VERSION}" "${flavor}"
+         env::migrate::main "${version}" "${MULLE_EXECUTABLE_VERSION}" "${flavor}"
       fi
 
       envincludefile="${sharedir}/include-environment.sh"
@@ -284,14 +277,14 @@ env_init_main()
 
       local text
 
-      if ! text="`print_${flavor}_startup_sh "${style}" `"
+      if ! text="`env::plugin::${flavor}::print_startup "${style}" `"
       then
          fail "Plugin \"${flavor}\" failed in startup"
       fi
 
       redirect_exekutor "${envfile}" printf "%s\n" "${text}" || exit 1
 
-      text="`print_${flavor}_auxscope_sh "${style}" `"
+      text="`env::plugin::${flavor}::print_auxscope "${style}" `"
       if [ ! -z "${text}" ]
       then
          log_verbose "Creating \"${auxscopefile}\""
@@ -299,14 +292,14 @@ env_init_main()
       fi
 
       log_verbose "Creating \"${envincludefile}\""
-      if ! text="`print_${flavor}_include_sh "${style}" `"
+      if ! text="`env::plugin::${flavor}::print_include "${style}" `"
       then
          fail "Plugin \"${flavor}\" failed in include"
       fi
       redirect_exekutor "${envincludefile}" printf "%s\n" "${text}" || exit 1
 
       log_verbose "Creating \"${pluginfile}\""
-      if ! text="`print_${flavor}_environment_aux_sh "${style}" `"
+      if ! text="`env::plugin::${flavor}::print_environment_aux "${style}" `"
       then
          fail "Plugin \"${flavor}\" failed in environment_aux"
       fi
@@ -318,7 +311,7 @@ env_init_main()
       # add more os flavors later
       for os in darwin freebsd linux mingw
       do
-         callback="print_${flavor}_environment_os_${os}_sh"
+         callback="env::plugin::${flavor}::print_environment_os_${os}"
          if shell_is_function "${callback}"
          then
             local pluginosfile
@@ -334,7 +327,7 @@ env_init_main()
       done
 
       log_verbose "Creating \"${toolfile}\""
-      if ! text="`print_${flavor}_tools_sh "${style}" | sort -u`"
+      if ! text="`env::plugin::${flavor}::print_tools "${style}" | sort -u`"
       then
          fail "Tool install of \"${flavor}\" failed"
       fi
@@ -386,7 +379,7 @@ EOF
 
       # we create this last, if its present than the init ran through
       log_verbose "Creating \"${versionfile}\""
-      redirect_exekutor "${versionfile}" printf "%s\n" "${MULLE_ENV_VERSION}" || exit 1
+      redirect_exekutor "${versionfile}" printf "%s\n" "${MULLE_EXECUTABLE_VERSION}" || exit 1
    )
    rval=$?
 

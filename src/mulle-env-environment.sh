@@ -32,7 +32,7 @@
 MULLE_ENV_ENVIRONMENT_SH="included"
 
 
-env_environment_usage()
+env::environment::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -63,7 +63,6 @@ Example:
 
 Options:
    -h                : show this usage
-   --global          : scope for general environments variables
    --host <name>     : narrow scope to host with name
    --os <name>       : narrow scope to operating system
    --scope <name>    : use an arbitrarily named scope
@@ -71,7 +70,7 @@ Options:
    --this-host       : narrow scope to this host ($MULLE_HOSTNAME)
    --this-os         : narrow scope to this operating system ($MULLE_UNAME)
    --this-user       : user with name ($MULLE_USERNAME)
-
+   --[a-z]*          : shortcut for --scope <name> (e.g. --global)
 Commands:
 EOF
 
@@ -86,7 +85,7 @@ EOF
 }
 
 
-env_environment_get_usage()
+env::environment::get_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -113,7 +112,7 @@ EOF
 }
 
 
-env_environment_set_usage()
+env::environment::set_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -142,7 +141,7 @@ EOF
 }
 
 
-env_environment_remove_usage()
+env::environment::remove_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -166,7 +165,7 @@ EOF
 }
 
 
-env_environment_list_usage()
+env::environment::list_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -190,7 +189,7 @@ EOF
 }
 
 
-env_environment_scope_usage()
+env::environment::scope_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -223,7 +222,7 @@ EOF
 }
 
 
-key_values_to_command()
+env::environment::key_values_to_command()
 {
    local line
 
@@ -248,7 +247,7 @@ key_values_to_command()
 }
 
 
-key_values_to_sed()
+env::environment::key_values_to_sed()
 {
    local line
 
@@ -285,9 +284,9 @@ key_values_to_sed()
 }
 
 
-env_execute_with_unprotected_files_in_dir()
+env::environment::execute_with_unprotected_files_in_dir()
 {
-   log_entry "env_execute_with_unprotected_files_in_dir" "$@"
+   log_entry "env::environment::execute_with_unprotected_files_in_dir" "$@"
 
    local directory="$1"; shift
 
@@ -317,9 +316,9 @@ env_execute_with_unprotected_files_in_dir()
 }
 
 
-r_mkdir_if_missing_or_unprotect()
+env::environment::r_mkdir_if_missing_or_unprotect()
 {
-   log_entry "r_mkdir_if_missing_or_unprotect" "$@"
+   log_entry "env::environment::r_mkdir_if_missing_or_unprotect" "$@"
 
    local directory="$1"
 
@@ -337,7 +336,7 @@ r_mkdir_if_missing_or_unprotect()
       r_dirname "${directory}"
       parentdir="${RVAL}"
 
-      r_mkdir_if_missing_or_unprotect "${parentdir}"
+      env::environment::r_mkdir_if_missing_or_unprotect "${parentdir}"
 
       if ! exekutor mkdir "${directory}"
       then
@@ -355,9 +354,9 @@ r_mkdir_if_missing_or_unprotect()
 }
 
 
-env_safe_create_file()
+env::environment::safe_create_file()
 {
-   log_entry "env_safe_create_file" "$@"
+   log_entry "env::environment::safe_create_file" "$@"
 
    local filename="$1"; shift
 
@@ -381,7 +380,7 @@ env_safe_create_file()
    local protectdirs
    local rval
 
-   r_mkdir_if_missing_or_unprotect "${directory}"
+   env::environment::r_mkdir_if_missing_or_unprotect "${directory}"
    protectdirs="${RVAL}"
 
    rval=0
@@ -413,26 +412,21 @@ env_safe_create_file()
       fi
    fi
 
-   IFS=$'\n'
-   shell_disable_glob
-   for directory in ${protectdirs}
-   do
+   .foreachline directory in ${protectdirs}
+   .do
       if ! exekutor chmod a-w "${directory}"
       then
          rval=1
       fi
-   done
-
-   IFS="${DEFAULT_IFS}"
-   shell_enable_glob
+   .done
 
    return ${rval}
 }
 
 
-env_safe_write_file()
+env::environment::safe_write_file()
 {
-   log_entry "env_safe_write_file" "$@"
+   log_entry "env::environment::safe_write_file" "$@"
 
    local filename="$1"; shift
 
@@ -474,17 +468,17 @@ env_safe_write_file()
 }
 
 
-env_safe_create_or_write_file()
+env::environment::safe_create_or_write_file()
 {
-   log_entry "env_safe_create_or_write_file" "$@"
+   log_entry "env::environment::safe_create_or_write_file" "$@"
 
    local filename="$1"
 
    if [ ! -f "${filename}" ]
    then
-      env_safe_create_file "$@"
+      env::environment::safe_create_file "$@"
    else
-      env_safe_write_file "$@"
+      env::environment::safe_write_file "$@"
    fi
 }
 
@@ -492,9 +486,9 @@ env_safe_create_or_write_file()
 #
 # as write file but also unprotect directory
 #
-env_safe_modify_file()
+env::environment::safe_modify_file()
 {
-   log_entry "env_safe_modify_file" "$@"
+   log_entry "env::environment::safe_modify_file" "$@"
 
    local filename="$1"; shift
 
@@ -560,9 +554,9 @@ env_safe_modify_file()
 }
 
 
-env_safe_remove_file_if_present()
+env::environment::safe_remove_file_if_present()
 {
-   log_entry "env_safe_modify_file" "$@"
+   log_entry "env::environment::safe_remove_file_if_present" "$@"
 
    local filename="$1"
 
@@ -607,9 +601,9 @@ env_safe_remove_file_if_present()
 #
 # Set
 #
-_env_environment_set()
+env::environment::_set()
 {
-   log_entry "_env_environment_set" "$@"
+   log_entry "env::environment::_set" "$@"
 
    local filename="$1"
    local key="$2"
@@ -667,7 +661,7 @@ shell environment"
          return 4
       fi
 
-      if ! _env_file_defines_key "${filename}" "${key}"
+      if ! env::environment::_file_defines_key "${filename}" "${key}"
       then
          log_fluff "${key} does not exist in ${filename}"
          return 4
@@ -675,7 +669,7 @@ shell environment"
 
       # inplace sed creates a temporary file, so we need create to unprotect
       # the parent
-      env_safe_modify_file "${filename}" \
+      env::environment::safe_modify_file "${filename}" \
          inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
       return $?
@@ -686,11 +680,11 @@ shell environment"
    #
    if [ -f "${filename}" ]
    then
-      if _env_file_defines_key "${filename}" "${key}"
+      if env::environment::_file_defines_key "${filename}" "${key}"
       then
          # inplace sed creates a temporary file, so we need create to unprotect
          # the parent
-         env_safe_modify_file "${filename}" \
+         env::environment::safe_modify_file "${filename}" \
             inplace_sed -e "s/^[ #]*export *${sed_escaped_key}=.*/\
 export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
          return $?
@@ -730,7 +724,7 @@ export ${key}=${value}
 
 "
    # unprotect if needed
-   env_safe_create_or_write_file "${filename}" \
+   env::environment::safe_create_or_write_file "${filename}" \
       redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
    # protect if unprotected
 }
@@ -740,32 +734,29 @@ export ${key}=${value}
 # global (specified implicitly as DEFAULT) is special because it cleans
 # everything below it, even scopes not applicable to the current os/machine/usr
 #
-env_environment_remove_from_global_subscopes()
+env::environment::remove_from_global_subscopes()
 {
-   log_entry "env_environment_remove_from_global_subscopes" "$@"
+   log_entry "env::environment::remove_from_global_subscopes" "$@"
 
    local key="$1"
 
    local i
 
-   shell_enable_nullglob
-   for i in ${MULLE_ENV_ETC_DIR}/environment-os-*.sh \
-            ${MULLE_ENV_ETC_DIR}/environment-host-*.sh \
-            ${MULLE_ENV_ETC_DIR}/environment-user-*.sh
-   do
-      shell_disable_nullglob
-      _env_environment_remove "$i" "${key}"
-   done
-   shell_disable_nullglob
+   .foreachfile i in ${MULLE_ENV_ETC_DIR}/environment-os-*.sh \
+                     ${MULLE_ENV_ETC_DIR}/environment-host-*.sh \
+                     ${MULLE_ENV_ETC_DIR}/environment-user-*.sh
+   .do
+      env::environment::_remove "$i" "${key}"
+   .done
 }
 
 
 # todo: set is still too hacky
-#       and doesn't respect r_get_scopes information
+#       and doesn't respect env::scope::r_get_scopes information
 
-env_environment_set_main()
+env::environment::set_main()
 {
-   log_entry "env_environment_set_main" "$@"
+   log_entry "env::environment::set_main" "$@"
 
    local scopename="$1"; shift
 
@@ -781,7 +772,7 @@ env_environment_set_main()
    do
       case "$1" in
          -h|--help|help)
-            env_environment_set_usage
+            env::environment::set_usage
          ;;
 
          --no-add-empty)
@@ -801,14 +792,14 @@ env_environment_set_main()
          ;;
 
          -s|--separator|--seperator)
-            [ "$#" -eq 1 ] && env_environment_set_usage "Missing argument to \"$1\""
+            [ "$#" -eq 1 ] && env::environment::set_usage "Missing argument to \"$1\""
             shift
 
             OPTION_SEPARATOR="$1"
          ;;
 
          -*)
-            env_environment_set_usage "Unknown option \"$1\""
+            env::environment::set_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -832,25 +823,25 @@ env_environment_set_main()
          key="${key%%=*}"
          comment="$2"
 
-         [ $# -lt 1 -o $# -gt 2 ] && env_environment_set_usage
+         [ $# -lt 1 -o $# -gt 2 ] && env::environment::set_usage
       ;;
 
       *)
-         [ $# -lt 2 -o $# -gt 3 ] && env_environment_set_usage
+         [ $# -lt 2 -o $# -gt 3 ] && env::environment::set_usage
       ;;
    esac
 
 
-   [ -z "${key}" ] && env_environment_set_usage "empty key for set"
+   [ -z "${key}" ] && env::environment::set_usage "empty key for set"
 
-   assert_valid_environment_key "${key}"
+   env::assert_valid_environment_key "${key}"
 
    if [ "${OPTION_ADD}" != 'NO' ]
    then
       local prev
       local oldvalue
 
-      prev="`env_environment_get_main "${scopename}" "${key}"`"
+      prev="`env::environment::get_main "${scopename}" "${key}"`"
       log_debug "Previous value is \"${prev}\""
 
       case "${value}" in
@@ -861,19 +852,15 @@ ${C_INFO}Tip: use multiple addition statements."
          ;;
       esac
 
-      shell_disable_glob; IFS="${OPTION_SEPARATOR}"
-
-      for oldvalue in ${prev}
-      do
-         shell_enable_glob; IFS="${DEFAULT_IFS}"
+      IFS="${OPTION_SEPARATOR}"
+      .for oldvalue in ${prev}
+      .do
          if [ "${oldvalue}" = "${value}" ]
          then
             log_fluff "\"${value}\" already set"
             return 0
          fi
-      done
-
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
+      .done
 
       if [ "${OPTION_ADD}" = 'APPEND' ]
       then
@@ -894,17 +881,17 @@ ${C_INFO}Tip: use multiple addition statements."
    if [ "${scopename}" = 'DEFAULT' ]
    then
       filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
-      _env_environment_set "${filename}" "${key}" "${value}" "${comment}" &&
-      env_environment_remove_from_global_subscopes "${key}"
+      env::environment::_set "${filename}" "${key}" "${value}" "${comment}" &&
+      env::environment::remove_from_global_subscopes "${key}"
       return $?
    fi
 
    local scopeprefix
    local rval
 
-   if ! r_filename_for_scopeid "${scopename}"
+   if ! env::scope::r_filename_for_scopeid "${scopename}"
    then
-      if scope_is_keyword "${scopename}"
+      if env::scope::is_keyword "${scopename}"
       then
          fail "You can't set values in scope \"${scopename}\""
       fi
@@ -912,7 +899,7 @@ ${C_INFO}Tip: use multiple addition statements."
    fi
    filename="${RVAL}"
 
-   _env_environment_set "${filename}" "${key}" "${value}" "${comment}"
+   env::environment::_set "${filename}" "${key}" "${value}" "${comment}"
    rval=$?
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
@@ -931,9 +918,9 @@ ${C_INFO}Tip: use multiple addition statements."
 #
 # interface for mulle-sde
 #
-env_environment_mset_main()
+env::environment::mset_main()
 {
-   log_entry "env_environment_mset_main" "$@"
+   log_entry "env::environment::mset_main" "$@"
 
    local scopename="$1"; shift
 
@@ -995,7 +982,7 @@ env_environment_mset_main()
          comment="`sed -e 's/^/# /' <<< "${comment}"`"
       fi
 
-      env_environment_set_main "${scopename}" ${option} "${key}" "${value}" "${comment}"
+      env::environment::set_main "${scopename}" ${option} "${key}" "${value}" "${comment}"
 
       shift
    done
@@ -1005,9 +992,9 @@ env_environment_mset_main()
 #
 # Get
 #
-_env_environment_get()
+env::environment::_get()
 {
-   log_entry "_env_environment_get" "$@"
+   log_entry "env::environment::_get" "$@"
 
    local filename="$1"
    local key="$2"
@@ -1020,7 +1007,7 @@ _env_environment_get()
 
    log_fluff "Reading \"${filename}\""
 
-   assert_valid_environment_key "${key}"
+   env::assert_valid_environment_key "${key}"
 
    local sedcmd
 
@@ -1038,7 +1025,7 @@ _env_environment_get()
 
    if [ -z "${value}" ]
    then
-      _env_file_defines_key "${filename}" "${key}"
+      env::environment::_file_defines_key "${filename}" "${key}"
       return $?
    fi
 
@@ -1057,9 +1044,9 @@ _env_environment_get()
 }
 
 
-_env_file_defines_key()
+env::environment::_file_defines_key()
 {
-   log_entry "_env_file_defines_key" "$@"
+   log_entry "env::environment::_file_defines_key" "$@"
 
    local filename="$1"
    local key="$2"
@@ -1080,9 +1067,9 @@ _env_file_defines_key()
 }
 
 
-_env_environment_eval_get()
+env::environment::_eval_get()
 {
-   log_entry "_env_environment_eval_get" "$@"
+   log_entry "env::environment::_eval_get" "$@"
 
    local filename="$1"; shift
    local key="$1"; shift
@@ -1121,18 +1108,18 @@ _env_environment_eval_get()
       return 0
    fi
 
-   _env_file_defines_key "${filename}" "${key}"
+   env::environment::_file_defines_key "${filename}" "${key}"
    return $?
 }
 
 
-_env_environment_sed_get()
+env::environment::_sed_get()
 {
-   log_entry "_env_environment_sed_get" "$@"
+   log_entry "env::environment::_sed_get" "$@"
 
    local value
 
-   if ! value="`_env_environment_eval_get "$@"`"
+   if ! value="`env::environment::_eval_get "$@"`"
    then
       return 1
    fi
@@ -1158,9 +1145,9 @@ _env_environment_sed_get()
 #       the environment files is a the proper level. Not sure if
 #       r_unescaped_doublequotes is correct here, or should be lower/higher
 #
-env_environment_get_main()
+env::environment::get_main()
 {
-   log_entry "env_environment_get_main" "$@"
+   log_entry "env::environment::get_main" "$@"
 
    local scopename="$1"; shift
 
@@ -1168,41 +1155,41 @@ env_environment_get_main()
    local getter
    local reverse="--reverse"
 
-   getter="_env_environment_get"
+   getter="env::environment::_get"
 
    while :
    do
       case "$1" in
          -h|--help|help)
-            env_environment_get_usage
+            env::environment::get_usage
          ;;
 
          --output-eval)
-            getter="_env_environment_eval_get"
+            getter="env::environment::_eval_get"
             reverse=""
          ;;
 
          --output-sed)
-            getter="_env_environment_sed_get"
+            getter="env::environment::_sed_get"
             reverse=""
          ;;
 
          --sed-key-prefix)
-            [ $# -eq 1 ] && env_environment_get_usage "missing argument to $1"
+            [ $# -eq 1 ] && env::environment::get_usage "missing argument to $1"
             shift
 
             OPTION_SED_KEY_PREFIX="$1"
          ;;
 
          --sed-key-suffix)
-            [ $# -eq 1 ] && env_environment_get_usage "missing argument to $1"
+            [ $# -eq 1 ] && env::environment::get_usage "missing argument to $1"
             shift
 
             OPTION_SED_KEY_SUFFIX="$1"
          ;;
 
          -*)
-            env_environment_get_usage "Unknown option \"$1\""
+            env::environment::get_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1213,7 +1200,7 @@ env_environment_get_main()
       shift
    done
 
-   [ "$#" -ne 1 ]  && env_environment_get_usage "wrong number of arguments \"$*\""
+   [ "$#" -ne 1 ]  && env::environment::get_usage "wrong number of arguments \"$*\""
 
    local key="$1"
 
@@ -1232,7 +1219,7 @@ env_environment_get_main()
       ;;
    esac
 
-   r_get_existing_scope_files ${reverse} "${scopename}"
+   env::scope::r_get_existing_scope_files ${reverse} "${scopename}"
    filenames="${RVAL}"
 
    local rval
@@ -1240,10 +1227,9 @@ env_environment_get_main()
    local prevfiles
 
    rval=1
-   shell_disable_glob; IFS=$'\n'
-   for filename in ${filenames}
-   do
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
+
+   .foreachline filename in ${filenames}
+   .do
       if value="`eval ${getter} "'${filename}'" "'${key}'" "${prevfiles}"`"
       then
          rval=0
@@ -1257,8 +1243,7 @@ env_environment_get_main()
 
       r_concat "${prevfiles}" "'${filename}'"
       prevfiles="${RVAL}"
-   done
-   shell_enable_glob; IFS="${DEFAULT_IFS}"
+   .done
 
    if [ "${rval}" -eq 0 ]
    then
@@ -1270,9 +1255,9 @@ env_environment_get_main()
 }
 
 
-remove_environmentfile_if_empty()
+env::environment::remove_environmentfile_if_empty()
 {
-   log_entry "remove_environmentfile_if_empty" "$@"
+   log_entry "env::environment::remove_environmentfile_if_empty" "$@"
 
    local filename="$1"
 
@@ -1281,14 +1266,14 @@ remove_environmentfile_if_empty()
    contents="`egrep -v '^#' "${filename}" | sed '/^[ ]*$/d'`"
    if [ -z "${contents}" ]
    then
-      env_safe_remove_file_if_present "${filename}"
+      env::environment::safe_remove_file_if_present "${filename}"
    fi
 }
 
 
-_env_environment_remove()
+env::environment::_remove()
 {
-   log_entry "_env_environment_remove" "$@"
+   log_entry "env::environment::_remove" "$@"
 
    local filename="$1"
    local key="$2"
@@ -1309,19 +1294,19 @@ _env_environment_remove()
    #       probably easier to do with a cleanup path that removes
    #       three comments above an empty line, that's why we don't
    #       delete here
-   env_safe_modify_file "${filename}" \
+   env::environment::safe_modify_file "${filename}" \
       inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)//" "${filename}"
 
    if [ "${OPTION_REMOVE_FILE}" != 'NO' ]
    then
-      remove_environmentfile_if_empty "${filename}"
+      env::environment::remove_environmentfile_if_empty "${filename}"
    fi
 }
 
 
-env_environment_remove_main()
+env::environment::remove_main()
 {
-   log_entry "env_environment_remove_main" "$@"
+   log_entry "env::environment::remove_main" "$@"
 
    local scopename="$1"; shift
 
@@ -1331,7 +1316,7 @@ env_environment_remove_main()
    do
       case "$1" in
          -h|--help|help)
-            env_environment_remove_usage
+            env::environment::remove_usage
          ;;
 
          --no-remove-file)
@@ -1339,7 +1324,7 @@ env_environment_remove_main()
          ;;
 
          -*)
-            env_environment_remove_usage "Unknown option \"$1\""
+            env::environment::remove_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1350,7 +1335,7 @@ env_environment_remove_main()
       shift
    done
 
-   [ "$#" -ne 1 ]  && env_environment_remove_usage "wrong number of arguments \"$*\""
+   [ "$#" -ne 1 ]  && env::environment::remove_usage "wrong number of arguments \"$*\""
 
    # shellcheck source=src/mulle-env-scope.sh
    [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
@@ -1363,9 +1348,9 @@ env_environment_remove_main()
    local filenames
    if [ "${scopename}" = "DEFAULT" ]
    then
-      r_get_existing_scope_files "--with-inferiors" "global"
+      env::scope::r_get_existing_scope_files "--with-inferiors" "global"
    else
-      r_get_existing_scope_files "${scopename}"
+      env::scope::r_get_existing_scope_files "${scopename}"
    fi
 
    r_reverse_lines "${RVAL}"
@@ -1374,21 +1359,19 @@ env_environment_remove_main()
    local rval
 
    rval=1
-   shell_disable_glob; IFS=$'\n'
-   for filename in ${filenames}
-   do
+   .foreachline filename in ${filenames}
+   .do
       shell_enable_glob; IFS="${DEFAULT_IFS}"
 
-      if _env_file_defines_key "${filename}" "${key}"
+      if env::environment::_file_defines_key "${filename}" "${key}"
       then
-         if _env_environment_remove "${filename}" "${key}"
+         if env::environment::_remove "${filename}" "${key}"
          then
             rval=0
-            break
+            .break
          fi
       fi
-  done
-   shell_enable_glob; IFS="${DEFAULT_IFS}"
+   .done
 
    return $rval
 }
@@ -1401,7 +1384,7 @@ env_environment_remove_main()
 # diz not pretty, close eyes
 # https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
 
-merge_awk_filter()
+env::environment::merge_awk_filter()
 {
    local awkcode
 
@@ -1414,29 +1397,29 @@ print i "=\"" substr(value[ i], 2, length(value[ i]) - 2) "\"" }'
 }
 
 
-merge_environment_text()
+env::environment::merge_environment_text()
 {
-   log_entry "merge_environment_text" "$@"
+   log_entry "env::environment::merge_environment_text" "$@"
 
    rexekutor sed -n 's/^ *export *\(.*= *\".*\"\).*/\1/p' <<< "${1}" | \
-   merge_awk_filter | \
+   env::environment::merge_awk_filter | \
    LC_ALL=C rexekutor sort
 }
 
 
-merge_environment_file()
+env::environment::merge_environment_file()
 {
-   log_entry "merge_environment_file" "$@"
+   log_entry "env::environment::merge_environment_file" "$@"
 
    rexekutor sed -n 's/^ *export *\(.*= *\".*\"\).*/\1/p' "${1}" | \
-   merge_awk_filter | \
+   env::environment::merge_awk_filter | \
    LC_ALL=C rexekutor sort
 }
 
 
-_env_environment_combined_list()
+env::environment::_combined_list()
 {
-   log_entry "_env_environment_combined_list" "$@"
+   log_entry "env::environment::_combined_list" "$@"
 
    local text_lister="$1"; shift
 
@@ -1463,41 +1446,37 @@ _env_environment_combined_list()
 }
 
 
-_env_environment_combined_list_main()
+env::environment::_combined_list_main()
 {
-   log_entry "_env_environment_combined_list_main" "$@"
+   log_entry "env::environment::_combined_list_main" "$@"
 
    local text_lister="$1" ; shift
 
-   [ "$#" -ne 0 ] && env_environment_list_usage "wrong number of arguments \"$*\""
+   [ "$#" -ne 0 ] && env::environment::list_usage "wrong number of arguments \"$*\""
 
    local cmdline
 
-   cmdline="_env_environment_combined_list '${text_lister}'"
+   cmdline="env::environment::_combined_list '${text_lister}'"
 
    local filename
    local filenames
 
-   r_get_existing_scope_files "DEFAULT"
+   env::scope::r_get_existing_scope_files "DEFAULT"
    filenames="${RVAL}"
 
-   shell_disable_glob; IFS=$'\n'
-   for filename in ${filenames}
-   do
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
-
+   .foreachline filename in ${filenames}
+   .do
       r_concat "${cmdline}" "'${filename}'"
       cmdline="${RVAL}"
-   done
-   shell_enable_glob; IFS="${DEFAULT_IFS}"
+   .done
 
    eval "${cmdline}"
 }
 
 
-_env_environment_list()
+env::environment::_list()
 {
-   log_entry "_env_environment_list" "$@"
+   log_entry "env::environment::_list" "$@"
 
    local scopeprefix="$1"; shift
 
@@ -1526,7 +1505,7 @@ _env_environment_list()
             ;;
          esac
 
-         merge_environment_file "$1"
+         env::environment::merge_environment_file "$1"
       else
          log_fluff "\"$1\" does not exist"
       fi
@@ -1537,9 +1516,9 @@ _env_environment_list()
 }
 
 
-_env_environment_eval_list()
+env::environment::_eval_list()
 {
-   log_entry "_env_environment_eval_list" "$@"
+   log_entry "env::environment::_eval_list" "$@"
 
    shift
 
@@ -1597,42 +1576,42 @@ MULLE_USERNAME\"${MULLE_USERNAME}\" \
                                                -e '/^MULLE_VIRTUAL_ROOT=/d'
 }
 
-_env_environment_sed_list()
+env::environment::_sed_list()
 {
-   log_entry "_env_environment_sed_list" "$@"
+   log_entry "env::environment::_sed_list" "$@"
 
-   _env_environment_eval_list "$@" | key_values_to_sed
+   env::environment::_eval_list "$@" | env::environment::key_values_to_sed
 }
 
 
-_env_environment_command_list()
+env::environment::_command_list()
 {
-   log_entry "_env_environment_command_list" "$@"
+   log_entry "env::environment::_command_list" "$@"
 
-   _env_environment_eval_list "$@" | key_values_to_command
+   env::environment::_eval_list "$@" | env::environment::key_values_to_command
 }
 
 
 
-env_environment_list_main()
+env::environment::list_main()
 {
-   log_entry "env_environment_list_main" "$@"
+   log_entry "env::environment::list_main" "$@"
 
    local scopename="$1"; shift
 
    local lister
 
-   lister="_env_environment_list"
+   lister="env::environment::_list"
 
    while :
    do
       case "$1" in
          -h|--help|help)
-            env_environment_list_usage
+            env::environment::list_usage
          ;;
 
          --output-eval)
-            lister="_env_environment_eval_list"
+            lister="env::environment::_eval_list"
             if [ "${scopename}" = "DEFAULT" ]
             then
                scopename="include"
@@ -1640,7 +1619,7 @@ env_environment_list_main()
          ;;
 
          --output-sed)
-            lister="_env_environment_sed_list"
+            lister="env::environment::_sed_list"
             if [ "${scopename}" = "DEFAULT" ]
             then
                scopename="include"
@@ -1648,7 +1627,7 @@ env_environment_list_main()
          ;;
 
          --output-command)
-            lister="_env_environment_command_list"
+            lister="env::environment::_command_list"
             if [ "${scopename}" = "DEFAULT" ]
             then
                scopename="include"
@@ -1670,7 +1649,7 @@ env_environment_list_main()
          ;;
 
          -*)
-            env_environment_list_usage "Unknown option \"$1\""
+            env::environment::list_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1681,7 +1660,7 @@ env_environment_list_main()
       shift
    done
 
-   [ "$#" -ne 0 ] && env_environment_list_usage "wrong number of arguments \"$*\""
+   [ "$#" -ne 0 ] && env::environment::list_usage "wrong number of arguments \"$*\""
 
    # shellcheck source=src/mulle-env-scope.sh
    [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
@@ -1695,7 +1674,7 @@ env_environment_list_main()
 
    case "${scopename}" in
       "merged")
-         _env_environment_combined_list_main "merge_environment_text" "$@"
+         env::environment::_combined_list_main "env::environment::merge_environment_text" "$@"
       ;;
 
       "include")
@@ -1703,21 +1682,18 @@ env_environment_list_main()
       ;;
 
       *)
-         r_get_scopes "YES" "YES" "YES" "YES" "YES"
+         env::scope::r_get_scopes "YES" "YES" "YES" "YES" "YES"
          scopes="${RVAL}"
 
          local i
          local i_name
 
-         shell_disable_glob; IFS=$'\n'
-         for i in ${scopes}
+         .foreachline i in ${scopes}
          do
-            shell_enable_glob; IFS="${DEFAULT_IFS}"
-
             i_name="${i:2}"
             if [ "${scopename}" != "DEFAULT" -a "${i_name}" != "${scopename}" ]
             then
-               continue
+               .continue
             fi
 
             case "${i}" in
@@ -1737,15 +1713,14 @@ env_environment_list_main()
                   echo "MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\""
                ;;
             esac
-         done
-         shell_enable_glob; IFS="${DEFAULT_IFS}"
+         .done
       ;;
 
    esac
 }
 
 
-assert_default_scope()
+env::environment::assert_default_scope()
 {
    [ "${OPTION_SCOPE}" = "DEFAULT" ] || \
       log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
@@ -1755,9 +1730,9 @@ assert_default_scope()
 ###
 ### parameters and environment variables
 ###
-env_environment_main()
+env::environment::main()
 {
-   log_entry "env_environment_main" "$@"
+   log_entry "env::environment::main" "$@"
 
    local OPTION_SCOPE="DEFAULT"
    local infix="_"
@@ -1772,20 +1747,14 @@ env_environment_main()
    do
       case "$1" in
          -h|--help|help)
-            env_environment_usage
-         ;;
-
-         --global)
-            assert_default_scope
-
-            OPTION_SCOPE="${1:2}"
+            env::environment::usage
          ;;
 
          --host)
             [ $# -eq 1 ] && fail "missing argument to $1"
             shift
 
-            assert_default_scope
+            env::environment::assert_default_scope
             OPTION_SCOPE="host-$1"
          ;;
 
@@ -1793,7 +1762,7 @@ env_environment_main()
             [ $# -eq 1 ] && fail "missing argument to $1"
             shift
 
-            assert_default_scope
+            env::environment::assert_default_scope
             OPTION_SCOPE="os-$1"
          ;;
 
@@ -1801,18 +1770,18 @@ env_environment_main()
             [ $# -eq 1 ] && fail "missing argument to $1"
             shift
 
-            assert_default_scope
+            env::environment::assert_default_scope
             OPTION_SCOPE="user-$1"
          ;;
 
          --host-this|--this-host)
-            assert_default_scope
+            env::environment::assert_default_scope
 
             OPTION_SCOPE="host-${MULLE_HOSTNAME}"
          ;;
 
          --user-this|--this-user|--me|--myself)
-            assert_default_scope
+            env::environment::assert_default_scope
 
             [ -z "${MULLE_USERNAME}" ] && fail "MULLE_USERNAME environment variable not set"
 
@@ -1820,7 +1789,7 @@ env_environment_main()
          ;;
 
          --os-this|--this-os)
-            assert_default_scope
+            env::environment::assert_default_scope
 
             OPTION_SCOPE="os-${MULLE_UNAME}"
          ;;
@@ -1836,12 +1805,18 @@ env_environment_main()
             [ $# -eq 1 ] && fail "missing argument to $1"
             shift
 
-            assert_default_scope
+            env::environment::assert_default_scope
             OPTION_SCOPE="$1"
          ;;
 
+         --[a-z]*)
+            env::environment::assert_default_scope
+
+            OPTION_SCOPE="${1:2}"
+         ;;
+
          -*)
-            env_environment_usage "Unknown option \"$1\""
+            env::environment::usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1858,33 +1833,33 @@ env_environment_main()
 
    case "${cmd}" in
       mset|remove|set)
-         [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
+         [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
          if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a "${OPTION_PROTECT}" = 'YES' ]
          then
             # shellcheck source=src/mulle-env-scope.sh
             [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
 
-            env_validate_scope_write "${OPTION_SCOPE}" "$@"
+            env::scope::env_validate_scope_write "${OPTION_SCOPE}" "$@"
          fi
-         env_environment_${cmd}_main "${OPTION_SCOPE}" "$@"
+         env::environment::${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
       get|list)
-         [ -z "${OPTION_SCOPE}" ] && env_environment_usage "Empty scope is invalid"
+         [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
-         env_environment_${cmd}_main "${OPTION_SCOPE}" "$@"
+         env::environment::${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
       scope|scopes)
          # shellcheck source=src/mulle-env-scope.sh
          [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
 
-         MULLE_USAGE_NAME="${MULLE_USAGE_NAME} environment" env_scope_main "$@"
+         MULLE_USAGE_NAME="${MULLE_USAGE_NAME} environment" env::scope::main "$@"
       ;;
 
       *)
-         env_environment_usage "unknown command \"${cmd}\""
+         env::environment::usage "unknown command \"${cmd}\""
       ;;
    esac
 }

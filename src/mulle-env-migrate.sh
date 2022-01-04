@@ -32,9 +32,9 @@
 MULLE_ENV_MIGRATE_SH="included"
 
 
-env_move_directory()
+env::migrate::move_directory()
 {
-   log_entry "env_move_directory" "$@"
+   log_entry "env::migrate::move_directory" "$@"
 
    local srcdir="$1"
    local dstdir="$2"
@@ -63,9 +63,9 @@ env_move_directory()
 }
 
 
-env_straight_convert_directory_if_present()
+env::migrate::straight_convert_directory_if_present()
 {
-   log_entry "env_straight_convert_directory_if_present" "$@"
+   log_entry "env::migrate::straight_convert_directory_if_present" "$@"
 
    local directory="$1"
 
@@ -80,26 +80,26 @@ env_straight_convert_directory_if_present()
    r_dirname "${directory}"
    name="${RVAL##*-}"
 
-   env_move_directory "${directory}" ".mulle/${subdir}/${name}"
+   env::migrate::move_directory "${directory}" ".mulle/${subdir}/${name}"
 }
 
 
-env_convert_directory_if_present()
+env::migrate::convert_directory_if_present()
 {
-   log_entry "env_convert_directory_if_present" "$@"
+   log_entry "env::migrate::convert_directory_if_present" "$@"
 
    local srcdir="$1"
    local dstdir="$2"
 
    [ ! -d "${srcdir}" ] && return 4
 
-   env_move_directory "${srcdir}" "${dstdir}"
+   env::migrate::move_directory "${srcdir}" "${dstdir}"
 }
 
 
-env_rename_file_if_present()
+env::migrate::rename_file_if_present()
 {
-   log_entry "env_rename_file_if_present" "$@"
+   log_entry "env::migrate::rename_file_if_present" "$@"
 
    local srcfile="$1"
    local dstfile="$2"
@@ -111,9 +111,9 @@ env_rename_file_if_present()
 }
 
 
-env_migrate_from_v1_to_v2()
+env::migrate::migrate_from_v1_to_v2()
 {
-   log_entry "env_migrate_from_v1_to_v2" "$@"
+   log_entry "env::migrate::migrate_from_v1_to_v2" "$@"
 
    log_info "Migrating to mulle-env v2"
 
@@ -136,77 +136,71 @@ env_migrate_from_v1_to_v2()
 #      MV="git mv"
 #   fi
 
-   env_straight_convert_directory_if_present .mulle-sourcetree/etc
+   env::migrate::straight_convert_directory_if_present .mulle-sourcetree/etc
    rmdir_safer ".mulle-sourcetree"
 
-   env_straight_convert_directory_if_present .mulle-match/share
-   env_straight_convert_directory_if_present .mulle-match/env
+   env::migrate::straight_convert_directory_if_present .mulle-match/share
+   env::migrate::straight_convert_directory_if_present .mulle-match/env
    rmdir_safer ".mulle-match"
 
-   env_straight_convert_directory_if_present .mulle-monitor/share
-   env_straight_convert_directory_if_present .mulle-monitor/env
+   env::migrate::straight_convert_directory_if_present .mulle-monitor/share
+   env::migrate::straight_convert_directory_if_present .mulle-monitor/env
    rmdir_safer ".mulle-monitor"
 
-   env_convert_directory_if_present .mulle-make .mulle/etc/craft/definition
-   env_convert_directory_if_present .mulle-make.darwin .mulle/etc/craft/definition.darwin
-   env_convert_directory_if_present .mulle-make.mingw .mulle/etc/craft/definition.mingw
-   env_convert_directory_if_present .mulle-make.freebsd .mulle/etc/craft/definition.freebsd
-   env_convert_directory_if_present .mulle-make.linux .mulle/etc/craft/definition.linux
+   env::migrate::convert_directory_if_present .mulle-make .mulle/etc/craft/definition
+   env::migrate::convert_directory_if_present .mulle-make.darwin .mulle/etc/craft/definition.darwin
+   env::migrate::convert_directory_if_present .mulle-make.mingw .mulle/etc/craft/definition.mingw
+   env::migrate::convert_directory_if_present .mulle-make.freebsd .mulle/etc/craft/definition.freebsd
+   env::migrate::convert_directory_if_present .mulle-make.linux .mulle/etc/craft/definition.linux
 
-   env_convert_directory_if_present .mulle-sde/share/libexec .mulle/share/monitor/libexec
-   env_convert_directory_if_present .mulle-sde/etc/libexec .mulle/etc/monitor/libexec
-   env_convert_directory_if_present .mulle-sde/share/bin .mulle/share/monitor/bin
-   env_convert_directory_if_present .mulle-sde/etc/bin .mulle/etc/monitor/bin
+   env::migrate::convert_directory_if_present .mulle-sde/share/libexec .mulle/share/monitor/libexec
+   env::migrate::convert_directory_if_present .mulle-sde/etc/libexec .mulle/etc/monitor/libexec
+   env::migrate::convert_directory_if_present .mulle-sde/share/bin .mulle/share/monitor/bin
+   env::migrate::convert_directory_if_present .mulle-sde/etc/bin .mulle/etc/monitor/bin
 
-   env_convert_directory_if_present .mulle-sde/share/match.d .mulle/share/match/match.d
-   env_convert_directory_if_present .mulle-sde/etc/match.d .mulle/etc/match/match.d
-   env_convert_directory_if_present .mulle-sde/share/ignore.d .mulle/share/match/ignore.d
-   env_convert_directory_if_present .mulle-sde/etc/ignore.d .mulle/etc/match/ignore.d
+   env::migrate::convert_directory_if_present .mulle-sde/share/match.d .mulle/share/match/match.d
+   env::migrate::convert_directory_if_present .mulle-sde/etc/match.d .mulle/etc/match/match.d
+   env::migrate::convert_directory_if_present .mulle-sde/share/ignore.d .mulle/share/match/ignore.d
+   env::migrate::convert_directory_if_present .mulle-sde/etc/ignore.d .mulle/etc/match/ignore.d
 
-   env_straight_convert_directory_if_present .mulle-sde/share
-   env_straight_convert_directory_if_present .mulle-sde/etc
+   env::migrate::straight_convert_directory_if_present .mulle-sde/share
+   env::migrate::straight_convert_directory_if_present .mulle-sde/etc
+
    rmdir_safer ".mulle-sde"
 
    local craftinfo
 
-   shell_enable_nullglob
-   for craftinfo in craftinfo/*/mulle-make*
-   do
-      env_convert_directory_if_present "${craftinfo}" "${craftinfo//mulle-make/definition}"
-   done
-   shell_disable_nullglob
+   .foreachfile craftinfo in craftinfo/*/mulle-make*
+   .do
+      env::migrate::convert_directory_if_present "${craftinfo}" "${craftinfo//mulle-make/definition}"
+   .done
 
    local i
 
-   shell_enable_nullglob
-   for i in craftinfo/*/CMakeLists.txt
-   do
+   .foreachfile i in craftinfo/*/CMakeLists.txt
+   .do
       inplace_sed -e 's/mulle-make/definition/g' \
                   -e 's/BUILDINFO_DIRS/DEFINITION_DIRS/g' "${i}"
-   done
-   shell_disable_nullglob
+   .done
 
    # move mulle-project to .mulle to
-   env_convert_directory_if_present "mulle-project" ".mulle/etc/project"
+   env::migrate::convert_directory_if_present "mulle-project" ".mulle/etc/project"
 
-   env_straight_convert_directory_if_present .mulle-env/share
-   env_straight_convert_directory_if_present .mulle-env/etc
+   env::migrate::straight_convert_directory_if_present .mulle-env/share
+   env::migrate::straight_convert_directory_if_present .mulle-env/etc
 
    # remove some old clunckers
 
    remove_file_if_present .mulle-env/share/environment-aux.sh     # unused
    remove_file_if_present .mulle-env/share/environment-global.sh  # only etc!
 
-
-   shell_enable_nullglob
-   for i in .mulle-env/share/environment*.sh .mulle-env/etc/environment*.sh
-   do
+   .foreachfile i in .mulle-env/share/environment*.sh .mulle-env/etc/environment*.sh
+   .do
       if egrep -q '^MULLE_SOURCETREE_SHARE_DIR=' "$i"
       then
          inplace_sed 's/^MULLE_SOURCETREE_SHARE_DIR=/MULLE_SOURCETREE_STASH_DIRNAME=/' "${i}"
       fi
-   done
-   shell_disable_nullglob
+   .done
 
    #
    # hack .gitignore for new paths, also remove some superflous stuff and
@@ -234,9 +228,9 @@ env_migrate_from_v1_to_v2()
 }
 
 
-env_migrate_from_v2_0_to_v2_2()
+env::migrate::migrate_from_v2_0_to_v2_2()
 {
-   log_entry "env_migrate_from_v2_0_to_v2_2" "$@"
+   log_entry "env::migrate::migrate_from_v2_0_to_v2_2" "$@"
 
    log_info "Migrating to mulle-env v2.2"
 
@@ -249,13 +243,13 @@ env_migrate_from_v2_0_to_v2_2()
    remove_file_if_present ".mulle/share/env/optionaltool.freebsd"
    remove_file_if_present ".mulle/share/env/optionaltool.linux"
 
-   env_rename_file_if_present .mulle/share/env/auxscopes .mulle/share/env/auxscope
+   env::migrate::rename_file_if_present .mulle/share/env/auxscopes .mulle/share/env/auxscope
 }
 
 
-env_migrate_from_v2_2_to_v3()
+env::migrate::migrate_from_v2_2_to_v3()
 {
-   log_entry "env_migrate_from_v2_2_to_v3" "$@"
+   log_entry "env::migrate::migrate_from_v2_2_to_v3" "$@"
 
    local lines
    local scope
@@ -275,12 +269,12 @@ env_migrate_from_v2_2_to_v3()
    # auxscopes have changed
    #
    lines="`rexekutor egrep -v '^#' ".mulle/share/env/auxscope" 2> /dev/null`"
-   shell_disable_glob; IFS=$'\n'
-   for scope in ${lines}
-   do
+
+   .foreachline scope in ${lines}
+   .do
       case "${scope}" in
          extension|s:extension)
-            r_priority_for_scopeid 'extension'
+            env::scope::r_priority_for_scopeid 'extension'
             r_add_unique_line "${share_lines}" 'extension;${RVAL}'
             share_lines="${RVAL}"
          ;;
@@ -292,7 +286,7 @@ env_migrate_from_v2_2_to_v3()
          ;;
 
          'e:'*)
-            if ! r_priority_for_scopeid "${scope:2}"
+            if ! env::scope::r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))
@@ -302,7 +296,7 @@ env_migrate_from_v2_2_to_v3()
          ;;
 
          's:'*)
-            if ! r_priority_for_scopeid "${scope:2}"
+            if ! env::scope::r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))
@@ -317,16 +311,16 @@ env_migrate_from_v2_2_to_v3()
             order=$(( order + 10 ))
          ;;
       esac
-   done
+   .done
 
    order=100
    lines="`rexekutor egrep -v '^#' ".mulle/etc/env/auxscope" 2> /dev/null`"
-   shell_disable_glob; IFS=$'\n'
-   for scope in ${lines}
-   do
+
+   .foreachline scope in ${lines}
+   .do
       case "${scope}" in
          'e:'*)
-            if ! r_priority_for_scopeid "${scope:2}"
+            if ! env::scope::r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))
@@ -336,7 +330,7 @@ env_migrate_from_v2_2_to_v3()
          ;;
 
          's:'*)
-            if ! r_priority_for_scopeid "${scope:2}"
+            if ! env::scope::r_priority_for_scopeid "${scope:2}"
             then
                RVAL="${order}"
                order=$(( order + 10 ))
@@ -351,7 +345,7 @@ env_migrate_from_v2_2_to_v3()
             order=$(( order + 10 ))
          ;;
       esac
-   done
+   .done
 
    if [ ! -z "${etc_lines}" ]
    then
@@ -373,9 +367,9 @@ env_migrate_from_v2_2_to_v3()
 }
 
 
-env_migrate()
+env::migrate::main()
 {
-   log_entry "env_migrate" "$@"
+   log_entry "env::migrate::main" "$@"
 
    local oldversion="$1"
    local version="$2"
@@ -397,24 +391,24 @@ env_migrate()
 
    if [ "${oldmajor}" -lt 2 ]
    then
-      env_migrate_from_v1_to_v2
+      env::migrate::migrate_from_v1_to_v2
       oldmajor=2
       oldminor=0
    fi
 
    if [ "${oldmajor}" -eq 2 -a "${major}" -eq 2 -a "${oldminor}" -lt 2 ]
    then
-      env_migrate_from_v2_0_to_v2_2
+      env::migrate::migrate_from_v2_0_to_v2_2
       oldmajor=2
       oldminor=2
    fi
 
    if [ "${oldmajor}" -lt 3 ]
    then
-      env_migrate_from_v2_2_to_v3
+      env::migrate::migrate_from_v2_2_to_v3
       oldmajor=3
       oldminor=0
    fi
 
-   env_upgrade_plugin "${flavor}" "${oldversion}" "${version}"
+   env::plugin::upgrade "${flavor}" "${oldversion}" "${version}"
 }

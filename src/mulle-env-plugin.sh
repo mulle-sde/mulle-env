@@ -29,16 +29,16 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_PLUGINS_SH="included"
+MULLE_ENV_PLUGIN_SH="included"
 
 
 #
 # the main problem is brew, as brew symlinks to the folder
 # but we need to get the source of the symlinks folder
 #
-r_plugin_installdir()
+env::plugin::r_installdir()
 {
-#   log_entry "r_plugin_installdir"
+#   log_entry "env::plugin::r_installdir"
 
    local dev="${1:-YES}"
 
@@ -59,9 +59,9 @@ r_plugin_installdir()
 }
 
 
-r_plugin_searchpath()
+env::plugin::r_searchpath()
 {
-#   log_entry "r_plugin_searchpath"
+#   log_entry "env::plugin::r_searchpath"
 
    if [ ! -z "${_ENV_PLUGIN_SEARCHPATH}" ]
    then
@@ -76,7 +76,7 @@ r_plugin_searchpath()
 	# add wherever we are that share directory
 	# i.e.  /usr/libexec/mulle-env -> /usr/share/mulle-env
 	#
-   r_plugin_installdir
+   env::plugin::r_installdir
    r_colon_concat "${searchpath}" "${RVAL}"
    searchpath="${RVAL}"
 
@@ -99,47 +99,39 @@ r_plugin_searchpath()
 }
 
 
-_env_all_plugin_names()
+env::plugin::_all_names()
 {
-   log_entry "_env_all_plugin_names"
-
-   [ -z "${DEFAULT_IFS}" ] && internal_fail "DEFAULT_IFS not set"
-   [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
+   log_entry "env::plugin::_all_names"
 
    local searchpath
 
-   r_plugin_searchpath
+   env::plugin::r_searchpath
    searchpath="${RVAL}"
 
    local directory
    local pluginpath
 
-   IFS=':'
-   for directory in ${searchpath}
-   do
-      IFS=$'\n'
-      for pluginpath in `ls -1 "${directory}"/*.sh 2> /dev/null`
-      do
+   .foreachpath  directory in ${searchpath}
+   .do
+      .foreachline pluginpath in `ls -1 "${directory}"/*.sh 2> /dev/null`
+      .do
          basename -- "${pluginpath}" .sh
-      done
-      IFS=':'
-   done
-
-   IFS="${DEFAULT_IFS}"
+      .done
+   .done
 }
 
 
-env_all_plugin_names()
+env::plugin::all_names()
 {
-   log_entry "env_all_plugin_names" "$@"
+   log_entry "env::plugin::all_names" "$@"
 
-   _env_all_plugin_names "$@" | sort -u
+   env::plugin::_all_names "$@" | sort -u
 }
 
 
-_env_load_plugin()
+env::plugin::_load()
 {
-   log_entry "_env_load_plugin" "$@"
+   log_entry "env::plugin::_load" "$@"
 
    local flavor="$1"
    local searchpath="$2"
@@ -150,11 +142,8 @@ _env_load_plugin()
    local directory
    local pluginpath
 
-   IFS=':'
-   for directory in ${searchpath}
-   do
-      IFS="${DEFAULT_IFS}"
-
+   .foreachpath directory in ${searchpath}
+   .do
       r_filepath_concat "${directory}" "${flavor}.sh"
       pluginpath="${RVAL}"
 
@@ -167,26 +156,25 @@ _env_load_plugin()
       else
          log_debug "No plugin found at ${pluginpath#${MULLE_USER_PWD}/}"
       fi
-   done
-   IFS="${DEFAULT_IFS}"
+   .done
 
    log_fluff "No plugin found"
    return 1
 }
 
 
-env_load_plugin()
+env::plugin::load()
 {
-   log_entry "env_load_plugin" "$@"
+   log_entry "env::plugin::load" "$@"
 
    local flavor="$1"
 
    local searchpath
 
-   r_plugin_searchpath
+   env::plugin::r_searchpath
    searchpath="${RVAL}"
 
-   if _env_load_plugin "${flavor}" "${searchpath}"
+   if env::plugin::_load "${flavor}" "${searchpath}"
    then
       log_fluff "Env plugin \"${flavor}\" loaded"
       return
@@ -199,9 +187,9 @@ env_load_plugin()
 #
 # assumes plugin has already been loaded
 #
-env_upgrade_plugin()
+env::plugin::upgrade()
 {
-   log_entry "env_upgrade_plugin" "$@"
+   log_entry "env::plugin::upgrade" "$@"
 
    local flavor="$1"
    local oldversion="$2"
@@ -209,7 +197,7 @@ env_upgrade_plugin()
 
    local functionname
 
-   functionname="env_${flavor}_migrate"
+   functionname="env::plugin::${flavor}::migrate"
    if shell_is_function "${functionname}"
    then
       log_fluff "Migrating ${flavor} plugin"
@@ -219,13 +207,13 @@ env_upgrade_plugin()
 
 
 # cache this PATH
-env_plugin_initialize()
+env::plugin::initialize()
 {
-   r_plugin_searchpath
+   env::plugin::r_searchpath
 
    _ENV_PLUGIN_SEARCHPATH="${RVAL}"
 }
 
-env_plugin_initialize
+env::plugin::initialize
 
 :

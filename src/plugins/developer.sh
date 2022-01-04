@@ -30,43 +30,43 @@
 #   POSSIBILITY OF SUCH DAMAGE.
 #
 
-print_developer_startup_sh()
+env::plugin::developer::print_startup()
 {
-   log_entry "print_developer_startup_sh" "$@"
+   log_entry "env::plugin::developer::print_startup" "$@"
 
-   print_minimal_startup_sh "$@"
+   env::plugin::minimal::print_startup "$@"
 }
 
 
-print_developer_include_sh()
+env::plugin::developer::print_include()
 {
-   log_entry "print_developer_include_sh" "$@"
+   log_entry "env::plugin::developer::print_include" "$@"
 
-   print_minimal_include_sh "$@"
+   env::plugin::minimal::print_include "$@"
 }
 
 
-print_developer_environment_aux_sh()
+env::plugin::developer::print_environment_aux()
 {
-   log_entry "print_developer_environment_aux_sh" "$@"
+   log_entry "env::plugin::developer::print_environment_aux" "$@"
 
-   print_minimal_environment_aux_sh "$@"
+   env::plugin::minimal::print_environment_aux "$@"
 }
 
 
-print_developer_auxscope_sh()
+env::plugin::developer::print_auxscope()
 {
-   log_entry "print_developer_auxscope_sh" "$@"
+   log_entry "env::plugin::developer::print_auxscope" "$@"
 }
 
 
 
 # callback
-print_developer_tools_sh()
+env::plugin::developer::print_tools()
 {
-   log_entry "print_developer_tools_sh" "$@"
+   log_entry "env::plugin::developer::print_tools" "$@"
 
-   print_minimal_tools_sh "$@"
+   env::plugin::minimal::print_tools "$@"
 
 #
 # somewhat arbitrarily hand-picked. Rule of thumb: if a mulle script uses
@@ -114,14 +114,14 @@ vi;optional"
 }
 
 
-env_setup_developer_tools()
+env::plugin::developer::setup_tools()
 {
-   log_entry "env_setup_developer_tools" "$@"
+   log_entry "env::plugin::developer::setup_tools" "$@"
 
    local bindir="$1"
    local libexecdir="$2"
 
-   env_setup_minimal_tools "$@"
+   env::plugin::minimal::setup_tools "$@"
 
    #
    # Since the PATH is restricted, we need a basic set of tools
@@ -130,19 +130,20 @@ env_setup_developer_tools()
    # checked yet)
    #
    (
-      env_link_mulle_tool "mulle-bashfunctions-env" "${bindir}"  \
-                                                    "${libexecdir}" \
-                                                    "library" &&
-      env_link_mulle_tool "mulle-env"               "${bindir}" \
-                                                    "${libexecdir}"
+      env::tool::link_mulle_tool "mulle-bashfunctions" "${bindir}"  \
+                                                           "${libexecdir}" \
+                                                           "library" \
+      && \
+      env::tool::link_mulle_tool "mulle-env"               "${bindir}" \
+                                                           "${libexecdir}"
    ) || return 1
 }
 
 
-env_mulle_initialize()
+env::plugin::developer::initialize()
 {
-   env_load_plugin "minimal"
+   env::plugin::load "minimal"
 }
 
 
-env_mulle_initialize
+env::plugin::developer::initialize

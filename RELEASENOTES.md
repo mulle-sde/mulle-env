@@ -1,3 +1,13 @@
+# 4.0.0
+
+* big function rename to `<tool>`::`<file>`::`<function>` to make it easier to read hopefully
+* added invoke command to substitute env -i
+* add `MULLE_USERNAME` to list of exported/injected environment variables
+* new **doctor** command
+* used mulle-bashfunctions 4 now
+* compatible with zsh and will run zsh, if bash is not installed
+
+
 ## 3.4.0
 
 * clarify distinction between os (host) and plaform (target) a bit

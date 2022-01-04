@@ -30,9 +30,9 @@
 #   POSSIBILITY OF SUCH DAMAGE.
 #
 
-print_none_startup_sh()
+env::plugin::none::print_startup()
 {
-   log_entry "print_none_startup_sh" "$@"
+   log_entry "env::plugin::none::print_startup" "$@"
 
    cat <<EOF
 #######
@@ -162,9 +162,9 @@ EOF
 }
 
 
-print_none_include_header_sh()
+env::plugin::none::print_include_header()
 {
-   log_entry "print_none_include_header_sh" "$@"
+   log_entry "env::plugin::none::print_include_header" "$@"
 
    cat <<EOF
 [ -z "\${MULLE_VIRTUAL_ROOT}" -o -z "\${MULLE_UNAME}"  ] && \\
@@ -177,9 +177,9 @@ EOF
 }
 
 
-print_none_include_environment_sh()
+env::plugin::none::print_include_environment()
 {
-   log_entry "print_none_include_environment_sh" "$@"
+   log_entry "env::plugin::none::print_include_environment" "$@"
 
    cat <<EOF
 # Top/down order of inclusion.
@@ -265,9 +265,9 @@ EOF
 }
 
 
-print_none_include_footer_sh()
+env::plugin::none::print_include_footer()
 {
-   log_entry "print_none_include_footer_sh" "$@"
+   log_entry "env::plugin::none::print_include_footer" "$@"
 
    cat <<EOF
 unset MULLE_ENV_ETC_DIR
@@ -277,40 +277,40 @@ EOF
 }
 
 
-print_none_include_sh()
+env::plugin::none::print_include()
 {
-   log_entry "print_none_include_sh" "$@"
+   log_entry "env::plugin::none::print_include" "$@"
 
-   print_none_include_header_sh "$@"
-   print_none_include_environment_sh "$@"
-   print_none_include_footer_sh "$@"
+   env::plugin::none::print_include_header "$@"
+   env::plugin::none::print_include_environment "$@"
+   env::plugin::none::print_include_footer "$@"
 }
 
 
-print_none_environment_aux_sh()
+env::plugin::none::print_environment_aux()
 {
-   log_entry "print_none_environment_aux_sh" "$@"
+   log_entry "env::plugin::none::print_environment_aux" "$@"
 }
 
 
-print_none_auxscope_sh()
+env::plugin::none::print_auxscope()
 {
-   log_entry "print_none_auxscope_sh" "$@"
+   log_entry "env::plugin::none::print_auxscope" "$@"
 }
 
 
-env_setup_none_tools()
+env::plugin::none::setup_tools()
 {
-   log_entry "env_setup_none_tools" "$@"
+   log_entry "env::plugin::none::setup_tools" "$@"
 
    # there are no "special" tools to do here
 }
 
 
 # callback
-print_none_tools_sh()
+env::plugin::none::print_tools()
 {
-   log_entry "print_none_tools_sh" "$@"
+   log_entry "env::plugin::none::print_tools" "$@"
 
    echo "mudo"
 

@@ -29,12 +29,12 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_TOOL2_SH="included"
+MULLE_ENV_TOOL_SH="included"
 
 #
 # This needs a complete rewrite:
 #
-env_tool2_usage()
+env::tool::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -69,7 +69,7 @@ EOF
 }
 
 
-env_tool2_remove_usage()
+env::tool::remove_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -88,7 +88,7 @@ EOF
 }
 
 
-env_tool2_add_usage()
+env::tool::add_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -114,7 +114,7 @@ EOF
 }
 
 
-env_tool2_list_usage()
+env::tool::list_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -140,7 +140,7 @@ EOF
 }
 
 
-env_tool2_doctor_usage()
+env::tool::doctor_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -186,9 +186,9 @@ EOF
 # the toolname for the libraryname. Also libexec is versionized
 # so add the version. The dstbindir/dstlibexecdir is in .mulle directly
 #
-env_link_mulle_tool()
+env::tool::link_mulle_tool()
 {
-   log_entry "env_link_mulle_tool" "$@"
+   log_entry "env::tool::link_mulle_tool" "$@"
 
    local toolname="$1"
    local dstbindir="$2"
@@ -302,18 +302,17 @@ env_link_mulle_tool()
 ##
 ##
 
-r_env_tool2_oslist()
+env::tool::r_oslist()
 {
-   log_entry "r_env_tool2_oslist" "$@"
+   log_entry "env::tool::r_oslist" "$@"
 
    local name
    local filename
    local filenames
 
-   shell_enable_nullglob
-   for filename in "${MULLE_ENV_SHARE_DIR}"/tool* \
-                   "${MULLE_ENV_ETC_DIR}"/tool*
-   do
+   .foreachfile filename in "${MULLE_ENV_SHARE_DIR}"/tool* \
+                            "${MULLE_ENV_ETC_DIR}"/tool*
+   .do
       name="${filename##*tool.}"
       if [ "${filename}" = "${name}" ]
       then
@@ -322,16 +321,15 @@ r_env_tool2_oslist()
 
       r_add_unique_line "${filenames}" "${name}"
       filenames="${RVAL}"
-   done
-   shell_disable_nullglob
+   .done
 
    RVAL="${filenames}"
 }
 
 
-r_env_tool2_scoped_get()
+env::tool::r_scoped_get()
 {
-   log_entry "r_env_tool2_scoped_get" "$@"
+   log_entry "env::tool::r_scoped_get" "$@"
 
    local scope="$1"
    local os="$2"
@@ -348,7 +346,7 @@ r_env_tool2_scoped_get()
 
    case "${scope}" in
       'plugin')
-         if r_env_tool2_get "${tool}" \
+         if env::tool::r_get "${tool}" \
                             "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
                             "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}"
          then
@@ -357,7 +355,7 @@ r_env_tool2_scoped_get()
       ;;
 
       'extension')
-         if r_env_tool2_get "${tool}" \
+         if env::tool::r_get "${tool}" \
                             "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
                             "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
                             "${MULLE_ENV_SHARE_DIR}/tool-extension" \
@@ -368,7 +366,7 @@ r_env_tool2_scoped_get()
       ;;
 
       *)
-         if r_env_tool2_get "${tool}" \
+         if env::tool::r_get "${tool}" \
                             "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
                             "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
                             "${MULLE_ENV_SHARE_DIR}/tool-extension" \
@@ -385,9 +383,9 @@ r_env_tool2_scoped_get()
 }
 
 
-env_tool2_add()
+env::tool::add()
 {
-   log_entry "env_tool2_add" "$@"
+   log_entry "env::tool::add" "$@"
 
    [ -z "${MULLE_ENV_ETC_DIR}" ]   && internal_fail "MULLE_ENV_ETC_DIR not defined"
    [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
@@ -405,7 +403,7 @@ env_tool2_add()
    do
       case "$1" in
          -h*|--help|help)
-            env_tool2_add_usage
+            env::tool::add_usage
          ;;
 
          -o|--optional|--no-required)
@@ -437,7 +435,7 @@ env_tool2_add()
          ;;
 
          -*)
-            env_tool2_add_usage "Unknown option \"$1\""
+            env::tool::add_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -448,11 +446,11 @@ env_tool2_add()
       shift
    done
 
-   [ $# -lt 1 ] && env_tool2_add_usage "Missing tool name"
+   [ $# -lt 1 ] && env::tool::add_usage "Missing tool name"
 
    local tool
 
-   unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
+   env::unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
 
    # run in subshell to protect cleanly afterwards
    (
@@ -461,7 +459,7 @@ env_tool2_add()
          tool="$1"
          shift
 
-         [ -z "${tool}" ] && env_tool2_add_usage "Empty tool name"
+         [ -z "${tool}" ] && env::tool::add_usage "Empty tool name"
 
          local mark
 
@@ -499,7 +497,7 @@ env_tool2_add()
          local doesexist
 
          doesexist='NO'
-         if r_env_tool2_scoped_get "${scope}" "${os}" "${tool}"
+         if env::tool::r_scoped_get "${scope}" "${os}" "${tool}"
          then
             doesexist='YES'
          fi
@@ -587,7 +585,7 @@ Use ${C_RESET_BOLD}--global add${C_VERBOSE} to extend requirement to all platfor
       done
    )
    rval=$?
-   protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
+   env::protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
 
    if [ $rval -ne 0 ]
    then
@@ -599,15 +597,15 @@ Use ${C_RESET_BOLD}--global add${C_VERBOSE} to extend requirement to all platfor
       if [ "${OPTION_COMPILE_LINK}" != 'DEFAULT' -o ! -z "${MULLE_VIRTUAL_ROOT}" ]
       then
          log_debug "compile and link as : OPTION_COMPILE_LINK is \"${OPTION_COMPILE_LINK}\" and MULLE_VIRTUAL_ROOT is \"${MULLE_VIRTUAL_ROOT}\""
-         env_tool2_link --compile-if-needed
+         env::tool::link --compile-if-needed
       fi
    fi
 }
 
 
-env_tool2_compile()
+env::tool::compile()
 {
-   log_entry "env_tool2_compile" "$@"
+   log_entry "env::tool::compile" "$@"
 
    [ -z "${MULLE_ENV_ETC_DIR}" ]      && internal_fail "MULLE_ENV_ETC_DIR not defined"
    [ -z "${MULLE_ENV_SHARE_DIR}" ]    && internal_fail "MULLE_ENV_SHARE_DIR not defined"
@@ -625,7 +623,7 @@ env_tool2_compile()
    do
       case "$1" in
          -h*|--help|help)
-            env_tool2_compile_usage
+            env::tool::compile_usage
          ;;
 
          --if-needed)
@@ -633,7 +631,7 @@ env_tool2_compile()
          ;;
 
          -*)
-            env_tool2_compile_usage "Unknown option \"$1\""
+            env::tool::compile_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -644,11 +642,11 @@ env_tool2_compile()
       shift
    done
 
-   [ $# -ne 0 ] && env_tool2_compile_usage "superflous arguments \"$*\""
+   [ $# -ne 0 ] && env::tool::compile_usage "superflous arguments \"$*\""
 
    if [ "${ifneeded}" = 'YES' ]
    then
-      env_tool2_status "log_fluff"
+      env::tool::status "log_fluff"
       case $? in
          0)
             return 0
@@ -666,31 +664,25 @@ env_tool2_compile()
 
    local _filepath
 
-   __get_tool_filepath "${MULLE_UNAME}"
+   env::__get_tool_filepath "${MULLE_UNAME}"
 
    local lines
    local result
    local file
    local name
 
-   IFS=':'
-   for file in ${_filepath}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      [ ! -f "${file}" ]  && continue
+   .foreachpath file in ${_filepath}
+   .do
+      [ ! -f "${file}" ]  && .continue
 
       log_fluff "Compiling \"${file}\""
 
       lines="`rexekutor egrep -v '^#' "${file}"`"
 
-      shell_disable_glob; IFS=$'\n'
       local i
 
-      for i in ${lines}
-      do
-         shell_enable_glob; IFS=':'
-
+      .foreachline i in ${lines}
+      .do
          case "${i}" in
             *';remove')
                name="${i%;remove}"
@@ -711,20 +703,17 @@ env_tool2_compile()
                result="${RVAL}"
             ;;
          esac
-      done
-
-      shell_enable_glob; IFS=':'
-   done
-   IFS="${DEFAULT_IFS}"
+      .done
+   .done
 
    mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
    redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/tool" sort <<< "${result}" || exit 1
 }
 
 
-r_env_tool2_get()
+env::tool::r_get()
 {
-   log_entry "r_env_tool2_get" "$@"
+   log_entry "env::tool::r_get" "$@"
 
    local tool="$1" ; shift
 
@@ -743,9 +732,9 @@ r_env_tool2_get()
       [ ! -f "${file}" ]  && continue
 
       lines="`egrep -v '^#' "${file}" | egrep "^${tool}$|^${tool};" `"
-   shell_disable_glob; IFS=$'\n'
-      for i in ${lines}
-      do
+
+      .foreachline i in ${lines}
+      .do
          case "${i}" in
             *';remove')
                result=""
@@ -756,9 +745,7 @@ r_env_tool2_get()
                result="$i"
             ;;
          esac
-      done
-      set IFS="${DEFAULT_IFS}"
-
+      .done
    done
 
    if [ -z "${result}" ]
@@ -774,9 +761,9 @@ r_env_tool2_get()
 
 
 #
-env_tool2_get()
+env::tool::get()
 {
-   log_entry "env_tool2_get" "$@"
+   log_entry "env::tool::get" "$@"
 
    [ -z "${MULLE_ENV_ETC_DIR}" ]   && internal_fail "MULLE_ENV_ETC_DIR not defined"
    [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
@@ -788,11 +775,11 @@ env_tool2_get()
    do
       case "$1" in
          -h*|--help|help)
-            env_tool2_get_usage
+            env::tool::get_usage
          ;;
 
          -*)
-            env_tool2_get_usage "Unknown option \"$1\""
+            env::tool::get_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -803,15 +790,15 @@ env_tool2_get()
       shift
    done
 
-   [ $# -ne 1 ] && env_tool2_get_usage "missing tool name"
+   [ $# -ne 1 ] && env::tool::get_usage "missing tool name"
 
    local tool
 
    tool="$1"
 
-   [ -z "${tool}" ] && env_tool2_get_usage "missing tool name"
+   [ -z "${tool}" ] && env::tool::get_usage "missing tool name"
 
-   if ! r_env_tool2_scoped_get "${scope}" "${os}" "${tool}"
+   if ! env::tool::r_scoped_get "${scope}" "${os}" "${tool}"
    then
       return 1
    fi
@@ -820,9 +807,9 @@ env_tool2_get()
 }
 
 
-env_tool2_link_tool()
+env::tool::link_tool()
 {
-   log_entry "env_tool2_link_tool" "$@"
+   log_entry "env::tool::link_tool" "$@"
 
    local toolname="$1"
    local bindir="$2"
@@ -931,9 +918,9 @@ exec '${filename}' \"\$@\""
 }
 
 
-env_tool2_unlink_tool()
+env::tool::unlink_tool()
 {
-   log_entry "env_tool2_unlink_tool" "$@"
+   log_entry "env::tool::unlink_tool" "$@"
 
    local toolname="$1"
    local bindir="$2"
@@ -944,9 +931,9 @@ env_tool2_unlink_tool()
 }
 
 
-env_tool2_link_tools()
+env::tool::link_tools()
 {
-   log_entry "env_tool2_link_tools" "$@"
+   log_entry "env::tool::link_tools" "$@"
 
    local toollines="$1"
    local bindir="$2"
@@ -959,11 +946,8 @@ env_tool2_link_tools()
 
    mkdir_if_missing "${bindir}"
 
-   shell_disable_glob; IFS=$'\n'
-   for toolline in ${toollines}
-   do
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
-
+   .foreachline toolline in ${toollines}
+   .do
       isrequired='YES'
       operation="link"
 
@@ -979,18 +963,16 @@ env_tool2_link_tools()
          ;;
       esac
 
-      env_tool2_${operation}_tool "${toolname}" "${bindir}" "${isrequired}"
-   done
-
-   shell_enable_glob; IFS="${DEFAULT_IFS}"
+      env::tool::${operation}_tool "${toolname}" "${bindir}" "${isrequired}"
+   .done
 
    rmdir_if_empty "${bindir}"
 }
 
 
-env_tool2_link()
+env::tool::link()
 {
-   log_entry "env_tool2_link" "$@"
+   log_entry "env::tool::link" "$@"
 
    local compile_if_needed='NO'
    local compile='NO'
@@ -1004,7 +986,7 @@ env_tool2_link()
    do
       case "$1" in
          -h*|--help|help)
-            env_tool2_get_usage
+            env::tool::get_usage
          ;;
 
          --compile)
@@ -1024,7 +1006,7 @@ env_tool2_link()
          ;;
 
          -*)
-            env_tool2_get_usage "Unknown option \"$1\""
+            env::tool::get_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1037,7 +1019,7 @@ env_tool2_link()
 
    if [ "${compile}" = 'YES' ]
    then
-      env_tool2_compile ${compile_flags}
+      env::tool::compile ${compile_flags}
    fi
 
    local toolfile
@@ -1052,13 +1034,13 @@ env_tool2_link()
       return
    fi
 
-   env_tool2_link_tools "${toollines}" "${bindir}"
+   env::tool::link_tools "${toollines}" "${bindir}"
 }
 
 
-env_tool2_doctor()
+env::tool::doctor()
 {
-   log_entry "env_tool2_doctor" "$@"
+   log_entry "env::tool::doctor" "$@"
 
    local bindir="$1"
 
@@ -1066,8 +1048,9 @@ env_tool2_doctor()
    local rval
 
    rval=0
-   for symlink in "${bindir}"/*
-   do
+
+   .foreachfile symlink in "${bindir}"/*
+   .do
       #https://stackoverflow.com/questions/8049132/how-can-i-detect-whether-a-symlink-is-broken-in-bash
       if [ ! -e "${symlink}" ]
       then
@@ -1085,13 +1068,13 @@ ${C_RESET_BOLD}   mulle-sde tool link"
             log_error "Tool ${C_RESET_BOLD}${RVAL}${C_ERROR} is not available"
          fi
       fi
-   done
+   .done
 
    return $rval
 }
 
 
-_env_list_tool_file()
+env::tool::_list_file()
 {
    local filename="$1"
    local color="$2"
@@ -1179,9 +1162,9 @@ _env_list_tool_file()
 }
 
 
-_env_tool2_list()
+env::tool::_list()
 {
-   log_entry "_env_tool2_list" "$@"
+   log_entry "env::tool::_list" "$@"
 
    local os="$1"
    local color="$2"
@@ -1190,7 +1173,7 @@ _env_tool2_list()
 
    local toolfiles
 
-   r_get_existing_tool_filepath "${os}"
+   env::r_get_existing_tool_filepath "${os}"
    toolfiles="${RVAL}"
 
    local file
@@ -1212,16 +1195,16 @@ _env_tool2_list()
 
       log_info "${directory}/${name}"
 
-      _env_list_tool_file "${file}" "${color}" "${csv}" "${builtin}"
+      env::tool::_list_file "${file}" "${color}" "${csv}" "${builtin}"
    done
 
    IFS="${DEFAULT_IFS}"
 }
 
 
-env_tool2_list()
+env::tool::list()
 {
-   log_entry "env_tool2_list" "$@"
+   log_entry "env::tool::list" "$@"
 
    [ -z "${MULLE_ENV_ETC_DIR}" ]   && internal_fail "MULLE_ENV_ETC_DIR not defined"
    [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
@@ -1236,7 +1219,7 @@ env_tool2_list()
    do
       case "$1" in
          -h*|--help|help)
-            env_tool2_list_usage
+            env::tool::list_usage
          ;;
 
          --no-color)
@@ -1256,7 +1239,7 @@ env_tool2_list()
          ;;
 
          -*)
-            env_tool2_list_usage "Unknown option \"$1\""
+            env::tool::list_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1269,22 +1252,22 @@ env_tool2_list()
 
    case "$1" in
       file|files)
-         r_get_existing_tool_filepath "${os}"
+         env::r_get_existing_tool_filepath "${os}"
          printf "%s\n" "${RVAL}"
       ;;
 
       os|oss)
-         r_env_tool2_oslist
+         env::tool::r_oslist
          sort <<< "${RVAL}"
          return 0
       ;;
 
       ""|tool|tools)
-         _env_tool2_list "${os}" "${OPTION_COLOR}" "${OPTION_CSV}" "${OPTION_BUILTIN}"
+         env::tool::_list "${os}" "${OPTION_COLOR}" "${OPTION_CSV}" "${OPTION_BUILTIN}"
       ;;
 
       *)
-         env_tool2_list_usage "Unknown argument \"$1\""
+         env::tool::list_usage "Unknown argument \"$1\""
       ;;
    esac
 }
@@ -1293,13 +1276,13 @@ env_tool2_list()
 ##
 ## status code is in main now
 ##
-env_tool2_status()
+env::tool::status()
 {
-   log_entry "env_tool2_status" "$@"
+   log_entry "env::tool::status" "$@"
 
    local logger="${1:-log_info}"
 
-   _env_tool2_status "$@"
+   env::_tool_status "$@"
    rval=$?
 
    case $rval in
@@ -1322,9 +1305,9 @@ env_tool2_status()
 ###
 ### parameters and environment variables
 ###
-env_tool2_main()
+env::tool::main()
 {
-   log_entry "env_tool2_main" "$@"
+   log_entry "env::tool::main" "$@"
 
    #
    # handle options
@@ -1336,7 +1319,7 @@ env_tool2_main()
    do
       case "$1" in
          -h*|--help|help)
-            env_tool2_usage
+            env::tool::usage
          ;;
 
          --plugin|--extension)
@@ -1359,7 +1342,7 @@ env_tool2_main()
          ;;
 
          -*)
-            env_tool2_usage "Unknown option \"$1\""
+            env::tool::usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1386,71 +1369,71 @@ env_tool2_main()
 
    case "${cmd:-list}" in
       add)
-         unprotect_dir_if_exists "${bindir}"
-         unprotect_dir_if_exists "${libexecdir}"
+         env::unprotect_dir_if_exists "${bindir}"
+         env::unprotect_dir_if_exists "${libexecdir}"
          (
-            env_tool2_add "${OPTION_SCOPE}" \
+            env::tool::add "${OPTION_SCOPE}" \
                           "${OPTION_OS}" \
                           "$@"
          )
          rval=$?
-         protect_dir_if_exists "${bindir}"
-         protect_dir_if_exists "${libexecdir}"
+         env::protect_dir_if_exists "${bindir}"
+         env::protect_dir_if_exists "${libexecdir}"
          return $rval
       ;;
 
       doctor)
-         env_tool2_doctor "${bindir}"
+         env::tool::doctor "${bindir}"
       ;;
 
       compile)
-         env_tool2_compile "$@"
+         env::tool::compile "$@"
       ;;
 
       get)
-         env_tool2_get "${OPTION_SCOPE}" \
+         env::tool::get "${OPTION_SCOPE}" \
                        "${OPTION_OS}" \
                        "$@"
       ;;
 
       link)
-         unprotect_dir_if_exists "${bindir}"
-         unprotect_dir_if_exists "${libexecdir}"
+         env::unprotect_dir_if_exists "${bindir}"
+         env::unprotect_dir_if_exists "${libexecdir}"
          (
-            env_tool2_link "$@"
+            env::tool::link "$@"
          )
          rval=$?
-         protect_dir_if_exists "${bindir}"
-         protect_dir_if_exists "${libexecdir}"
+         env::protect_dir_if_exists "${bindir}"
+         env::protect_dir_if_exists "${libexecdir}"
          return $rval
       ;;
 
       list)
-         env_tool2_list "${OPTION_OS}" \
+         env::tool::list "${OPTION_OS}" \
                         "$@"
       ;;
 
       remove)
-         unprotect_dir_if_exists "${bindir}"
-         unprotect_dir_if_exists "${libexecdir}"
+         env::unprotect_dir_if_exists "${bindir}"
+         env::unprotect_dir_if_exists "${libexecdir}"
          (
-            env_tool2_add "${OPTION_SCOPE}" \
+            env::tool::add "${OPTION_SCOPE}" \
                           "${OPTION_OS}" \
                           --remove \
                           "$@"
          )
          rval=$?
-         protect_dir_if_exists "${bindir}"
-         protect_dir_if_exists "${libexecdir}"
+         env::protect_dir_if_exists "${bindir}"
+         env::protect_dir_if_exists "${libexecdir}"
          return $rval
       ;;
 
       status)
-         env_tool2_status "$@"
+         env::tool::status "$@"
       ;;
 
       *)
-         env_tool2_usage "Unknown command \"${cmd}\""
+         env::tool::usage "Unknown command \"${cmd}\""
       ;;
    esac
 }

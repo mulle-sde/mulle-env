@@ -30,42 +30,42 @@
 #   POSSIBILITY OF SUCH DAMAGE.
 #
 
-print_minimal_startup_sh()
+env::plugin::minimal::print_startup()
 {
-   log_entry "print_minimal_startup_sh" "$@"
+   log_entry "env::plugin::minimal::print_startup" "$@"
 
-   print_none_startup_sh "$@"
+   env::plugin::none::print_startup "$@"
 }
 
 
-print_minimal_include_sh()
+env::plugin::minimal::print_include()
 {
-   log_entry "print_minimal_include_sh" "$@"
+   log_entry "env::plugin::minimal::print_include" "$@"
 
-   print_none_include_sh "$@"
+   env::plugin::none::print_include "$@"
 }
 
 
-print_minimal_environment_aux_sh()
+env::plugin::minimal::print_environment_aux()
 {
-   log_entry "print_minimal_environment_aux_sh" "$@"
+   log_entry "env::plugin::minimal::print_environment_aux" "$@"
 
-   print_none_environment_aux_sh "$@"
+   env::plugin::none::print_environment_aux "$@"
 }
 
 
-print_minimal_auxscope_sh()
+env::plugin::minimal::print_auxscope()
 {
-   log_entry "print_minimal_auxscope_sh" "$@"
+   log_entry "env::plugin::minimal::print_auxscope" "$@"
 }
 
 
 # callback
-print_minimal_tools_sh()
+env::plugin::minimal::print_tools()
 {
-   log_entry "print_minimal_tools_sh" "$@"
+   log_entry "env::plugin::minimal::print_tools" "$@"
 
-   print_none_tools_sh "$@"
+   env::plugin::none::print_tools "$@"
 
 #
 # http://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html
@@ -112,22 +112,22 @@ uname
 }
 
 
-env_setup_minimal_tools()
+env::plugin::minimal::setup_tools()
 {
-   log_entry "env_setup_minimal_tools" "$@"
+   log_entry "env::plugin::minimal::setup_tools" "$@"
 
-   env_setup_none_tools "$@"
+   env::plugin::none::setup_tools "$@"
 
    # there are no "special" tools to do here
    # minimal is still an environment, where you don't do mulle stuff
-   # so no mulle-env or mulle-bashfunctions-env here
+   # so no mulle-env or mulle-bashfunctions here
 }
 
 
-env_mulle_initialize()
+env::plugin::minimal::initialize()
 {
-   env_load_plugin "none"
+   env::plugin::load "none"
 }
 
 
-env_mulle_initialize
+env::plugin::minimal::initialize
