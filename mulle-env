@@ -31,7 +31,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="4.0.0"
+MULLE_EXECUTABLE_VERSION="4.0.1"
 
 
 ###########################################################################
@@ -690,7 +690,7 @@ ${C_RESET_BOLD}   cd \"${MULLE_VIRTUAL_ROOT}\"
 ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} upgrade"
       ;;
 
-      3\.*)
+      3\.*|4\.*)
       ;;
 
       *)
