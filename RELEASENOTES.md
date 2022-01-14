@@ -1,3 +1,7 @@
+### 4.0.2
+
+* fix installer (?)
+
 ### 4.0.1
 
 * fix version check for new version 4

@@ -162,9 +162,6 @@ main()
       chmod 755 ./mulle-env
    fi
 
-   PROJECT_VERSION="`./mulle-env version`"
-   [ -z "${PROJECT_VERSION}" ] && echo "tragisches versagen" >&2 && exit 1
-
    local bin
    local libexec
    local share
