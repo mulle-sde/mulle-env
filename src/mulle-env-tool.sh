@@ -347,8 +347,8 @@ env::tool::r_scoped_get()
    case "${scope}" in
       'plugin')
          if env::tool::r_get "${tool}" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}"
+                             "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
+                             "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}"
          then
             return 0
          fi
@@ -356,10 +356,10 @@ env::tool::r_scoped_get()
 
       'extension')
          if env::tool::r_get "${tool}" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-extension" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-extension${extension}"
+                             "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
+                             "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
+                             "${MULLE_ENV_SHARE_DIR}/tool-extension" \
+                             "${MULLE_ENV_SHARE_DIR}/tool-extension${extension}"
          then
             return 0
          fi
@@ -367,12 +367,12 @@ env::tool::r_scoped_get()
 
       *)
          if env::tool::r_get "${tool}" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-extension" \
-                            "${MULLE_ENV_SHARE_DIR}/tool-extension${extension}" \
-                            "${MULLE_ENV_ETC_DIR}/tool" \
-                            "${MULLE_ENV_ETC_DIR}/tool${extension}"
+                             "${MULLE_ENV_SHARE_DIR}/tool-plugin" \
+                             "${MULLE_ENV_SHARE_DIR}/tool-plugin${extension}" \
+                             "${MULLE_ENV_SHARE_DIR}/tool-extension" \
+                             "${MULLE_ENV_SHARE_DIR}/tool-extension${extension}" \
+                             "${MULLE_ENV_ETC_DIR}/tool" \
+                             "${MULLE_ENV_ETC_DIR}/tool${extension}"
          then
             return 0
          fi
@@ -387,8 +387,8 @@ env::tool::add()
 {
    log_entry "env::tool::add" "$@"
 
-   [ -z "${MULLE_ENV_ETC_DIR}" ]   && internal_fail "MULLE_ENV_ETC_DIR not defined"
-   [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
+   [ -z "${MULLE_ENV_ETC_DIR}" ]   && _internal_fail "MULLE_ENV_ETC_DIR not defined"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ] && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
 
    local scope="$1" ; shift
    local os="$1" ; shift
@@ -552,35 +552,38 @@ env::tool::add()
             exit 1
          fi
 
-         if [ "${OPTION_OPTIONALITY}" = 'YES' ]
+         if [ "${OPTION_REMOVE}" != 'YES' ]
          then
-            case "${os}" in
-               'DEFAULT')
-                  log_info "Tool \"${tool}\" added.
+            if [ "${OPTION_OPTIONALITY}" = 'YES' ]
+            then
+               case "${os}" in
+                  'DEFAULT')
+                     _log_info "Tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added.
 Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict tool to a certain OS."
-               ;;
+                  ;;
 
-               *)
-                  log_info "Tool \"${tool}\" added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
+                  *)
+                     _log_info "Tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
 Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platforms."
-               ;;
-            esac
-         else
-            case "${os}" in
-               'DEFAULT')
-                  log_info "Requirement for tool \"${tool}\" added.
+                  ;;
+               esac
+            else
+               case "${os}" in
+                  'DEFAULT')
+                     _log_info "Requirement for tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added.
 ${C_VERBOSE}The project will not be usable without it being installed.
 Use ${C_RESET_BOLD}add --optional${C_INFO} to add tools that aren't required.
 Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict requirement for a certain OS."
-               ;;
+                  ;;
 
-               *)
-                  log_info "Requirement for tool \"${tool}\" added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
+                  *)
+                     _log_info "Requirement for tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
 ${C_VERBOSE}The project will not be usable on ${C_MAGENTA}${C_BOLD}${os}${C_VERBOSE} without ${tool} being installed.
 Use ${C_RESET_BOLD}add --optional${C_VERBOSE} to add tools that aren't required.
 Use ${C_RESET_BOLD}--global add${C_VERBOSE} to extend requirement to all platforms."
-               ;;
-            esac
+                  ;;
+               esac
+            fi
          fi
       done
    )
@@ -607,10 +610,10 @@ env::tool::compile()
 {
    log_entry "env::tool::compile" "$@"
 
-   [ -z "${MULLE_ENV_ETC_DIR}" ]      && internal_fail "MULLE_ENV_ETC_DIR not defined"
-   [ -z "${MULLE_ENV_SHARE_DIR}" ]    && internal_fail "MULLE_ENV_SHARE_DIR not defined"
-   [ -z "${MULLE_ENV_VAR_DIR}" ]      && internal_fail "MULLE_ENV_VAR_DIR not defined"
-   [ -z "${MULLE_ENV_HOST_VAR_DIR}" ] && internal_fail "MULLE_ENV_HOST_VAR_DIR not defined"
+   [ -z "${MULLE_ENV_ETC_DIR}" ]      && _internal_fail "MULLE_ENV_ETC_DIR not defined"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ]    && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
+   [ -z "${MULLE_ENV_VAR_DIR}" ]      && _internal_fail "MULLE_ENV_VAR_DIR not defined"
+   [ -z "${MULLE_ENV_HOST_VAR_DIR}" ] && _internal_fail "MULLE_ENV_HOST_VAR_DIR not defined"
 
    local ifneeded='NO'
 
@@ -646,7 +649,7 @@ env::tool::compile()
 
    if [ "${ifneeded}" = 'YES' ]
    then
-      env::tool::status "log_fluff"
+      env::tool::status "_log_fluff"
       case $? in
          0)
             return 0
@@ -765,8 +768,8 @@ env::tool::get()
 {
    log_entry "env::tool::get" "$@"
 
-   [ -z "${MULLE_ENV_ETC_DIR}" ]   && internal_fail "MULLE_ENV_ETC_DIR not defined"
-   [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
+   [ -z "${MULLE_ENV_ETC_DIR}" ]   && _internal_fail "MULLE_ENV_ETC_DIR not defined"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ] && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
 
    local scope="$1" ; shift
    local os="$1" ; shift
@@ -843,26 +846,33 @@ env::tool::link_tool()
       ;;
    esac
 
-   if [ ! -z "${MULLE_OLDPATH}" ]
+   local searchpath
+
+   searchpath="${MULLE_OLDPATH}"
+   if [ -z "${searchpath}" ]
    then
-      # same as mudo
-      filename="`PATH="${MULLE_OLDPATH}" command -v "${toolname}" `"
-   else
-      filename="`command -v "${toolname}" `"
+      searchpath="${PATH}"
+      log_debug "MULLE_OLDPATH is empty (searching for \"$toolname\")"
    fi
+
+   filename="`PATH="${searchpath}" command -v "${toolname}" `"
 
    case "${filename}" in
       "")
          if [ "${isrequired}" = 'YES' ]
          then
-            if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
+            local text
+
+            text="Required tool \"${toolname}\" not found (${PWD#${MULLE_USER_PWD}/}) not found in:
+${C_RESET}${searchpath}"
+            if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
             then
-               fail "Required tool \"${toolname}\" not found"
+               log_warning "${text}"
             else
-               log_warning "Required tool \"${toolname}\" not found"
+               fail "${text}"
             fi
          else
-            log_fluff "\"${toolname}\" not found, but it's optional"
+            log_fluff "Tool \"${toolname}\" not found, but it's optional (${PWD#${MULLE_USER_PWD}/})"
          fi
          return 0
       ;;
@@ -1061,9 +1071,9 @@ env::tool::doctor()
          found="`mudo which "${RVAL}" `"
          if [ ! -z "${found}" ]
          then
-            log_error "Tool ${C_RESET_BOLD}${RVAL}${C_ERROR} is in a different place
+            _log_error "Tool ${C_RESET_BOLD}${RVAL}${C_ERROR} is in a different place
 ${C_INFO}You can probably fix this with
-${C_RESET_BOLD}   mulle-sde tool link"
+${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
          else
             log_error "Tool ${C_RESET_BOLD}${RVAL}${C_ERROR} is not available"
          fi
@@ -1206,8 +1216,8 @@ env::tool::list()
 {
    log_entry "env::tool::list" "$@"
 
-   [ -z "${MULLE_ENV_ETC_DIR}" ]   && internal_fail "MULLE_ENV_ETC_DIR not defined"
-   [ -z "${MULLE_ENV_SHARE_DIR}" ] && internal_fail "MULLE_ENV_SHARE_DIR not defined"
+   [ -z "${MULLE_ENV_ETC_DIR}" ]   && _internal_fail "MULLE_ENV_ETC_DIR not defined"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ] && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
 
    local OPTION_COLOR="YES"
    local OPTION_CSV="YES"
@@ -1280,7 +1290,7 @@ env::tool::status()
 {
    log_entry "env::tool::status" "$@"
 
-   local logger="${1:-log_info}"
+   local logger="${1:-_log_info}"
 
    env::_tool_status "$@"
    rval=$?
@@ -1373,13 +1383,21 @@ env::tool::main()
          env::unprotect_dir_if_exists "${libexecdir}"
          (
             env::tool::add "${OPTION_SCOPE}" \
-                          "${OPTION_OS}" \
-                          "$@"
+                           "${OPTION_OS}" \
+                           "$@"
          )
          rval=$?
          env::protect_dir_if_exists "${bindir}"
          env::protect_dir_if_exists "${libexecdir}"
          return $rval
+      ;;
+
+      bin-dir)
+         printf "%s\n" "${bindir}"
+      ;;
+
+      libexec-dir)
+         printf "%s\n" "${libexecdir}"
       ;;
 
       doctor)

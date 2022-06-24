@@ -34,22 +34,22 @@ test_simple()
    fi
 
    value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "user" ] && internal_fail "Wrong value \"${value}\" from get"
+   [ "${value}" != "user" ] && _internal_fail "Wrong value \"${value}\" from get"
 
    value="`run_mulle_env environment get --output-eval FOO`"
-   [ "${value}" != "user" ] && internal_fail "Wrong value \"${value}\" from get"
+   [ "${value}" != "user" ] && _internal_fail "Wrong value \"${value}\" from get"
 
    run_mulle_env environment --this-user remove FOO
    value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "host" ] && internal_fail "Wrong value \"${value}\" from get"
+   [ "${value}" != "host" ] && _internal_fail "Wrong value \"${value}\" from get"
 
    run_mulle_env environment --this-host remove FOO
    value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "global" ] && internal_fail "Wrong value \"${value}\" from get"
+   [ "${value}" != "global" ] && _internal_fail "Wrong value \"${value}\" from get"
 
    run_mulle_env environment --global remove FOO
    value="`run_mulle_env environment get FOO`"
-   [ "${value}" != "" ] && internal_fail "Wrong value \"${value}\" from get"
+   [ "${value}" != "" ] && _internal_fail "Wrong value \"${value}\" from get"
 
    log_verbose "----- #1 PASSED -----"
 }
@@ -62,7 +62,7 @@ test_hard()
    sed_expr='s/\(.*\)/\1&/'
    run_mulle_env environment --global set SED_EXPR "${sed_expr}"
    value="`run_mulle_env environment get SED_EXPR`"
-   [ "${value}" != "${sed_expr}" ] && internal_fail "Wrong value \"${value}\" instead of \"${sed_expr}\" from get"
+   [ "${value}" != "${sed_expr}" ] && _internal_fail "Wrong value \"${value}\" instead of \"${sed_expr}\" from get"
 
    log_verbose "----- #2 PASSED -----"
 

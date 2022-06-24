@@ -1,4 +1,9 @@
 #! /bin/sh
+#
+# shellcheck shell=bash
+# shellcheck disable=SC2236
+# shellcheck disable=SC2166
+# shellcheck disable=SC2006
 
 [ "${TRACE}" = 'YES' -o "${MUDO_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
@@ -9,7 +14,7 @@
 # Allows script to run on systems that either have bash (linux) or
 # zsh (macOS) only by default.
 
-if [ "$1" != --no-auto-shell ]
+if [ "${1:-}" != --no-auto-shell ]
 then
    if [ -z "${BASH_VERSION}" -a -z "${ZSH_VERSION}" ]
    then
@@ -131,7 +136,7 @@ fi
 #    MULLE_ENV_ETC_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/etc/env'
 #    MULLE_ENV_SHARE_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/share/env'
 #
-eval `mulle-env --search-as-is mulle-tool-env env` || exit 1
+eval "`mulle-env --search-as-is mulle-tool-env env`" || exit 1
 
 filename="${MULLE_ENV_VAR_DIR}/old-environment"
 environment="`cat "${filename}" 2> /dev/null`"

@@ -63,14 +63,14 @@ env::plugin::r_searchpath()
 {
 #   log_entry "env::plugin::r_searchpath"
 
-   if [ ! -z "${_ENV_PLUGIN_SEARCHPATH}" ]
+   if [ ${_ENV_PLUGIN_SEARCHPATH+x} ]
    then
       RVAL="${_ENV_PLUGIN_SEARCHPATH}"
    fi
 
 	local searchpath
 
-	searchpath="${MULLE_ENV_PLUGIN_PATH}"
+	searchpath="${MULLE_ENV_PLUGIN_PATH:-}"
 
 	#
 	# add wherever we are that share directory
@@ -80,7 +80,7 @@ env::plugin::r_searchpath()
    r_colon_concat "${searchpath}" "${RVAL}"
    searchpath="${RVAL}"
 
-   r_colon_concat "${searchpath}" "${MULLE_SDE_EXTENSION_BASE_PATH}"
+   r_colon_concat "${searchpath}" "${MULLE_SDE_EXTENSION_BASE_PATH:-}"
    searchpath="${RVAL}"
 
    r_colon_concat "${searchpath}" "/usr/local/share/mulle-env/plugins"
@@ -137,7 +137,7 @@ env::plugin::_load()
    local searchpath="$2"
 
    [ -z "${MULLE_ENV_LIBEXEC_DIR}" ] && \
-      internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
+      _internal_fail "MULLE_ENV_LIBEXEC_DIR not set"
 
    local directory
    local pluginpath
@@ -149,7 +149,7 @@ env::plugin::_load()
 
       if [ -f "${pluginpath}" ]
       then
-         log_verbose "Loading plugin ${pluginpath#${MULLE_USER_PWD}/}"
+         log_verbose "Loading env plugin ${pluginpath#${MULLE_USER_PWD}/}"
          . "${pluginpath}" || exit 1
 
          return 0
@@ -176,7 +176,7 @@ env::plugin::load()
 
    if env::plugin::_load "${flavor}" "${searchpath}"
    then
-      log_fluff "Env plugin \"${flavor}\" loaded"
+      log_debug "Env plugin \"${flavor}\" loaded"
       return
    fi
 

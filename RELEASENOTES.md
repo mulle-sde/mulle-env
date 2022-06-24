@@ -1,3 +1,10 @@
+## 4.1.0
+
+* some fixes for zsh
+* new commands mulle-bin-dir and mulle-libexec-dir for script support
+* new environment::get options for script support
+
+
 ### 4.0.2
 
 * fix installer (?)

@@ -97,16 +97,21 @@ Usage:
    to determine if a key exists and is empty (0), or absence of the key (1).
 
    The "DEFAULT" scope will check the user and host scopes first before
-   looking into the global scope and then the other scopes.
+   looking into the global scope and then the other scopes. Use the
+   \`environment\` --scope option, to change the scope:
+
+      mulle-env environment --scope project get PROJECT_NAME
 
    To get at the fully evaluated value, do not use this command but rather
-   the unix `env` command:
+   the unix \`env\` command:
 
       mulle-env -c env | sed -n 's/^MULLE_FETCH_SEARCH_PATH=\(.*\)/\1/p'
 
 Options:
+   --lenient     : return 0 on not found instead of 4
    --output-eval : resolve value with other environment variables. This will
                    not evaluate values from other scopes though
+
 EOF
    exit 1
 }
@@ -290,7 +295,7 @@ env::environment::execute_with_unprotected_files_in_dir()
 
    local directory="$1"; shift
 
-   [ -z "${directory}" ] && internal_fail "directory is empty"
+   [ -z "${directory}" ] && _internal_fail "directory is empty"
 
    local protect
    local rval
@@ -322,7 +327,7 @@ env::environment::r_mkdir_if_missing_or_unprotect()
 
    local directory="$1"
 
-   [ -z "${directory}" ] && internal_fail "directory is empty"
+   [ -z "${directory}" ] && _internal_fail "directory is empty"
    [ "${directory}" = '/' ] && fail "Won't touch root"
 
    RVAL=
@@ -360,7 +365,7 @@ env::environment::safe_create_file()
 
    local filename="$1"; shift
 
-   [ -z "${filename}" ] && internal_fail "filename is empty"
+   [ -z "${filename}" ] && _internal_fail "filename is empty"
 
    local directory
 
@@ -443,7 +448,7 @@ env::environment::safe_write_file()
 
    if [ ! -w "${filename}" ]
    then
-      [ -e "${filename}" ] || internal_fail "File must exist for write"
+      [ -e "${filename}" ] || _internal_fail "File must exist for write"
 
       protect='YES'
       if ! exekutor chmod ug+w "${filename}"
@@ -520,7 +525,7 @@ env::environment::safe_modify_file()
    rval=0
    if [ ! -w "${filename}" ]
    then
-      [ -e "${filename}" ] || internal_fail "File must exist for write"
+      [ -e "${filename}" ] || _internal_fail "File must exist for write"
 
       protect='YES'
       exekutor chmod ug+w "${filename}"
@@ -645,7 +650,7 @@ env::environment::_set()
 
    case "${MULLE_SHELL_MODE}" in
       *INTERACTIVE)
-         log_info "Use ${C_RESET_BOLD}mulle-env-reload${C_INFO} to update your \
+         _log_info "Use ${C_RESET_BOLD}mulle-env-reload${C_INFO} to update your \
 shell environment"
       ;;
    esac
@@ -904,7 +909,7 @@ ${C_INFO}Tip: use multiple addition statements."
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "filename : ${filename}"
+      log_setting "filename : ${filename}"
       cat "${filename}" >&2
    fi
 
@@ -1016,7 +1021,7 @@ env::environment::_get()
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "filename : ${filename}"
+      log_setting "filename : ${filename}"
       cat "${filename}" >&2
    fi
 
@@ -1074,8 +1079,8 @@ env::environment::_eval_get()
    local filename="$1"; shift
    local key="$1"; shift
 
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT not set up"
-   [ -z "${MULLE_UNAME}" ]        && internal_fail "MULLE_UNAME not set up"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT not set up"
+   [ -z "${MULLE_UNAME}" ]        && _internal_fail "MULLE_UNAME not set up"
 
    if [ ! -f "${filename}" ]
    then
@@ -1154,6 +1159,7 @@ env::environment::get_main()
    local infix="_"
    local getter
    local reverse="--reverse"
+   local OPTION_NOT_FOUND_RC
 
    getter="env::environment::_get"
 
@@ -1162,6 +1168,17 @@ env::environment::get_main()
       case "$1" in
          -h|--help|help)
             env::environment::get_usage
+         ;;
+
+         --lenient)
+            OPTION_NOT_FOUND_RC="0"
+         ;;
+
+         --notfound-rc)
+            [ $# -eq 1 ] && env::environment::get_usage "missing argument to $1"
+            shift
+
+            OPTION_NOT_FOUND_RC="$1"
          ;;
 
          --output-eval)
@@ -1215,7 +1232,7 @@ env::environment::get_main()
    case "${scopename}" in
       include)
          ${getter} "${MULLE_ENV_SHARE_DIR}/include-environment.sh" "${key}"
-         return
+         return $?
       ;;
    esac
 
@@ -1226,7 +1243,7 @@ env::environment::get_main()
    local value
    local prevfiles
 
-   rval=1
+   rval="${OPTION_NOT_FOUND_RC:-4}"
 
    .foreachline filename in ${filenames}
    .do
@@ -1237,7 +1254,7 @@ env::environment::get_main()
          then
             r_unescaped_doublequotes "${value}"
             printf "%s\n" "${RVAL}"
-            return $rval
+            return 0
          fi
       fi
 
@@ -1285,7 +1302,7 @@ env::environment::_remove()
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "filename : ${filename}"
+      log_setting "filename : ${filename}"
       cat "${filename}" >&2
    fi
 
@@ -1524,16 +1541,17 @@ env::environment::_eval_list()
 
    local cmdline
 
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT not set up"
-   [ -z "${MULLE_UNAME}" ] && internal_fail "MULLE_UNAME not set up"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT not set up"
+   [ -z "${MULLE_UNAME}" ]        && _internal_fail "MULLE_UNAME not set up"
+   [ -z "${MULLE_USERNAME}" ]     && _internal_fail "MULLE_USERNAME not set up"
 
    cmdline="env -i MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\" \
 MULLE_UNAME=\"${MULLE_UNAME}\" \
 MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\" \
-MULLE_USERNAME\"${MULLE_USERNAME}\" \
+MULLE_USERNAME=\"${MULLE_USERNAME}\" \
 \"${BASH}\" -c '"
 
-   [ "$#" -eq 0 ] && internal_fail "No environment files specified"
+   [ "$#" -eq 0 ] && _internal_fail "No environment files specified"
 
    local files
 
@@ -1723,7 +1741,7 @@ env::environment::list_main()
 env::environment::assert_default_scope()
 {
    [ "${OPTION_SCOPE}" = "DEFAULT" ] || \
-      log_fail "scope has already been specified as \"${OPTION_SCOPE}\""
+      fail "scope has already been specified as \"${OPTION_SCOPE}\""
 }
 
 

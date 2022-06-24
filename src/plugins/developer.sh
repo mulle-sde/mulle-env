@@ -131,11 +131,11 @@ env::plugin::developer::setup_tools()
    #
    (
       env::tool::link_mulle_tool "mulle-bashfunctions" "${bindir}"  \
-                                                           "${libexecdir}" \
-                                                           "library" \
+                                                       "${libexecdir}" \
+                                                       "library" \
       && \
-      env::tool::link_mulle_tool "mulle-env"               "${bindir}" \
-                                                           "${libexecdir}"
+      env::tool::link_mulle_tool "mulle-env"           "${bindir}" \
+                                                       "${libexecdir}"
    ) || return 1
 }
 

@@ -194,7 +194,7 @@ env::init::main()
       if [ "${OPTION_STYLE}" = 'DEFAULT' ]
       then
          if ! env::__get_saved_style_flavor "${mulle_dir}/etc/env" \
-                                       "${mulle_dir}/share/env"
+                                            "${mulle_dir}/share/env"
          then
 
             # old directories
@@ -203,7 +203,7 @@ env::init::main()
                if [ -d "${old_mulleenv_dir}" ]
                then
                   if ! env::__get_saved_style_flavor "${old_mulleenv_dir}/etc" \
-                                                "${old_mulleenv_dir}/share"
+                                                     "${old_mulleenv_dir}/share"
                   then
                      fail "Could not retrieve style from old .mulle-env directory"
                   fi
@@ -212,7 +212,7 @@ env::init::main()
                fi
             else
                env::__fail_get_saved_style_flavor "${mulle_dir}/etc/env" \
-                                             "${mulle_dir}/share/env"
+                                                 "${mulle_dir}/share/env"
             fi
          fi
          OPTION_STYLE="${style:-DEFAULT}"
@@ -268,12 +268,19 @@ env::init::main()
       stylefile="${sharedir}/style"
 
 
+      mkdir_if_missing "${sharedir}"
+
       # indicate a fresh init by removing a possibly old versionfile
-      remove_file_if_present "${versionfile}"
+      # unprotect sharedir if already present and protected
+      exekutor chmod -R +wX "${sharedir}" || exit 1
+
+      remove_file_if_present "${versionfile}.old"
+      if [ -f "${versionfile}" ]
+      then
+         exekutor mv "${versionfile}" "${versionfile}.old" || exit 1
+      fi
 
       log_verbose "Creating \"${envfile}\""
-
-      mkdir_if_missing "${sharedir}"
 
       local text
 
@@ -376,7 +383,6 @@ chmod -R ugo+rwX .mulle && rm -rf .mulle
 \`\`\`
 
 EOF
-
       # we create this last, if its present than the init ran through
       log_verbose "Creating \"${versionfile}\""
       redirect_exekutor "${versionfile}" printf "%s\n" "${MULLE_EXECUTABLE_VERSION}" || exit 1
@@ -393,7 +399,7 @@ EOF
 
    if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_REINIT}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
    then
-      log_info "Enter the environment:
+      _log_info "Enter the environment:
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory#${MULLE_USER_PWD}/}\"${C_INFO}"
    fi
 

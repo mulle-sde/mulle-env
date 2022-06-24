@@ -1,5 +1,12 @@
 #! /bin/sh
 #
+# shellcheck shell=bash
+# shellcheck disable=SC2236 # ! -z
+# shellcheck disable=SC1090 # include
+# shellcheck disable=SC1091 # include
+# shellcheck disable=SC2120 # log_entry misfire
+# shellcheck disable=SC2166 # [ p -o q ] don't care
+#
 #   Copyright (c) 2015 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
@@ -31,7 +38,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="4.0.2"
+MULLE_EXECUTABLE_VERSION="4.1.0"
 
 
 ###########################################################################
@@ -45,7 +52,7 @@ MULLE_EXECUTABLE_VERSION="4.0.2"
 #
 # Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
 #
-if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
+if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
 then
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
    export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
@@ -55,7 +62,7 @@ fi
 # The booter reruns the executable either with bash or zsh, whatever the
 # system provides. On the second run --no-auto-shell will be set first.
 #
-if [ "$1" != --no-auto-shell ]
+if [ "${1:-}" != --no-auto-shell ]
 then
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
 else
@@ -70,6 +77,7 @@ fi
 #
 # Do this first to get aliases
 #
+MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
 . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 
 ###
@@ -79,14 +87,13 @@ fi
 ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 ###########################################################################
 
-MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
 
 #
 # Determine location of own libexec directory. Which is `src` in development
 # and ../libexec when deployed. MULLE_EXECUTABLE needs to be defined for this.
 #
 
-if [ -z "${MULLE_ENV_LIBEXEC_DIR}" ]
+if ! [ ${MULLE_ENV_LIBEXEC_DIR+x} ]
 then
    r_get_libexec_dir "${MULLE_EXECUTABLE}" "mulle-env" "mulle-env-init.sh"
    MULLE_ENV_LIBEXEC_DIR="${RVAL}"
@@ -108,6 +115,8 @@ env::emit_options()
    -DKEY=VALUE   : define one-time environment variable
    -ef <file>    : use a different environment file (${ENVFILENAME})
    -aef <file>   : add another environment file to an interactive subshell
+   --search-here : search only in PWD, if none present ignore
+   --search-none : search only in PWD, if none present fail
    -N            : search for nearest enclosing environment
    -P            : search for parent environment
    -p <path>     : specify an additional plugin search path
@@ -115,7 +124,7 @@ env::emit_options()
    --style <t/e> : enter and change subshell style (${MULLE_ENV_DEFAULT_STYLE})
 EOF
 
-   if [ ! -z "${MULLE_TRACE}" ]
+   if [ ! -z "${MULLE_TRACE:-}" ]
    then
       options_technical_flags_usage "         : "
    fi
@@ -311,7 +320,7 @@ env::r_find_best_environment()
             ;;
 
             *)
-               internal_fail "unknown searchmode \"${searchmode}\""
+               _internal_fail "unknown searchmode \"${searchmode}\""
             ;;
          esac
          best="${directory}"
@@ -339,7 +348,7 @@ env::r_find_best_environment()
 
    if [ "${warn}" = 'YES' ]
    then
-      log_info "Using the superior mulle-env environment at \
+      _log_info "Using the superior mulle-env environment at \
 ${C_RESET_BOLD}${best}${C_INFO}.
 Suppress this behaviour with the flag \"-N\" or permanently suppress on a
 per environment basis with:
@@ -359,12 +368,12 @@ env::_setup_environment()
    local directory="$1"
    local setroot="$2"
 
-   [ -z "${MULLE_UNAME}" ]   && internal_fail "MULLE_UNAME not set"
-   [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME not set"
+   [ -z "${MULLE_UNAME}" ]   && _internal_fail "MULLE_UNAME not set"
+   [ -z "${MULLE_HOSTNAME}" ] && _internal_fail "MULLE_HOSTNAME not set"
 
    local physicaldir
 
-   r_physicalpath "${directory:-${PWD}}" || internal_fail "physicalpath failed"
+   r_physicalpath "${directory:-${PWD}}" || _internal_fail "physicalpath failed"
    physicaldir="${RVAL}"
 
    [ ! -d "${physicaldir}" ]  && fail "\"${directory}\" is not a directory"
@@ -383,18 +392,19 @@ env::_setup_environment()
    # people with read-only read/write setups
    #
    case "${MULLE_UNAME}" in
-      windows)
+      mingw|windows)
          #
          # on windows the project directory is likely on a windows filesystem
          # so the symlinks don't work out (e.g. cmake.exe) ???? Still true ??
          # Symlinks still have other problems: https://github.com/microsoft/WSL/issues/3999
-         # We use a quiet place in HOME.
+         # We use a quiet place in HOME. A problem is that this tends to fill
+         # up.
          #
-         # Use physicaldir for shasum calc
+         # Use physicaldir for shasum calc. TODO
          #
          if [ -z "${MULLE_ENV_HOST_VAR_DIR}" ]
          then
-            hash="`shasum -a 256 -b <<< "${physicaldir}" | cut -c1-8`"
+            hash="`shasum -a 256 -b <<< "${physicaldir}" | cut -c1-8`" || exit 1
             MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}-${hash}.var/${MULLE_HOSTNAME}/env"
          fi
          MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-${HOME}/.mulle/${directory##*/}.var/.env}"
@@ -411,11 +421,11 @@ env::_setup_environment()
 
 #   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
 #   then
-#      log_trace2 "MULLE_VIRTUAL_ROOT:     \"${MULLE_VIRTUAL_ROOT}\""
-#      log_trace2 "MULLE_ENV_ETC_DIR:      \"${MULLE_ENV_ETC_DIR}\""
-#      log_trace2 "MULLE_ENV_SHARE_DIR:    \"${MULLE_ENV_SHARE_DIR}\""
-#      log_trace2 "MULLE_ENV_VAR_DIR:      \"${MULLE_ENV_VAR_DIR}\""
-#      log_trace2 "MULLE_ENV_HOST_VAR_DIR: \"${MULLE_ENV_HOST_VAR_DIR}\""
+#      log_setting "MULLE_VIRTUAL_ROOT:     \"${MULLE_VIRTUAL_ROOT}\""
+#      log_setting "MULLE_ENV_ETC_DIR:      \"${MULLE_ENV_ETC_DIR}\""
+#      log_setting "MULLE_ENV_SHARE_DIR:    \"${MULLE_ENV_SHARE_DIR}\""
+#      log_setting "MULLE_ENV_VAR_DIR:      \"${MULLE_ENV_VAR_DIR}\""
+#      log_setting "MULLE_ENV_HOST_VAR_DIR: \"${MULLE_ENV_HOST_VAR_DIR}\""
 #   fi
 }
 
@@ -467,7 +477,7 @@ env::protect_dir_if_exists()
    then
       if [ -d "${directory}" ]
       then
-         exekutor chmod -R -f a-w "${directory}" || internal_fail "Could not protect \"${directory}\""
+         exekutor chmod -R -f a-w "${directory}" || _internal_fail "Could not protect \"${directory}\""
       fi
    fi
 }
@@ -550,7 +560,7 @@ env::_tool_status()
    env::r_get_existing_tool_filepath "${MULLE_UNAME}"
    filepath="${RVAL}"
 
-   log_debug "Checking if compile is needed with: ${_filepath}"
+   log_debug "Checking if compile is needed with: ${filepath}"
 
    local compile
    local anymatch
@@ -739,7 +749,7 @@ env::setup_if_needed()
 
    if [ "${flavor}" != "${oldflavor}" ]
    then
-      log_info "You affected a tool style change from \
+      _log_info "You affected a tool style change from \
 \"${oldflavor}\" to \"${flavor}\". You may want to
 check your tool list.
    ${C_RESET_BOLD} mulle-env tool list"
@@ -872,7 +882,7 @@ env::__load_flavor_plugin()
 
    local flavor="$1"
 
-   if [ -z "${MULLE_ENV_PLUGIN_SH}" ]
+   if ! [ ${MULLE_ENV_PLUGIN_SH+x} ]
    then
       # shellcheck source=src/mulle-env-plugin.sh
       . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugin.sh" || exit 1
@@ -955,7 +965,7 @@ env::r_censored_path()
 
    RVAL=""
 
-   [ -z "${RESTRICTED_PATH}" ] && internal_fail "RESTRICTED_PATH must not be empty"
+   [ -z "${RESTRICTED_PATH}" ] && _internal_fail "RESTRICTED_PATH must not be empty"
 
    .foreachpath i in ${full_path}
    .do
@@ -1006,11 +1016,11 @@ env::_run_subenv()
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
-      log_verbose "Run subenv shell command \
+      _log_verbose "Run subenv shell command \
 \"${OPTION_SHELL_COMMAND}\" ($MULLE_VIRTUAL_ROOT})"
       mode="SUBENV:SCRIPT"
    else
-      log_info "Starting subenv shell in \
+      _log_info "Starting subenv shell in \
 ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
       mode="SUBENV:INTERACTIVE"
    fi
@@ -1055,7 +1065,7 @@ env::_print_env()
       if [ ! -z "${key}" ]
       then
          # indirection bash feature
-         if [ ! -z "${ZSH_VERSION}" ]
+         if [ ${ZSH_VERSION+x} ]
          then
             value="${(P)key}"
          else
@@ -1065,7 +1075,12 @@ env::_print_env()
                ;;
 
                *)
-                  value="${!key}"
+                  if [ ${ZSH_VERSION+x} ]
+                  then
+                     value="${(P)key}"
+                  else
+                     value="${!key}"
+                  fi
                ;;
             esac
          fi
@@ -1133,11 +1148,12 @@ env::_run_subshell()
 
    env::_default_setup_environment "${directory}" "${OPTION_SEARCHMODE}"
 
-   local etcdir
+#   local etcdir
+#   etcdir="${MULLE_ENV_ETC_DIR}"
+
    local sharedir
    local vardir
 
-   etcdir="${MULLE_ENV_ETC_DIR}"
    sharedir="${MULLE_ENV_SHARE_DIR}"
    vardir="${MULLE_ENV_HOST_VAR_DIR}"
 
@@ -1168,6 +1184,8 @@ env::_run_subshell()
    local inherit_path
    local runpath
    local rundirectory
+
+   runpath=""
 
    case "${style}" in
       */*)
@@ -1222,26 +1240,29 @@ env::_run_subshell()
       ;;
    esac
 
+   local customenvironment
+
+   customenvironment="${CUSTOM_ENVIRONMENT}"
    case "${style}" in
       */restrict|*/tight|*/relax)
 
-         [ -z "${MULLE_HOSTNAME}" ] && internal_fail "MULLE_HOSTNAME \
+         [ -z "${MULLE_HOSTNAME}" ] && _internal_fail "MULLE_HOSTNAME \
 undefined (old mulle-bashfunctions)"
 
-
          env::setup_if_needed "${directory}" \
-                             "${vardir}" \
-                             "${sharedir}" \
-                             "${style}" \
-                             "${flavor}" \
-                             "${oldstyle}" \
-                             "${oldflavor}"
+                              "${vardir}" \
+                              "${sharedir}" \
+                              "${style}" \
+                              "${flavor}" \
+                              "${oldstyle}" \
+                              "${oldflavor}"
 
          r_colon_concat "${runpath}" "${vardir}/bin"
          r_colon_concat "${RVAL}" "${MULLE_ENV_VAR_DIR}/bin"
          runpath="${RVAL}"
 
-         s="MULLE_OLDPATH='${PATH}'"
+         r_concat "${customenvironment}" "MULLE_OLDPATH='${PATH}'"
+         customenvironment="${RVAL}"
       ;;
    esac
 
@@ -1288,7 +1309,7 @@ undefined (old mulle-bashfunctions)"
    then
       log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" (${MULLE_VIRTUAL_ROOT})"
       mode="SCRIPT"
-      [ -z "${MULLE_USER_PWD}" ] && internal_fail "MULLE_USER_PWD must be set"
+      [ -z "${MULLE_USER_PWD}" ] && _internal_fail "MULLE_USER_PWD must be set"
    else
       log_verbose "Starting ${style#*/} shell (${MULLE_VIRTUAL_ROOT})"
       mode="INTERACTIVE"
@@ -1304,21 +1325,21 @@ undefined (old mulle-bashfunctions)"
    local rval
 
    env::_invoke_shell "${style#*/}" \
-                     "${CUSTOM_ENVIRONMENT}" \
-                     "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
-                     "'${MULLE_UNAME}'" \
-                     "'${MULLE_HOSTNAME}'" \
-                     "'${MULLE_USERNAME}'" \
-                     "'${MULLE_VIRTUAL_ROOT}'" \
-                     "'${MULLE_ENV_HOST_VAR_DIR}'" \
-                     "'${runpath}'" \
-                     "'${mode}'" \
-                     "'${style}'" \
-                     "'${TRACE}'" \
-                     "'${ENVFILENAME}'" \
-                     "'${AUXENVFILENAME}'" \
-                     "'${NO_MOTD}'" \
-                     "${OPTION_SHELL_COMMAND}"
+                      "${customenvironment}" \
+                      "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
+                      "'${MULLE_UNAME}'" \
+                      "'${MULLE_HOSTNAME}'" \
+                      "'${MULLE_USERNAME}'" \
+                      "'${MULLE_VIRTUAL_ROOT}'" \
+                      "'${MULLE_ENV_HOST_VAR_DIR}'" \
+                      "'${runpath}'" \
+                      "'${mode}'" \
+                      "'${style}'" \
+                      "'${TRACE:-}'" \
+                      "'${ENVFILENAME}'" \
+                      "'${AUXENVFILENAME}'" \
+                      "'${NO_MOTD:-}'" \
+                      "${OPTION_SHELL_COMMAND}"
    rval=$?
 
    log_debug "Subshell exited with $rval"
@@ -1334,6 +1355,8 @@ undefined (old mulle-bashfunctions)"
 #
 env::_invoke_shell()
 {
+   log_entry "env::_invoke_shell" "$@"
+
    local envstyle="$1"
    local customenvironment="$2"
 
@@ -1342,6 +1365,7 @@ env::_invoke_shell()
    local s
    local env_flag
 
+   s=""
    env_flag="-i"
 
    #
@@ -1357,32 +1381,32 @@ env::_invoke_shell()
 
       tight)
          # USERNAME is used by mulle-env to discern environment files and styles
-         [ ! -z "${LOGNAME}" ]         && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
+         [ ! -z "${LOGNAME}" ]    && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
       ;;
 
       relax|restrict|inherit)
-         [ ! -z "${DISPLAY}" ]         && r_concat "${s}" "DISPLAY='${DISPLAY}'" && s="${RVAL}"
-         [ ! -z "${EDITOR}" ]          && r_concat "${s}" "EDITOR='${EDITOR}'" && s="${RVAL}"
-         [ ! -z "${HOME}" ]            && r_concat "${s}" "HOME='${HOME}'" && s="${RVAL}"
-         [ ! -z "${LOGNAME}" ]         && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
-         [ ! -z "${LS_COLORS}" ]       && r_concat "${s}" "LS_COLORS='${LS_COLORS}'" && s="${RVAL}"
-         [ ! -z "${NO_COLOR}" ]        && r_concat "${s}" "NO_COLOR='${NO_COLOR}'" && s="${RVAL}"
-         [ ! -z "${PS1}" ]             && r_concat "${s}" "PS1='${PS1}'" && s="${RVAL}"
-         [ ! -z "${SSH_CONNECTION}" ] \
+         [ ${DISPLAY+x} ]         && r_concat "${s}" "DISPLAY='${DISPLAY}'" && s="${RVAL}"
+         [ ${EDITOR+x} ]          && r_concat "${s}" "EDITOR='${EDITOR}'" && s="${RVAL}"
+         [ ${HOME+x} ]            && r_concat "${s}" "HOME='${HOME}'" && s="${RVAL}"
+         [ ${LOGNAME+x} ]         && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
+         [ ${LS_COLORS+x} ]       && r_concat "${s}" "LS_COLORS='${LS_COLORS}'" && s="${RVAL}"
+         [ ${NO_COLOR+x} ]        && r_concat "${s}" "NO_COLOR='${NO_COLOR}'" && s="${RVAL}"
+         [ ${PS1+x} ]             && r_concat "${s}" "PS1='${PS1}'" && s="${RVAL}"
+         [ ${SSH_CONNECTION+x} ] \
                                        && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
-         [ ! -z "${SSH_TTY}" ]         && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
-         [ ! -z "${MULLE_ENV_PLUGIN_PATH}" ]    && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
-         [ ! -z "${MULLE_SDE_EXTENSION_PATH}" ] && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
-         [ ! -z "${MULLE_USER_PWD}" ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
-         [ ! -z "${MULLE_NO_COLOR}" ]  && r_concat "${s}" "MULLE_NO_COLOR='${MULLE_NO_COLOR}'" && s="${RVAL}"
-         [ ! -z "${TERM}" ]            && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
-         [ ! -z "${TMPDIR}" ]          && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
-         [ ! -z "${USER}" ]            && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
+         [ ${SSH_TTY+x} ]         && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
+         [ ${MULLE_ENV_PLUGIN_PATH+x} ]    && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
+         [ ${MULLE_SDE_EXTENSION_PATH+x} ] && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
+         [ ${MULLE_USER_PWD+x} ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
+         [ ${MULLE_NO_COLOR+x} ]  && r_concat "${s}" "MULLE_NO_COLOR='${MULLE_NO_COLOR}'" && s="${RVAL}"
+         [ ${TERM+x} ]            && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
+         [ ${TMPDIR+x} ]          && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
+         [ ${USER+x} ]            && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
          # mingw is USERNAME
-         [ ! -z "${USERNAME}" ]        && r_concat "${s}" "USERNAME='${USERMAME}'" && s="${RVAL}"
-         [ ! -z "${VISUAL}" ]          && r_concat "${s}" "VISUAL='${VISUAL}'" && s="${RVAL}"
-         [ ! -z "${DBUS_SESSION_BUS_ADDRESS}" ] \
-                                       && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
+         [ ${USERNAME+x} ]        && r_concat "${s}" "USERNAME='${USERNAME}'" && s="${RVAL}"
+         [ ${VISUAL+x} ]          && r_concat "${s}" "VISUAL='${VISUAL}'" && s="${RVAL}"
+         [ ${DBUS_SESSION_BUS_ADDRESS+x} ] \
+                                  && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
       ;;
 
       *)
@@ -1399,6 +1423,8 @@ env::_invoke_shell()
 
 env::assert_valid_environment_key()
 {
+   log_entry "env::assert_valid_environment_key" "$@"
+
    local key="$1"
 
    local identifier
@@ -1488,29 +1514,32 @@ env::is_help_request_commandline()
 env::main()
 {
    # todo rename these to FLAG
-   local OPTION_DIRECTORY
-   local OPTION_SHELL_COMMAND
+   local OPTION_DIRECTORY=""
+   local OPTION_SHELL_COMMAND=""
    local OPTION_KEEP_TMP='NO'
-   local MULLE_FLAG_MAGNUM_FORCE=
+   local MULLE_FLAG_MAGNUM_FORCE="NO"
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCHMODE="DEFAULT"
    local OPTION_PROTECT="YES"
 
    local MULLE_TRACE
-   local MULLE_FLAG_EXEKUTOR_DRY_RUN
-   local MULLE_FLAG_LOG_DEBUG
-   local MULLE_FLAG_LOG_EXEKUTOR
-   local MULLE_FLAG_LOG_TERSE
+   local MULLE_FLAG_EXEKUTOR_DRY_RUN='NO'
+   local MULLE_FLAG_LOG_DEBUG='NO'
+   local MULLE_FLAG_LOG_EXEKUTOR='NO'
+   local MULLE_FLAG_LOG_SETTINGS='NO'
+   local MULLE_FLAG_LOG_FLUFF='NO'
+   local MULLE_FLAG_LOG_VERBOSE='NO'
+   local MULLE_FLAG_LOG_TERSE='NO'
    local OPTION_COPY_MULLE_TOOL='NO'
-   local CUSTOM_ENVIRONMENT
-   local FLAG_OUTSIDE_ENV
-   local RESTRICTED_PATH
+   local CUSTOM_ENVIRONMENT=""
+   local FLAG_OUTSIDE_ENV='NO'
+   local RESTRICTED_PATH=""
 
    # mingw needs different values here
 
    case "${MULLE_UNAME}" in
       "")
-         internal_fail "MULLE_UNAME not set"
+         _internal_fail "MULLE_UNAME not set"
       ;;
 
       *)
@@ -1536,7 +1565,7 @@ env::main()
          ;;
 
          --shell)
-            if [ ! -z "${ZSH_VERSION}" ]
+            if [ ${ZSH_VERSION+x} ]
             then
                echo "zsh"
             else
@@ -1726,13 +1755,13 @@ env::main()
       shift
    done
 
-   options_setup_trace "${MULLE_TRACE}" && set -x
+   options_setup_trace "${MULLE_TRACE:-}" && set -x
    export MULLE_TRACE
 
    local arg
    local url
 
-   arg="$1"
+   arg="${1:-}"
    [ $# -ne 0 ] && shift
 
    #
@@ -1753,6 +1782,18 @@ env::main()
       'clean')
          env::clean "$@"
          return $?
+      ;;
+
+      'mulle-bin-dir')
+         env::_default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         printf "%s\n" "${MULLE_ENV_VAR_DIR}/bin"
+         return 0
+      ;;
+
+      'mulle-libexec-dir')
+         env::_default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         printf "%s\n" "${MULLE_ENV_VAR_DIR}/libexec"
+         return 0
       ;;
 
       'environment')
@@ -2039,9 +2080,6 @@ ${C_INFO}Hint: Use --style to switch styles."
       ;;
 
       'tweak')
-         # shellcheck source=src/mulle-env-environment.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
-
          env::_default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
          mkdir_if_missing "${MULLE_ENV_ETC_DIR}/tweak"
          redirect_exekutor "${MULLE_ENV_ETC_DIR}/tweak/$1" echo "intentionally blank"
@@ -2103,10 +2141,13 @@ ${C_INFO}Hint: Use --style to switch styles."
    #
    # lets do this for now
    #
-   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
+   if [ ${MULLE_VIRTUAL_ROOT+x} ]
    then
-      fail "You are already in the virtual \
-environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
+      if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
+      then
+         fail "You are already in the virtual \
+environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack. (${PWD#${MULLE_USER_PWD}/})"
+      fi
    fi
 
    # inherits all options ....
@@ -2115,4 +2156,4 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack."
 }
 
 
-call_with_flags "env::main" "${MULLE_ENV_FLAGS}" "$@"
+call_with_flags "env::main" "${MULLE_ENV_FLAGS:-}" "$@"

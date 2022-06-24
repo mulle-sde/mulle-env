@@ -112,7 +112,7 @@ r_get_envfile()
 
    local filename
 
-   if [ ! -z "${ZSH_VERSION}" ]
+   if [ ${ZSH_VERSION+x} ]
    then
       filename="${(P)envvar}"
    else

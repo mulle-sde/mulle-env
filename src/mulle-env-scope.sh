@@ -297,7 +297,7 @@ env::scope::r_priority_for_scopeid()
 
    case "${scopeid}" in
       *:*)
-         internal_fail "Need unprefixed scope"
+         _internal_fail "Need unprefixed scope"
       ;;
    esac
 
@@ -441,7 +441,7 @@ env::scope::r_scopeprefix_for_scopeid()
 
    case "${scopeid}" in
       *:*)
-         internal_fail "Need unprefixed scope"
+         _internal_fail "Need unprefixed scope"
       ;;
 
      host-*|os-*|user-*)
@@ -481,7 +481,7 @@ env::scope::r_filename_for_scope()
       ;;
 
       *)
-         internal_fail "Need prefixed scope ($scope is not prefixed)"
+         _internal_fail "Need prefixed scope ($scope is not prefixed)"
       ;;
    esac
 
@@ -502,7 +502,7 @@ env::scope::r_filename_for_scope()
       ;;
 
       *)
-         internal_fail "invalid scope \"${scope}\""
+         _internal_fail "invalid scope \"${scope}\""
       ;;
    esac
 }
@@ -551,7 +551,7 @@ env::scope::r_get_existing_scope_files()
 
    search_scopename="$1"
 
-   [ -z "${search_scopename}" ] && internal_fail "empty search scope"
+   [ -z "${search_scopename}" ] && _internal_fail "empty search scope"
 
    local scopes
 
@@ -735,7 +735,7 @@ env::scope::list_main()
 
    [ "$#" -eq 0 ] || env::scope::list_usage "Superflous arguments \"$*\""
 
-   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && _internal_fail "MULLE_ENV_SHARE_DIR is empty"
    [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
 
    if [ "${OPTION_EXISTING}" = 'YES' ]
@@ -1151,7 +1151,7 @@ env::scope::remove()
       ;;
 
       *)
-         internal_fail "Malformed scope \"${scope}\""
+         _internal_fail "Malformed scope \"${scope}\""
       ;;
    esac
 
@@ -1287,7 +1287,7 @@ env::scope::main()
       shift
    done
 
-   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && internal_fail "MULLE_ENV_SHARE_DIR is empty"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ]   && _internal_fail "MULLE_ENV_SHARE_DIR is empty"
    [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
 
    local cmd="${1:-list}"
