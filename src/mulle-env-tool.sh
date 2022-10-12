@@ -908,7 +908,6 @@ ${C_RESET}${searchpath}"
       ;;
    esac
 
-
    if [ "${use_script}" = 'YES' ]
    then
       log_fluff "Creating script \"${bindir}/${toolname}\""
@@ -1056,11 +1055,15 @@ env::tool::doctor()
 
    local symlink
    local rval
+   local found 
+   local any
 
    rval=0
+   any="NO"
 
    .foreachfile symlink in "${bindir}"/*
    .do
+      any="YES"
       #https://stackoverflow.com/questions/8049132/how-can-i-detect-whether-a-symlink-is-broken-in-bash
       if [ ! -e "${symlink}" ]
       then
@@ -1079,6 +1082,16 @@ ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
          fi
       fi
    .done
+
+   if [ ${rval} -eq 0 ]
+   then
+      if [ "${any}" = 'NO' ]
+      then
+         log_warning "No tools found"
+      else
+         log_info "No problems found"
+      fi
+   fi
 
    return $rval
 }
