@@ -1,4 +1,5 @@
-#! /bin/sh
+#! /usr/bin/env mulle-bash
+# shellcheck shell=bash
 #
 # shellcheck shell=bash
 # shellcheck disable=SC2236 # ! -z
@@ -39,53 +40,6 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 MULLE_EXECUTABLE_VERSION="4.1.0"
-
-
-###########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
-# #
-# # PRELUDE - Standard startup code for loading mulle-bashfunctions
-# #
-###
-
-#
-# Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
-#
-if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
-then
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
-   export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
-fi
-
-#
-# The booter reruns the executable either with bash or zsh, whatever the
-# system provides. On the second run --no-auto-shell will be set first.
-#
-if [ "${1:-}" != --no-auto-shell ]
-then
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
-else
-   shift    # get rid of --no-auto-shell
-fi
-
-#
-# Include mulle-bashfunctions.sh         : default functions
-#         mulle-bashfunctions-none.sh    : almost no functions
-#         mulle-bashfunctions-minimal.sh : few functions for basic scripts
-#         mulle-bashfunctions-all.sh     : everything, even obscure functions
-#
-# Do this first to get aliases
-#
-MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
-. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
-###
-# # Now we are in bash or zsh with mulle-bashfunctions loaded
-# #
-###########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
 
 
 #
@@ -312,7 +266,7 @@ env::r_find_best_environment()
                if [ -f "${directory}/.mulle/share/env/defer" -o \
                     -f "${directory}/.mulle/etc/env/defer" ]
                then
-                  log_verbose "\"${directory#${MULLE_USER_PWD}/}\" is defering with tweak \"defer\""
+                  log_verbose "\"${directory#"${MULLE_USER_PWD}/"}\" is defering with tweak \"defer\""
                else
                   RVAL="${directory}"
                   return
@@ -828,11 +782,11 @@ env::__fail_get_saved_style_flavor()
    if [ -z "${fallback}" ]
    then
       fail "No properly setup environment found in project \
-directory \"${userdir#${MULLE_USER_PWD}/}\" as \"${directory#${MULLE_USER_PWD}/}\" contains no \
+directory \"${userdir#"${MULLE_USER_PWD}/"}\" as \"${directory#"${MULLE_USER_PWD}/"}\" contains no \
 style information."
    else
       fail "No properly setup environment found in project \
-directory \"${userdir#${MULLE_USER_PWD}/}\" as \"${directory#${MULLE_USER_PWD}/}\" or \"${fallback#${MULLE_USER_PWD}/}\" contain no \
+directory \"${userdir#"${MULLE_USER_PWD}/"}\" as \"${directory#"${MULLE_USER_PWD}/"}\" or \"${fallback#"${MULLE_USER_PWD}/"}\" contain no \
 style information."
    fi
 }
@@ -911,6 +865,37 @@ ${C_INFO}Fixes:
 }
 
 
+env::write_cachedir_tag()
+{
+   log_entry "env::write_cachedir_tag" "$@"
+
+   local vardir="$1"
+
+   [ "${MULLE_CACHEDIR_TAG}" != "YES" ] && return
+
+   r_basename "${vardir}"
+   if [ "${RVAL}" = ".env" ]
+   then
+      r_dirname "${vardir}"
+      vardir="${RVAL}"
+   fi
+
+   # assume one stat is faster than open/write/close
+   [ -f "${vardir}/CACHEDIR.TAG" ] && return
+
+   redirect_exekutor "${vardir}/CACHEDIR.TAG" printf "%s\n" "\
+Signature: 8a477f597d28d172789f06886806bc55
+
+This file is a cache directory tag created by mulle-env.
+If you use \`tar --exclude-caches-all\`, this directory will be excluded from
+your archive.
+
+You can suppress the generation of this file with:
+   mulle-sde env --global set MULLE_CACHEDIR_TAG NO
+"
+}
+
+
 env::apply_style_to_directory()
 {
    log_entry "env::apply_style_to_directory" "$@"
@@ -931,6 +916,7 @@ env::apply_style_to_directory()
    # memorize new style
    # since this always changes on user reques its in etc
    mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
+   env::write_cachedir_tag "${MULLE_ENV_VAR_DIR}"
    redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/style.${LOGNAME:-all}" printf "%s\n" "${style}"
 }
 
@@ -1064,26 +1050,17 @@ env::_print_env()
       key="${line%%=*}"
       if [ ! -z "${key}" ]
       then
-         # indirection bash feature
-         if [ ${ZSH_VERSION+x} ]
-         then
-            value="${(P)key}"
-         else
-            case "${key}" in 
-               *\!*|*\(*\)*)  
-                  value="${line#*=}" # mingw craziness
-               ;;
+         case "${key}" in
+            *\!*|*\(*\)*)
+               value="${line#*=}" # mingw craziness
+            ;;
 
-               *)
-                  if [ ${ZSH_VERSION+x} ]
-                  then
-                     value="${(P)key}"
-                  else
-                     value="${!key}"
-                  fi
-               ;;
-            esac
-         fi
+            *)
+               r_shell_indirect_expand "${key}"
+               value="${RVAL}"
+            ;;
+         esac
+
          if [ ! -z "${value}" ]
          then
             printf "${sep}%s=%q" "${key}" "${value}"
@@ -1346,6 +1323,41 @@ undefined (old mulle-bashfunctions)"
    return $rval
 }
 
+MULLE_ENVIRONMENT_KEYS="\
+MULLE_UNAME
+MULLE_HOSTNAME \
+MULLE_USERNAME \
+MULLE_VIRTUAL_ROOT \
+MULLE_ENV_HOST_VAR_DIR \
+TRACE \
+ENVFILENAME \
+AUXENVFILENAME \
+NO_MOTD"
+
+
+RELAX_ENVIRONMENT_KEYS="\
+DBUS_SESSION_BUS_ADDRESS
+DISPLAY \
+EDITOR \
+HOME \
+LOGNAME \
+LS_COLORS \
+MULLE_ENV_PLUGIN_PATH \
+MULLE_NO_COLOR \
+MULLE_SDE_EXTENSION_PATH \
+MULLE_USER_PWD \
+MULLE_VIRTUAL_ROOT \
+NO_COLOR \
+PS1 \
+SSH_CONNECTION \
+SSH_TTY \
+TERM \
+TMPDIR \
+USER \
+USERNAME \
+VISUAL \
+"
+
 #
 # this is more lowlevel, it executes with a limited environment a shell command
 # it doesn't use the mulle-env environment. It's rarely useful except to run
@@ -1521,6 +1533,7 @@ env::main()
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCHMODE="DEFAULT"
    local OPTION_PROTECT="YES"
+   local OPTION_SCOPE_SUBDIRS=
 
    local MULLE_TRACE
    local MULLE_FLAG_EXEKUTOR_DRY_RUN='NO'
@@ -1697,6 +1710,14 @@ env::main()
          #
          --no-protect)
             OPTION_PROTECT='NO'
+         ;;
+
+         --scope-subdir)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            r_add_line "${OPTION_SCOPE_SUBDIRS}" "$1"
+            OPTION_SCOPE_SUBDIRS="${RVAL}"
          ;;
 
          --style)
@@ -2146,7 +2167,7 @@ ${C_INFO}Hint: Use --style to switch styles."
       if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
       then
          fail "You are already in the virtual \
-environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack. (${PWD#${MULLE_USER_PWD}/})"
+environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack. (${PWD#"${MULLE_USER_PWD}/"})"
       fi
    fi
 

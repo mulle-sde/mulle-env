@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -224,63 +224,79 @@ env::tool::link_mulle_tool()
    # doing it like this renames "src" to $toolname
 
    local srclibexecdir
-   local parentdir
+   local srclibdir
 
-   srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
-   r_dirname "${srclibdir}"
-   srclibexecdir="${RVAL}"
+   if [ ! -z "${dstlibexecdir}" ]
+   then
+      srclibdir="`exekutor "${exefile}" libexec-dir `" || exit 1
+      r_dirname "${srclibdir}"
+      srclibexecdir="${RVAL}"
+
+      local dstlibname
+
+      dstlibname="${toolname}"
+
+      if [ "${copystyle}" = "library" ]
+      then
+         local version
+
+         version="`"${exefile}" version `" || exit 1
+         dstlibname="`sed 's/-env$//' <<< "${toolname}" `"
+         dstlibdir="${dstlibexecdir}/${dstlibname}/${version}"
+      else
+         dstlibdir="${dstlibexecdir}/${dstlibname}"
+      fi
+
+      if [ -d "${dstlibdir}" ]
+      then
+         rmdir_safer "${dstlibdir}"
+      else
+         remove_file_if_present "${dstlibdir}"
+      fi
+   fi
 
    local dstexefile
-   local dstlibname
 
-   dstlibname="${toolname}"
    dstexefile="${dstbindir}/${toolname}"
-   mkdir_if_missing "${dstbindir}"
-
-   if [ "${copystyle}" = "library" ]
-   then
-      local version
-
-      version="`"${exefile}" version `" || exit 1
-      dstlibname="`sed 's/-env$//' <<< "${toolname}" `"
-      dstlibdir="${dstlibexecdir}/${dstlibname}/${version}"
-   else
-      dstlibdir="${dstlibexecdir}/${dstlibname}"
-   fi
-
    # remove previous symlinks or files
    remove_file_if_present "${dstexefile}"
-   if [ -d "${dstlibdir}" ]
-   then
-      rmdir_safer "${dstlibdir}"
-   else
-      remove_file_if_present "${dstlibdir}"
-   fi
+   mkdir_if_missing "${dstbindir}"
 
+   #
+   # copy
+   #
    if [ "${OPTION_COPY_MULLE_TOOL}" = 'YES' ]
    then
-      mkdir_if_missing "${dstlibdir}"
-
-      ( cd "${srclibdir}" ; tar cf - . ) | \
-      ( cd "${dstlibdir}" ; tar xf -  ) || exit 1
-
-      mkdir_if_missing "${dstbindir}"
-
       log_fluff "Copying \"${dstexefile}\""
 
       exekutor cp "${exefile}" "${dstexefile}" &&
       exekutor chmod 755 "${dstexefile}"
-      return $?
+
+      if [ ! -z "${dstlibexecdir}" ]
+      then
+         log_fluff "Copying \"${dstlibdir}\""
+
+         mkdir_if_missing "${dstlibdir}"
+
+         ( cd "${srclibdir}" ; tar cf - . ) | \
+         ( cd "${dstlibdir}" ; tar xf -  ) || exit 1
+      fi
+      return
    fi
 
-   mkdir_if_missing "${dstbindir}"
-   r_mkdir_parent_if_missing "${dstlibdir}"
-
+   #
+   # symlinks
+   #
    log_fluff "Creating symlink \"${dstexefile}\""
    exekutor ln -s -f "${exefile}" "${dstexefile}" || exit 1
 
-   log_fluff "Creating symlink \"${dstlibdir}\""
-   exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}" || exit 1
+   if [ ! -z "${dstlibexecdir}" ]
+   then
+      r_mkdir_parent_if_missing "${dstlibdir}"
+
+      log_fluff "Creating symlink \"${dstlibdir}\""
+      exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}" || exit 1
+   fi
 }
 
 
@@ -863,7 +879,7 @@ env::tool::link_tool()
          then
             local text
 
-            text="Required tool \"${toolname}\" not found (${PWD#${MULLE_USER_PWD}/}) not found in:
+            text="Required tool \"${toolname}\" not found (${PWD#"${MULLE_USER_PWD}/"}) not found in:
 ${C_RESET}${searchpath}"
             if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
             then
@@ -872,7 +888,7 @@ ${C_RESET}${searchpath}"
                fail "${text}"
             fi
          else
-            log_fluff "Tool \"${toolname}\" not found, but it's optional (${PWD#${MULLE_USER_PWD}/})"
+            log_fluff "Tool \"${toolname}\" not found, but it's optional (${PWD#"${MULLE_USER_PWD}/"})"
          fi
          return 0
       ;;

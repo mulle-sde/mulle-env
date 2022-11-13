@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2015 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -1064,9 +1064,9 @@ env::environment::_file_defines_key()
 
    if [ $rval -eq 0 ]
    then
-      log_debug "${key} exists in \"${filename#${MULLE_USER_PWD}/}\""
+      log_debug "${key} exists in \"${filename#"${MULLE_USER_PWD}/"}\""
    else
-      log_debug "${key} does not exist in \"${filename#${MULLE_USER_PWD}/}\""
+      log_debug "${key} does not exist in \"${filename#"${MULLE_USER_PWD}/"}\""
    fi
    return $rval
 }
@@ -1104,9 +1104,12 @@ env::environment::_eval_get()
 
    log_debug "cmd: $cmd"
 
-   value="`eval_rexekutor env -i "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
-                                 "MULLE_UNAME='${MULLE_UNAME}'" \
-                                 '${BASH}' -c "'${cmd}'" `"
+   local environment
+
+   env::environment::r_environment_string
+   environment="${RVAL}"
+
+   value="`eval_rexekutor env -i "${environment}" '${BASH}' -c "'${cmd}'" `"
    if [ ! -z "${value}" ]
    then
       printf "%s\n" "$value"
@@ -1533,6 +1536,45 @@ env::environment::_list()
 }
 
 
+env::environment::r_append_environment_variable()
+{
+   log_entry "env::environment::r_append_environment_variable" "$@"
+
+   local environment="$1"
+   local key="$2"
+
+   # if undefined don't output
+   if [ -z ${!key+x} ]
+   then
+      RVAL="${environment}"
+      return
+   fi
+
+   r_shell_indirect_expand "${key}"
+   r_escaped_shell_string "${RVAL}"
+   r_concat "${environment} "${key}=\"${RVAL}\"
+}
+
+
+env::environment::r_environment_string()
+{
+   log_entry "env::environment::r_environment_string" "$@"
+
+   local keys="${1:-"${MULLE_ENVIRONMENT_KEYS} ${RELAX_ENVIRONMENT_KEYS}"}"
+
+   local environment
+
+   .for key in ${keys}
+   .do
+      env::environment::r_append_environment_variable "${environment}" "${key}"
+      environment="${RVAL}"
+   .done
+
+   RVAL="${environment}"
+}
+
+
+
 env::environment::_eval_list()
 {
    log_entry "env::environment::_eval_list" "$@"
@@ -1545,11 +1587,12 @@ env::environment::_eval_list()
    [ -z "${MULLE_UNAME}" ]        && _internal_fail "MULLE_UNAME not set up"
    [ -z "${MULLE_USERNAME}" ]     && _internal_fail "MULLE_USERNAME not set up"
 
-   cmdline="env -i MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\" \
-MULLE_UNAME=\"${MULLE_UNAME}\" \
-MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\" \
-MULLE_USERNAME=\"${MULLE_USERNAME}\" \
-\"${BASH}\" -c '"
+   local environment
+
+   env::environment::r_environment_string
+   environment="${RVAL}"
+
+   cmdline="env -i ${environment} \"${BASH}\" -c '"
 
    [ "$#" -eq 0 ] && _internal_fail "No environment files specified"
 
@@ -1707,7 +1750,7 @@ env::environment::list_main()
          local i_name
 
          .foreachline i in ${scopes}
-         do
+         .do
             i_name="${i:2}"
             if [ "${scopename}" != "DEFAULT" -a "${i_name}" != "${scopename}" ]
             then
@@ -1715,12 +1758,9 @@ env::environment::list_main()
             fi
 
             case "${i}" in
-               'e:'*)
-                  "${lister}" "${i:0:1}" "${MULLE_ENV_ETC_DIR}/environment-${i_name}.sh"
-               ;;
-
-               's:'*)
-                 "${lister}" "${i:0:1}" "${MULLE_ENV_SHARE_DIR}/environment-${i_name}.sh"
+               [es]':'*)
+                  env::scope::r_filename_for_scopeprefix_scopeid "${i:0:1}" "${i_name}"
+                  "${lister}" "${i:0:1}" "${RVAL}"
                ;;
 
                'h:'*)
@@ -1729,6 +1769,10 @@ env::environment::list_main()
                   echo "MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\""
                   echo "MULLE_UNAME=\"${MULLE_UNAME}\""
                   echo "MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\""
+               ;;
+
+               *)
+                  internal_fail "unknown scope"
                ;;
             esac
          .done
@@ -1753,6 +1797,7 @@ env::environment::main()
    log_entry "env::environment::main" "$@"
 
    local OPTION_SCOPE="DEFAULT"
+   # local OPTION_SCOPE_SUBDIRS (already set in "main")
    local infix="_"
    local OPTION_SED_KEY_PREFIX
    local OPTION_SED_KEY_SUFFIX
@@ -1819,6 +1864,14 @@ env::environment::main()
             OPTION_PROTECT="$1"
          ;;
 
+         --scope-subdir)
+            [ $# -eq 1 ] && fail "missing argument to $1"
+            shift
+
+            r_add_line "${OPTION_SCOPE_SUBDIRS}" "$1"
+            OPTION_SCOPE_SUBDIRS="${RVAL}"
+         ;;
+
          --scope)
             [ $# -eq 1 ] && fail "missing argument to $1"
             shift
@@ -1845,34 +1898,39 @@ env::environment::main()
       shift
    done
 
+   include "env::scope"
+
    local cmd="${1:-list}"
    [ $# -ne 0 ] && shift
 
+   # unset is used for definitions so support it
+   if [ "${cmd}" = 'unset' ]
+   then
+      cmd='remove'
+   fi
 
    case "${cmd}" in
-      mset|remove|set)
+      'mset'|'remove'|'set')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
          if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a "${OPTION_PROTECT}" = 'YES' ]
          then
-            # shellcheck source=src/mulle-env-scope.sh
-            [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
-
             env::scope::env_validate_scope_write "${OPTION_SCOPE}" "$@"
          fi
          env::environment::${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
-      get|list)
+      'get'|'list')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
+         if [ "${OPTION_SCOPE}" != "DEFAULT" ]
+         then
+            env::scope::is_known_scopeid "${OPTION_SCOPE}" || fail "Scope \"${OPTION_SCOPE}\" is unknown"
+         fi
          env::environment::${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
-      scope|scopes)
-         # shellcheck source=src/mulle-env-scope.sh
-         [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
-
+      'scope'|'scopes')
          MULLE_USAGE_NAME="${MULLE_USAGE_NAME} environment" env::scope::main "$@"
       ;;
 

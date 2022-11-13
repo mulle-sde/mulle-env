@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -149,12 +149,12 @@ env::plugin::_load()
 
       if [ -f "${pluginpath}" ]
       then
-         log_verbose "Loading env plugin ${pluginpath#${MULLE_USER_PWD}/}"
+         log_verbose "Loading env plugin ${pluginpath#"${MULLE_USER_PWD}/"}"
          . "${pluginpath}" || exit 1
 
          return 0
       else
-         log_debug "No plugin found at ${pluginpath#${MULLE_USER_PWD}/}"
+         log_debug "No plugin found at ${pluginpath#"${MULLE_USER_PWD}/"}"
       fi
    .done
 

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -400,7 +400,7 @@ EOF
    if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_REINIT}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
    then
       _log_info "Enter the environment:
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory#${MULLE_USER_PWD}/}\"${C_INFO}"
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} \"${directory#"${MULLE_USER_PWD}/"}\"${C_INFO}"
    fi
 
    RVAL="${directory}"

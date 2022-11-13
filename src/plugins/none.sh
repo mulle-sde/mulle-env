@@ -44,26 +44,6 @@ env::plugin::none::print_startup()
 # If mulle-env is broken, sometimes its nice just to source this file.
 # If you're sourcing this manually on a regular basis, you're doing it wrong.
 #
-# We need some minimal stuff to get things going though:
-#     sed, cut, tr, hostname, pwd, uname
-#
-if [ -z "\${MULLE_UNAME}" ]
-then
-   MULLE_UNAME="\`PATH=/bin:/usr/bin uname | \\
-                  PATH=/bin:/usr/bin cut -d_ -f1 | \\
-                  PATH=/bin:/usr/bin sed 's/64\$//' | \\
-                  PATH=/bin:/usr/bin tr 'A-Z' 'a-z'\`"
-   export MULLE_UNAME
-fi
-if [ -z "\${MULLE_HOSTNAME}" ]
-then
-   MULLE_HOSTNAME="\`PATH=/bin:/usr/bin:/sbin:/usr/sbin hostname -s\`"
-   if [ "\${MULLE_HOSTNAME:0:1}" = '.' ]
-   then
-      MULLE_HOSTNAME="_\${MULLE_HOSTNAME}"
-   fi
-   export MULLE_HOSTNAME
-fi
 if [ -z "\${MULLE_VIRTUAL_ROOT}" ]
 then
    MULLE_VIRTUAL_ROOT="\`PATH=/bin:/usr/bin pwd -P\`"
@@ -194,7 +174,7 @@ env::plugin::none::print_include_environment()
 # environment-global.sh                 |
 # environment-os-\${MULLE_UNAME}.sh      |
 # environment-host-\${MULLE_HOSTNAME}.sh |
-# environment-user-\${MULLE_USERNAME}.sh           |
+# environment-user-\${MULLE_USERNAME}.sh |
 # environment-custom.sh                 |
 #
 

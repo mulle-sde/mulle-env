@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -419,17 +419,28 @@ e:user-${MULLE_USERNAME};100"
 }
 
 
-env::scope::r_directory_for_scopeprefix()
+env::scope::is_known_scopeid()
 {
-   log_entry "env::scope::r_directory_for_scopeprefix" "$@"
+   log_entry "env::scope::is_known_scopeid" "$@"
 
-   local scopeprefix="$1"
+   local scopeid="$1"
 
-   RVAL="${MULLE_ENV_ETC_DIR}"
-   if [ "${scopeprefix:0:1}" = "s" ]
-   then
-      RVAL="${MULLE_ENV_SHARE_DIR}"
-   fi
+   local scopes
+   local scope
+   local protect
+
+   env::scope::r_get_scopes
+   scopes="${RVAL}"
+
+   .foreachline scope in ${scopes}
+   .do
+      if [ "${scope:2}" = "${scopeid}" ]
+      then
+         return 0
+      fi
+   .done
+
+   return 1
 }
 
 
@@ -470,6 +481,71 @@ env::scope::r_scopeprefix_for_scopeid()
 }
 
 
+env::scope::r_subdir_for_scopeid()
+{
+   log_entry "env::scope::r_subdir_for_scopeid" "$@"
+
+   local scopeid="$1"
+
+   # check OPTION_SCOPE_SUBDIRS to possibly
+   log_debug "OPTION_SCOPE_SUBDIRS=${OPTION_SCOPE_SUBDIRS}"
+
+   local line
+
+   RVAL=
+   .foreachline line in ${OPTION_SCOPE_SUBDIRS}
+   .do
+      case "${line}" in
+         ${scopeid}=*)
+            RVAL="${line#${scopeid}=}"
+            log_debug "scopeid \${scopeid}\" in subdir \"${RVAL}\""
+            return
+         ;;
+      esac
+   .done
+}
+
+
+env::scope::r_filename_for_scopeprefix_scopeid()
+{
+   log_entry "env::scope::r_filename_for_scopeprefix_scopeid" "$@"
+
+   local scopeprefix="$1"
+   local scopeid="$2"
+
+   local filepath
+
+   case "${scopeprefix}" in
+      'h'*)
+         RVAL="none"
+         return
+      ;;
+
+      's'*)
+         filepath="${MULLE_ENV_SHARE_DIR}"
+      ;;
+
+      'e'*)
+         filepath="${MULLE_ENV_ETC_DIR}"
+      ;;
+
+      *)
+         _internal_fail "invalid scopeprefix \"${scopeprefix}\""
+      ;;
+   esac
+
+   local subdir
+
+   env::scope::r_subdir_for_scopeid "${scopeid}"
+   subdir="${RVAL}"
+
+   r_filepath_concat "${filepath}" "${subdir}"
+   filepath="${RVAL}"
+
+   r_filepath_concat "${filepath}" "environment-${scopeid}.sh"
+}
+
+
 env::scope::r_filename_for_scope()
 {
    log_entry "env::scope::r_filename_for_scope" "$@"
@@ -481,30 +557,11 @@ env::scope::r_filename_for_scope()
       ;;
 
       *)
-         _internal_fail "Need prefixed scope ($scope is not prefixed)"
+         _internal_fail "Need prefixed scope"
       ;;
    esac
 
-   local scopeid
-
-   scopeid="${scope:2}"
-   case "${scope}" in
-      'h:'*)
-         RVAL="none"
-      ;;
-
-      's:'*)
-         RVAL="${MULLE_ENV_SHARE_DIR}/environment-${scopeid}.sh"
-      ;;
-
-      'e:'*)
-         RVAL="${MULLE_ENV_ETC_DIR}/environment-${scopeid}.sh"
-      ;;
-
-      *)
-         _internal_fail "invalid scope \"${scope}\""
-      ;;
-   esac
+   env::scope::r_filename_for_scopeprefix_scopeid "${scope:0:1}" "${scope:2}"
 }
 
 
@@ -518,7 +575,7 @@ env::scope::r_filename_for_scopeid()
    then
       return 1
    fi
-   env::scope::r_filename_for_scope "${RVAL}:${scopeid}"
+   env::scope::r_filename_for_scopeprefix_scopeid "${RVAL}" "${scopeid}"
 }
 
 
@@ -754,10 +811,10 @@ env::scope::list_main()
    local scopes
 
    env::scope::r_get_scopes "${OPTION_PLUGIN_SCOPES}" \
-                "${OPTION_SHARE_AUX_SCOPES}" \
-                "${OPTION_USER_SCOPES}" \
-                "${OPTION_ETC_AUX_SCOPES}" \
-                "${OPTION_HARDCODED_SCOPES}"
+                            "${OPTION_SHARE_AUX_SCOPES}" \
+                            "${OPTION_USER_SCOPES}" \
+                            "${OPTION_ETC_AUX_SCOPES}" \
+                            "${OPTION_HARDCODED_SCOPES}"
 
    scopes="${RVAL}"
 
@@ -810,7 +867,8 @@ env::scope::list_main()
          fi
       fi
 
-      concat "${scopeid}" "${filename#${MULLE_USER_PWD}/}" ";"
+      r_concat "${scopeid}" "${filename#"${MULLE_USER_PWD}/"}" ";"
+      printf "%s\n" "${RVAL}"
    .done
 
    return 0
@@ -1105,6 +1163,7 @@ env::scope::file_main()
    done
 
    local scopeid
+
    [ ! -z "$1"  ] || env::scope::remove_usage "Missing scope name"
 
    scopeid="$1"
@@ -1127,7 +1186,6 @@ env::scope::file_main()
       fi
    .done
 }
-
 
 
 env::scope::remove()

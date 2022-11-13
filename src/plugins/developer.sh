@@ -130,10 +130,12 @@ env::plugin::developer::setup_tools()
    # checked yet)
    #
    (
+      env::tool::link_mulle_tool "mulle-bash"          "${bindir}" \
+      &&
       env::tool::link_mulle_tool "mulle-bashfunctions" "${bindir}"  \
                                                        "${libexecdir}" \
                                                        "library" \
-      && \
+      &&
       env::tool::link_mulle_tool "mulle-env"           "${bindir}" \
                                                        "${libexecdir}"
    ) || return 1
