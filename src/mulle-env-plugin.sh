@@ -129,9 +129,9 @@ env::plugin::all_names()
 }
 
 
-env::plugin::_load()
+env::plugin::do_load()
 {
-   log_entry "env::plugin::_load" "$@"
+   log_entry "env::plugin::do_load" "$@"
 
    local flavor="$1"
    local searchpath="$2"
@@ -174,7 +174,7 @@ env::plugin::load()
    env::plugin::r_searchpath
    searchpath="${RVAL}"
 
-   if env::plugin::_load "${flavor}" "${searchpath}"
+   if env::plugin::do_load "${flavor}" "${searchpath}"
    then
       log_debug "Env plugin \"${flavor}\" loaded"
       return

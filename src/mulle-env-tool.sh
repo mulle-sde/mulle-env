@@ -468,6 +468,12 @@ env::tool::add()
 
    env::unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
 
+   # zsh no like in loop locals
+   local extension
+   local doesexist
+   local mark
+   local rval
+
    # run in subshell to protect cleanly afterwards
    (
       while [ $# -ne 0 ]
@@ -476,8 +482,6 @@ env::tool::add()
          shift
 
          [ -z "${tool}" ] && env::tool::add_usage "Empty tool name"
-
-         local mark
 
          if [ "${OPTION_CSV}" = 'YES' ]
          then
@@ -501,16 +505,12 @@ env::tool::add()
             fi
          fi
 
-         local extension
-
          if [ "${os}" = "DEFAULT" ]
          then
             extension=""
          else
             extension=".${os}"
          fi
-
-         local doesexist
 
          doesexist='NO'
          if env::tool::r_scoped_get "${scope}" "${os}" "${tool}"
@@ -543,8 +543,6 @@ env::tool::add()
          then
             tool="${tool};${mark}"
          fi
-
-         local rval
 
          rval=0
 
@@ -965,8 +963,6 @@ env::tool::link_tools()
 
    local toolname
    local isrequired
-
-   local bindir
    local mark
 
    mkdir_if_missing "${bindir}"
@@ -1321,7 +1317,7 @@ env::tool::status()
 
    local logger="${1:-_log_info}"
 
-   env::_tool_status "$@"
+   env::get_tool_status "$@"
    rval=$?
 
    case $rval in
@@ -1397,7 +1393,6 @@ env::tool::main()
    then
       shift
    fi
-
 
    local rval
    local bindir

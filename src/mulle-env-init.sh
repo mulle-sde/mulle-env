@@ -164,16 +164,8 @@ env::init::main()
    #
    env::init::init_custom_environment
 
-   local envfile
-   local envincludefile
-   local auxscopefile
-   local stylefile
-   local versionfile
    local sharedir
-   local completionfile
-   local toolfile
-   local style
-   local flavor
+   local envfile
 
    MULLE_ENV_SHARE_DIR="${directory}/.mulle/share/env"
 
@@ -185,6 +177,9 @@ env::init::main()
       log_warning "\"${envfile}\" already exists"
       return 4
    fi
+
+   local _style
+   local _flavor
 
    if [ "${OPTION_UPGRADE}" = 'YES' ]
    then
@@ -211,11 +206,11 @@ env::init::main()
                   log_warning "Can not determine style of (${MULLE_VIRTUAL_ROOT:-${PWD}})"
                fi
             else
-               env::__fail_get_saved_style_flavor "${mulle_dir}/etc/env" \
-                                                 "${mulle_dir}/share/env"
+               env::fail_get_saved_style_flavor "${mulle_dir}/etc/env" \
+                                                "${mulle_dir}/share/env"
             fi
          fi
-         OPTION_STYLE="${style:-DEFAULT}"
+         OPTION_STYLE="${_style:-DEFAULT}"
       fi
    fi
 
@@ -224,17 +219,17 @@ env::init::main()
       OPTION_STYLE="${MULLE_ENV_DEFAULT_STYLE}"
    fi
    env::__get_style_flavor "${OPTION_STYLE}"
-   env::__load_flavor_plugin "${flavor}"
+   env::load_flavor_plugin "${_flavor}"
 
-   case "${style}" in
+   case "${_style}" in
       */inherit|*/relax|*/restrict|*/tight|*/wild)
       ;;
 
       *)
-         fail "Unknown style \"${style}\""
+         fail "Unknown style \"${_style}\""
       ;;
    esac
-   log_verbose "Init style is \"${style}\""
+   log_verbose "Init style is \"${_style}\""
 
    # chmoding the share directory is bad for git
    if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${sharedir}" ]
@@ -243,10 +238,17 @@ env::init::main()
    fi
 
    (
+      local envincludefile
+      local auxscopefile
+      local stylefile
+      local versionfile
+      local completionfile
+      local toolfile
+
       # need proper flavor for migration
       if [ "${OPTION_UPGRADE}" = 'YES' ]
       then
-         if ! env::_r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
+         if ! env::r_get_saved_version "${MULLE_ENV_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT:-${PWD}}"
          then
             fail "Can not upgrade \"$PWD\" as there is no ${MULLE_ENV_SHARE_DIR}/version"
          fi
@@ -254,7 +256,7 @@ env::init::main()
 
          # shellcheck source=src/mulle-env-migrate.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-migrate.sh"
-         env::migrate::main "${version}" "${MULLE_EXECUTABLE_VERSION}" "${flavor}"
+         env::migrate::main "${version}" "${MULLE_EXECUTABLE_VERSION}" "${_flavor}"
       fi
 
       envincludefile="${sharedir}/include-environment.sh"
@@ -284,14 +286,14 @@ env::init::main()
 
       local text
 
-      if ! text="`env::plugin::${flavor}::print_startup "${style}" `"
+      if ! text="`env::plugin::${_flavor}::print_startup "${_style}" `"
       then
-         fail "Plugin \"${flavor}\" failed in startup"
+         fail "Plugin \"${_flavor}\" failed in startup"
       fi
 
       redirect_exekutor "${envfile}" printf "%s\n" "${text}" || exit 1
 
-      text="`env::plugin::${flavor}::print_auxscope "${style}" `"
+      text="`env::plugin::${_flavor}::print_auxscope "${_style}" `"
       if [ ! -z "${text}" ]
       then
          log_verbose "Creating \"${auxscopefile}\""
@@ -299,16 +301,16 @@ env::init::main()
       fi
 
       log_verbose "Creating \"${envincludefile}\""
-      if ! text="`env::plugin::${flavor}::print_include "${style}" `"
+      if ! text="`env::plugin::${_flavor}::print_include "${_style}" `"
       then
-         fail "Plugin \"${flavor}\" failed in include"
+         fail "Plugin \"${_flavor}\" failed in include"
       fi
       redirect_exekutor "${envincludefile}" printf "%s\n" "${text}" || exit 1
 
       log_verbose "Creating \"${pluginfile}\""
-      if ! text="`env::plugin::${flavor}::print_environment_aux "${style}" `"
+      if ! text="`env::plugin::${_flavor}::print_environment_aux "${_style}" `"
       then
-         fail "Plugin \"${flavor}\" failed in environment_aux"
+         fail "Plugin \"${_flavor}\" failed in environment_aux"
       fi
       if [ ! -z "${text}" ]
       then
@@ -318,25 +320,25 @@ env::init::main()
       # add more os flavors later
       for os in darwin freebsd linux mingw
       do
-         callback="env::plugin::${flavor}::print_environment_os_${os}"
+         callback="env::plugin::${_flavor}::print_environment_os_${os}"
          if shell_is_function "${callback}"
          then
             local pluginosfile
 
             pluginosfile="${sharedir}/environment-plugin-os-${os}.sh"
             log_verbose "Creating \"${pluginosfile}\""
-            if ! text="`${callback} "${style}" `"
+            if ! text="`${callback} "${_style}" `"
             then
-               fail "Plugin \"${flavor}\" failed in environment os"
+               fail "Plugin \"${_flavor}\" failed in environment os"
             fi
             redirect_exekutor "${pluginosfile}" printf "%s\n" "${text}" || exit 1
          fi
       done
 
       log_verbose "Creating \"${toolfile}\""
-      if ! text="`env::plugin::${flavor}::print_tools "${style}" | sort -u`"
+      if ! text="`env::plugin::${_flavor}::print_tools "${_style}" | sort -u`"
       then
-         fail "Tool install of \"${flavor}\" failed"
+         fail "Tool install of \"${_flavor}\" failed"
       fi
       redirect_exekutor "${toolfile}" printf "%s\n" "${text}" || exit 1
 
@@ -346,7 +348,7 @@ env::init::main()
                    ${completionfile}
 
       log_verbose "Creating \"${stylefile}\""
-      redirect_exekutor "${stylefile}" printf "%s\n" "${style}" || exit 1
+      redirect_exekutor "${stylefile}" printf "%s\n" "${_style}" || exit 1
 
       log_verbose "Creating .mulle/.gitignore"
       redirect_exekutor "${directory}/.mulle/.gitignore" cat <<EOF

@@ -235,16 +235,15 @@ env::scope::r_read_auxscope_file()
 
    # eval it to resolve USER and so on
    local tmp
-   local aux_scope
 
    tmp="`rexekutor egrep -v '^#' "${auxscopefile}"`"
 
-   RVAL=
-
-   local aux_scope
    local order
 
    order=100
+
+   local aux_scope
+   local result 
 
    .foreachline aux_scope in ${tmp}
    .do
@@ -269,9 +268,12 @@ env::scope::r_read_auxscope_file()
             ;;
          esac
 
-         r_add_line "${RVAL}" "${aux_scope}"
+         r_add_line "${result}" "${aux_scope}"
+         result="${RVAL}"
       fi
    .done
+
+   RVAL="${result}"
 }
 
 
