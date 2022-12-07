@@ -176,71 +176,69 @@ env::plugin::none::print_include_environment()
 # environment-host-\${MULLE_HOSTNAME}.sh |
 # environment-user-\${MULLE_USERNAME}.sh |
 # environment-custom.sh                 |
+# environment-post-global.sh            |
 #
+scopes="s:plugin;5
+s:plugin-os-\${MULLE_UNAME};15
+e:global;40
+e:os-\${MULLE_UNAME};60
+e:host-\${MULLE_HOSTNAME};80
+e:user-\${MULLE_USERNAME};100
+e:custom;1000
+e:post-global;2000"
 
-#
-# The plugin file, if present is to be set by a mulle-env plugin
-#
-if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-plugin.sh" ]
+if [ -f "\${MULLE_ENV_ETC_DIR}/auxscope" ]
 then
-   . "\${MULLE_ENV_SHARE_DIR}/environment-plugin.sh"
+   auxscopes="\`PATH=/bin:/usr/bin sed -e 's/^/e:/'  \\
+                    -e "s/\\\${MULLE_UNAME}/\${MULLE_UNAME}/" \\
+                    -e "s/\\\${MULLE_HOSTNAME}/\${MULLE_HOSTNAME}/" \\
+                    -e "s/\\\${MULLE_USERNAME}/\${MULLE_USERNAME}/" \\
+                    "\${MULLE_ENV_ETC_DIR}/auxscope"\`"
+   scopes="\${scopes}"\$'\\n'"\${auxscopes}"
+fi
+
+if [ -f "\${MULLE_ENV_SHARE_DIR}/auxscope" ]
+then
+   auxscopes="\`PATH=/bin:/usr/bin sed -e 's/^/s:/'  \\
+                    -e "s/\\\${MULLE_UNAME}/\${MULLE_UNAME}/" \\
+                    -e "s/\\\${MULLE_HOSTNAME}/\${MULLE_HOSTNAME}/" \\
+                    -e "s/\\\${MULLE_USERNAME}/\${MULLE_USERNAME}/" \\
+                    "\${MULLE_ENV_SHARE_DIR}/auxscope"\`"
+   scopes="\${scopes}"\$'\\n'"\${auxscopes}"
 fi
 
 #
-# The plugin file, if present is to be set by a mulle-env plugin
+# Load scopes according to priority now
 #
-if [ -f "\${MULLE_ENV_SHARE_DIR}/environment-plugin-os\${MULLE_UNAME}.sh" ]
-then
-   . "\${MULLE_ENV_SHARE_DIR}/environment-plugin-os\${MULLE_UNAME}.sh"
-fi
+for scope in \`printf "%s\\n" "\${scopes}" \\
+              | PATH=/bin:/usr/bin sort -t';' -k2n -k1 \\
+              | PATH=/bin:/usr/bin sed -n -e 's/\(.*\);.*$/\1/p'\`
+do
+   case "\${scope}" in
+      e:*)
+         includefile="\${MULLE_ENV_ETC_DIR}/environment-\${scope#?:}.sh"
+      ;;
 
-#
-# The project file, if present is to be set by mulle-sde init itself
-# w/o extensions
-#
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-project.sh" ]
-then
-   . "\${MULLE_ENV_ETC_DIR}/environment-project.sh"
-fi
+      s:*)
+         includefile="\${MULLE_ENV_SHARE_DIR}/environment-\${scope#?:}.sh"
+      ;;
 
+      *)
+         continue;
+      ;;
+   esac
 
-#
-# Global user settings
-#
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-global.sh" ]
-then
-   . "\${MULLE_ENV_ETC_DIR}/environment-global.sh"
-fi
+   if [ -f "\${includefile}" ]
+   then
+      . "\${includefile}"
+   fi
+done
 
-#
-# "os-" user settings
-#
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh" ]
-then
-   . "\${MULLE_ENV_ETC_DIR}/environment-os-\${MULLE_UNAME}.sh"
-fi
+unset scope
+unset scopes
+unset auxscopes
+unset includefile
 
-#
-# Load in some user modifications depending on hostname, username. These
-# won't be provided by extensions or plugins.
-#
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-host-\${MULLE_HOSTNAME}.sh" ]
-then
-   . "\${MULLE_ENV_ETC_DIR}/environment-host-\${MULLE_HOSTNAME}.sh"
-fi
-
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-user-\${MULLE_USERNAME}.sh" ]
-then
-   . "\${MULLE_ENV_ETC_DIR}/environment-user-\${MULLE_USERNAME}.sh"
-fi
-
-#
-# For more complex edits, that don't work with the cmdline tool
-#
-if [ -f "\${MULLE_ENV_ETC_DIR}/environment-custom.sh" ]
-then
-   . "\${MULLE_ENV_ETC_DIR}/environment-custom.sh"
-fi
 EOF
 }
 

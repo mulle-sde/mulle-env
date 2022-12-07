@@ -238,10 +238,6 @@ env::scope::r_read_auxscope_file()
 
    tmp="`rexekutor egrep -v '^#' "${auxscopefile}"`"
 
-   local order
-
-   order=100
-
    local aux_scope
    local result 
 
@@ -277,7 +273,9 @@ env::scope::r_read_auxscope_file()
 }
 
 
-# Typical include oder is this, so let priority reflect this
+# Typical include order is this, so let priority reflect this. But except for
+# the ordering, the value is meaningless. Also the range 40-200 is hard coded
+# unfortunately.
 # Also make right odd tenners, and left even tenners
 #
 # -----|---------------------------------------|--------------------
@@ -289,8 +287,10 @@ env::scope::r_read_auxscope_file()
 #  40  | environment-global.sh                 |
 #  60  | environment-os-${MULLE_UNAME}.sh      |
 #  80  | environment-host-${MULLE_HOSTNAME}.sh |
-#  100 | environment-user-${MULLE_USERNAME}.sh           |
-#
+#  100 | environment-user-${MULLE_USERNAME}.sh |
+#  210 |                                       | environment-post-extension.sh
+# 1000 | environment-post-global.sh            |
+
 env::scope::r_priority_for_scopeid()
 {
    log_entry "env::scope::r_priority_for_scopeid" "$@"
@@ -310,7 +310,7 @@ env::scope::r_priority_for_scopeid()
       ;;
 
       'plugin')
-         RVAL=10
+         RVAL=5
          return 0
       ;;
 
@@ -319,6 +319,7 @@ env::scope::r_priority_for_scopeid()
          return 0
       ;;
 
+      # strictly speaking these two should not be hardcoded here
       'project')
          RVAL=20
          return 0
@@ -346,6 +347,17 @@ env::scope::r_priority_for_scopeid()
 
       'user-'*)
          RVAL=100
+         return 0
+      ;;
+
+      # strictly speaking these two should not be hardcoded here
+      'post-extension')
+         RVAL=110
+         return 0
+      ;;
+
+      'post-global')
+         RVAL=120
          return 0
       ;;
    esac
@@ -402,7 +414,8 @@ env::scope::r_get_scopes()
       etc_scopes="e:global;40
 e:os-${MULLE_UNAME};60
 e:host-${MULLE_HOSTNAME};80
-e:user-${MULLE_USERNAME};100"
+e:user-${MULLE_USERNAME};100
+e:post-global;1000"
    fi
 
    if [ "${option_etc_aux}" = 'YES' ]

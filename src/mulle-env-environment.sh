@@ -747,6 +747,9 @@ env::environment::remove_from_global_subscopes()
 
    local i
 
+   #
+   # TODO: need to do this properly with scopes and prorities
+   #
    .foreachfile i in ${MULLE_ENV_ETC_DIR}/environment-os-*.sh \
                      ${MULLE_ENV_ETC_DIR}/environment-host-*.sh \
                      ${MULLE_ENV_ETC_DIR}/environment-user-*.sh

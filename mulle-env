@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="4.1.0"
+MULLE_EXECUTABLE_VERSION="4.2.0"
 
 
 #
@@ -420,7 +420,6 @@ env::default_setup_environment()
 }
 
 
-
 env::protect_dir_if_exists()
 {
    log_entry "env::protect_dir_if_exists" "$@"
@@ -518,11 +517,8 @@ env::get_tool_status()
    anymatch='NO'
    compile='NO'
 
-   IFS=':'
-   for file in ${filepath}
-   do
-      IFS="${DEFAULT_IFS}"
-
+   .foreachpath file in ${filepath}
+   .do
       # make same date force recompile, because we can't be sure then
       if [ "${MULLE_ENV_HOST_VAR_DIR}/tool" -nt "${file}" ]
       then
@@ -532,8 +528,7 @@ env::get_tool_status()
          compile='YES'
       fi
       anymatch='YES'
-   done
-   IFS="${DEFAULT_IFS}"
+   .done
 
    if [ "${compile}" = 'NO' ]
    then
@@ -1504,6 +1499,100 @@ env::reset()
 }
 
 
+env::style()
+{
+   local directory="$1"
+
+   case "${directory}" in
+      --help|help|-h)
+         env::style_usage
+      ;;
+   esac
+
+   directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
+   directory="${directory:-${PWD}}"
+   r_simplified_absolutepath "${directory}"
+   directory="${RVAL}"
+   if [ ! -d "${directory}" ]
+   then
+      fail "Directory \"${directory}\" does not exist.
+${C_INFO}Hint: Use --style to switch styles."
+   fi
+
+   local envdirectory
+
+   case "${MULLE_UNAME}" in
+      windows)
+         envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
+      ;;
+
+      *)
+         envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
+      ;;
+   esac
+
+   local _style
+   local _flavor
+
+   _style="${OPTION_STYLE}"
+   if [ "${_style}" = "DEFAULT" ]
+   then
+      if ! env::__get_saved_style_flavor "${envdirectory}" \
+                                         "${directory}/.mulle/share/env"
+      then
+         env::fail_get_saved_style_flavor "${envdirectory}" \
+                                          "${directory}/.mulle/share/env"
+      fi
+   fi
+
+   printf "%s\n" "${_style}"
+   return 0
+}
+
+
+env::reinit()
+{
+   local directory
+   local envdirectory
+
+   directory="${MULLE_VIRTUAL_ROOT:-${PWD}}"
+   case "${MULLE_UNAME}" in
+      windows)
+         envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
+      ;;
+
+      *)
+         envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
+      ;;
+   esac
+
+   local fallback
+
+   fallback="${directory}/.mulle/share/env"
+   r_simplified_absolutepath "${envdirectory}"
+   envdirectory="${RVAL}"
+   r_simplified_absolutepath "${fallback}"
+   fallback="${RVAL}"
+
+   local _style
+   local _flavor
+
+   _style="${OPTION_STYLE}"
+   if [ "${_style}" = "DEFAULT" ]
+   then
+      if ! env::__get_saved_style_flavor "${envdirectory}" "${fallback}"
+      then
+         env::fail_get_saved_style_flavor "${envdirectory}" "${fallback}"
+      fi
+   fi
+   # shellcheck source=src/mulle-env-init.sh
+   . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
+
+   MULLE_FLAG_MAGNUM_FORCE='YES'
+   env::init::main --style "${_style}" --reinit
+   return $?
+}
+
 #
 # it assumed flags are parsed and the command like "envrionment" is
 # also parsed
@@ -1939,41 +2028,7 @@ wild"
       ;;
 
       'reinit')
-         local _style
-         local _flavor
-         local directory
-         local fallback
-         local envdirectory
-
-         directory="${MULLE_VIRTUAL_ROOT:-${PWD}}"
-         case "${MULLE_UNAME}" in
-            windows)
-               envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
-            ;;
-
-            *)
-               envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
-            ;;
-         esac
-         fallback="${directory}/.mulle/share/env"
-         r_simplified_absolutepath "${envdirectory}"
-         envdirectory="${RVAL}"
-         r_simplified_absolutepath "${fallback}"
-         fallback="${RVAL}"
-
-         _style="${OPTION_STYLE}"
-         if [ -z "${_style}" ]
-         then
-            if ! env::__get_saved_style_flavor "${envdirectory}" "${fallback}"
-            then
-               env::fail_get_saved_style_flavor "${envdirectory}" "${fallback}"
-            fi
-         fi
-         # shellcheck source=src/mulle-env-init.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-init.sh" || exit 1
-
-         MULLE_FLAG_MAGNUM_FORCE='YES'
-         env::init::main --style "${_style}" --reinit
+         env::reinit "$@"
          return $?
       ;;
 
@@ -1991,6 +2046,18 @@ wild"
             env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
          fi
          env::scope::main "$@"
+         return $?
+      ;;
+
+      'scopes')
+         # shellcheck source=src/mulle-env-scope.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh" || exit 1
+
+         if ! env::is_help_request_commandline "$@"
+         then
+            env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         fi
+         env::scope::main list "$@"
          return $?
       ;;
 
@@ -2013,47 +2080,8 @@ wild"
       ;;
 
       'style')
-         local _style
-         local _flavor
-         local envdirectory
-
-         local directory="$1"
-
-         case "${directory}" in
-            --help|help|-h)
-               env::style_usage
-            ;;
-         esac
-
-         directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
-         directory="${directory:-${PWD}}"
-         r_simplified_absolutepath "${directory}"
-         directory="${RVAL}"
-         if [ ! -d "${directory}" ]
-         then
-            fail "Directory \"${directory}\" does not exist.
-${C_INFO}Hint: Use --style to switch styles."
-         fi
-
-         case "${MULLE_UNAME}" in
-            windows)
-               envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
-            ;;
-
-            *)
-               envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
-            ;;
-         esac
-
-         if ! env::__get_saved_style_flavor "${envdirectory}" \
-                                       "${directory}/.mulle/share/env"
-         then
-            env::fail_get_saved_style_flavor "${envdirectory}" \
-                                          "${directory}/.mulle/share/env"
-         fi
-
-         printf "%s\n" "${_style}"
-         return 0
+         env::style "$@"
+         return $?
       ;;
 
       'subenv')
@@ -2084,6 +2112,7 @@ ${C_INFO}Hint: Use --style to switch styles."
       ;;
 
       'toolstyles'|'plugins')
+         # shellcheck source=src/mulle-env-plugin.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugin.sh" || exit 1
 
          log_info "Toolstyle"
@@ -2101,6 +2130,20 @@ ${C_INFO}Hint: Use --style to switch styles."
       'uname'|'osname')
          printf "%s\n" "${MULLE_UNAME}"
          return 0
+      ;;
+
+      'unveil')
+         # do not set MULLE_VIRTUAL_ROOT if not already set
+         if ! env::is_help_request_commandline "$@"
+         then
+            env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}" 'NO'
+         fi
+
+         # shellcheck source=src/mulle-env-unveil.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-unveil.sh" || exit 1
+
+         env::unveil::main "$@"
+         return $?
       ;;
 
       'username')

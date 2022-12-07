@@ -281,7 +281,7 @@ env::migrate::migrate_from_v2_2_to_v3()
 
          # should be done by a mulle-sde extension upgrade really
          project|s:project)
-            r_add_unique_line "${etc_lines}" 'project;10'
+            r_add_unique_line "${etc_lines}" 'project;20'
             etc_lines="${RVAL}"
          ;;
 

@@ -59,7 +59,8 @@ plugin-os-${MULLE_UNAME}
 global
 os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
-user-${MULLE_USERNAME}"
+user-${MULLE_USERNAME}
+post-global"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"
 
@@ -86,6 +87,7 @@ global
 os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
 user-${MULLE_USERNAME}
+post-global
 bar"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"
@@ -116,7 +118,8 @@ plugin-os-${MULLE_UNAME}
 global
 os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
-user-${MULLE_USERNAME}"
+user-${MULLE_USERNAME}
+post-global"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"
 

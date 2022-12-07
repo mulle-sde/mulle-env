@@ -687,6 +687,7 @@ env::tool::compile()
    local result
    local file
    local name
+   local i
 
    .foreachpath file in ${_filepath}
    .do
@@ -695,8 +696,6 @@ env::tool::compile()
       log_fluff "Compiling \"${file}\""
 
       lines="`rexekutor egrep -v '^#' "${file}"`"
-
-      local i
 
       .foreachline i in ${lines}
       .do
@@ -1124,12 +1123,9 @@ env::tool::_list_file()
    local color_end
    local printmark
 
-   IFS=$'\n'
-   for toolline in `egrep -v '^#' "${filename}"`
-   do
-      IFS="${DEFAULT_IFS}"
-
-      [ -z "${toolline}" ] && continue
+   .foreachline toolline in `egrep -v '^#' "${filename}"`
+   .do
+      [ -z "${toolline}" ] && .continue
 
       IFS=";" read -r toolname mark <<< "${toolline}"
 
@@ -1191,8 +1187,8 @@ env::tool::_list_file()
       fi
 
       printf '%b%s%b%s\n' "${color_start}" "${toolname}${printmark}" "${color_end}"
-   done
-   IFS="${DEFAULT_IFS}"
+   .done
+
    echo
 }
 

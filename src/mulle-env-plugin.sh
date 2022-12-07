@@ -99,33 +99,27 @@ env::plugin::r_searchpath()
 }
 
 
-env::plugin::_all_names()
-{
-   log_entry "env::plugin::_all_names"
-
-   local searchpath
-
-   env::plugin::r_searchpath
-   searchpath="${RVAL}"
-
-   local directory
-   local pluginpath
-
-   .foreachpath  directory in ${searchpath}
-   .do
-      .foreachline pluginpath in `ls -1 "${directory}"/*.sh 2> /dev/null`
-      .do
-         basename -- "${pluginpath}" .sh
-      .done
-   .done
-}
-
-
 env::plugin::all_names()
 {
    log_entry "env::plugin::all_names" "$@"
 
-   env::plugin::_all_names "$@" | sort -u
+   (
+      local searchpath
+
+      env::plugin::r_searchpath
+      searchpath="${RVAL}"
+
+      local directory
+      local pluginpath
+
+      .foreachpath directory in ${searchpath}
+      .do
+         .foreachline pluginpath in `dir_list_files "${directory}" "*.sh" 2> /dev/null`
+         .do
+            basename -- "${pluginpath}" .sh
+         .done
+      .done
+   ) | sort
 }
 
 
