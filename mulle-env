@@ -1300,6 +1300,7 @@ undefined (old mulle-bashfunctions)"
                       "'${MULLE_USERNAME}'" \
                       "'${MULLE_VIRTUAL_ROOT}'" \
                       "'${MULLE_ENV_HOST_VAR_DIR}'" \
+                      "'${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
                       "'${runpath}'" \
                       "'${mode}'" \
                       "'${_style}'" \
@@ -1320,6 +1321,7 @@ MULLE_HOSTNAME \
 MULLE_USERNAME \
 MULLE_VIRTUAL_ROOT \
 MULLE_ENV_HOST_VAR_DIR \
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR \
 TRACE \
 ENVFILENAME \
 AUXENVFILENAME \

@@ -214,6 +214,7 @@ run_script_shell()
    printf -v args "%q" ". \"${envfile}\" || exit 1 ; $1"
 
    eval "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
+        "MULLE_BASHFUNCTIONS_LIBEXEC_DIR='${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
         "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
@@ -283,6 +284,7 @@ run_interactive_shell()
    local rval
 
    eval "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
+        "MULLE_BASHFUNCTIONS_LIBEXEC_DIR='${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
         "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
         "MULLE_SHELL_MODE='${MODE}'" \
         "MULLE_UNAME='${MULLE_UNAME}'" \
@@ -372,46 +374,53 @@ main()
    shift
 
    #6
+   local MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="$1"
+   [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && _fail "empty MULLE_BASHFUNCTIONS_LIBEXEC_DIR"
+   shift
+
+   #7
    local RUNPATH
 
    RUNPATH="$1"
    [ -z "${RUNPATH}" ] && _fail "empty RUNPATH"
    shift
 
-   #7
+   #8
    local MODE  # either SCRIPT or INTERACTIVE
 
    MODE="$1"
    [ -z "${MODE}" ] && _fail "empty MODE"
    shift
 
-   #8
+   #9
    local STYLE  # wild or else
 
    STYLE="$1"
    [ -z "${STYLE}" ] && _fail "empty STYLE"
    shift
 
-   #9
+   #10
    local TRACE  # either YES or usually empty
 
    TRACE="$1"
    shift
 
-   #10
+   #11
    local ENVFILENAME  # environment.sh or so
 
    ENVFILENAME="$1"
    [ -z "${ENVFILENAME}" ] && _fail "empty ENVFILENAME"
    shift
 
-   #11
+   #12
    local AUXENVFILENAME  # usually empty
 
    AUXENVFILENAME="$1"
    shift
 
-   #12
+   #13
    local NO_MOTD  # either YES or usually empty
 
    NO_MOTD="$1"
