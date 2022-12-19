@@ -1980,6 +1980,7 @@ wild"
          return 1
       ;;
 
+      # move this to mulle-bashfunctions or ?
       'mulle-tool-env')
          [ $# -eq 0 ] && env::usage "Missing argument to \"${arg}\""
          [ $# -ne 1 ] && env::usage "Superflous arguments to \"${arg}\""
