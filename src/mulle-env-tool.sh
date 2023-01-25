@@ -140,6 +140,53 @@ EOF
 }
 
 
+env::tool::compile_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} tool compile
+
+   Compile tool list from recent changes. Run "link" to make these changes
+   become apparent.
+
+EOF
+   exit 1
+}
+
+
+env::tool::link_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} tool link
+
+   Relink tools. Useful, if tools were recently installed.
+
+EOF
+   exit 1
+}
+
+
+env::tool::get_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} tool get <name>
+
+   Check if named tool is linked and available.
+
+EOF
+   exit 1
+}
+
+
+
 env::tool::doctor_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -305,7 +352,7 @@ env::tool::link_mulle_tool()
 ## {
 ##    # the sed works like this:
 ##    # expect <toolname>;<command>
-##    # '/;remove$/!d' is the same as egrep
+##    # '/;remove$/!d' is the same as grep -E
 ##    # 's/;remove$//' delete trailing remove command
 ##    # print toolname
 ##    # print toolname;optional
@@ -695,7 +742,7 @@ env::tool::compile()
 
       log_fluff "Compiling \"${file}\""
 
-      lines="`rexekutor egrep -v '^#' "${file}"`"
+      lines="`rexekutor grep -E -v '^#' "${file}"`"
 
       .foreachline i in ${lines}
       .do
@@ -704,7 +751,7 @@ env::tool::compile()
                name="${i%;remove}"
                if find_line "${result}" "${name}"
                then
-                  result="`fgrep -v -x "${name}" <<< "${result}"`"
+                  result="`grep -F -v -x "${name}" <<< "${result}"`"
                fi
             ;;
 
@@ -747,7 +794,7 @@ env::tool::r_get()
 
       [ ! -f "${file}" ]  && continue
 
-      lines="`egrep -v '^#' "${file}" | egrep "^${tool}$|^${tool};" `"
+      lines="`grep -E -v '^#' "${file}" | grep -E "^${tool}$|^${tool};" `"
 
       .foreachline i in ${lines}
       .do
@@ -846,7 +893,7 @@ env::tool::link_tool()
    local use_script
 
    case "${MULLE_UNAME}" in
-      mingw*)
+      mingw)
          use_script='YES'
       ;;
 
@@ -906,7 +953,7 @@ ${C_RESET}${searchpath}"
          then
             log_fluff "Copying mulle script \"${bindir}/${toolname}\""
 
-            exekutor cp -a "${filename}" "${bindir}/" || exit 1
+            exekutor cp -p "${filename}" "${bindir}/" || exit 1
             return 0
          fi
       ;;
@@ -1002,11 +1049,16 @@ env::tool::link()
 
    bindir="${MULLE_ENV_HOST_VAR_DIR}/bin"
 
+   if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
+   then
+      compile='YES'
+   fi
+
    while :
    do
       case "$1" in
          -h*|--help|help)
-            env::tool::get_usage
+            env::tool::link_usage
          ;;
 
          --compile)
@@ -1026,7 +1078,7 @@ env::tool::link()
          ;;
 
          -*)
-            env::tool::get_usage "Unknown option \"$1\""
+            env::tool::link_usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -1047,7 +1099,7 @@ env::tool::link()
 
    toolfile="${MULLE_ENV_HOST_VAR_DIR}/tool"
 
-   toollines="`egrep -v '^#' "${toolfile}" 2> /dev/null`"
+   toollines="`grep -E -v '^#' "${toolfile}" 2> /dev/null`"
    if [ -z "${toollines}" ]
    then
       log_info "No tools defined in \"${toolfile}\""
@@ -1123,7 +1175,7 @@ env::tool::_list_file()
    local color_end
    local printmark
 
-   .foreachline toolline in `egrep -v '^#' "${filename}"`
+   .foreachline toolline in `grep -E -v '^#' "${filename}"`
    .do
       [ -z "${toolline}" ] && .continue
 

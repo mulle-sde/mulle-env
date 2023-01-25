@@ -71,6 +71,7 @@ Options:
    --this-os         : narrow scope to this operating system ($MULLE_UNAME)
    --this-user       : user with name ($MULLE_USERNAME)
    --[a-z]*          : shortcut for --scope <name> (e.g. --global)
+
 Commands:
 EOF
 
@@ -1062,7 +1063,7 @@ env::environment::_file_defines_key()
    local rval
 
    r_escaped_grep_pattern "${key}"
-   rexekutor egrep -q -s "^ *export *${RVAL}=" "${filename}"
+   rexekutor grep -E -q -s "^ *export *${RVAL}=" "${filename}"
    rval=$?
 
    if [ $rval -eq 0 ]
@@ -1286,7 +1287,7 @@ env::environment::remove_environmentfile_if_empty()
 
    local contents
 
-   contents="`egrep -v '^#' "${filename}" | sed '/^[ ]*$/d'`"
+   contents="`grep -E -v '^#' "${filename}" | sed '/^[ ]*$/d'`"
    if [ -z "${contents}" ]
    then
       env::environment::safe_remove_file_if_present "${filename}"

@@ -68,6 +68,8 @@ b'
 
    log_info "----- ALL PASSED -----"
 
+   cd ..
+
    rmdir_safer "${directory}"
 }
 

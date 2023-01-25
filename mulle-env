@@ -315,9 +315,9 @@ per environment basis with:
 }
 
 
-env::_setup_environment()
+env::setup_environment()
 {
-   log_entry "env::_setup_environment" "$@"
+   log_entry "env::setup_environment" "$@"
 
    local directory="$1"
    local setroot="$2"
@@ -416,7 +416,7 @@ env::default_setup_environment()
    directory="${RVAL}"
 
    log_fluff "Environment directory determined to be \"${directory}\""
-   env::_setup_environment "${directory}" "${setroot}"
+   env::setup_environment "${directory}" "${setroot}"
 }
 
 
@@ -430,7 +430,18 @@ env::protect_dir_if_exists()
    then
       if [ -d "${directory}" ]
       then
-         exekutor chmod -R -f a-w "${directory}" || _internal_fail "Could not protect \"${directory}\""
+         if ! exekutor chmod -R -f a-w "${directory}"
+         then
+            case "${MULLE_UNAME}" in
+               android)
+                  # sees that it can't protect symlinks, complains
+               ;;
+
+               *)
+                  _internal_fail "Could not protect \"${directory}\""
+               ;;
+            esac
+         fi
       fi
    fi
 }
@@ -446,7 +457,18 @@ env::unprotect_dir_if_exists()
    then
       if [ -d "${directory}" ]
       then
-         exekutor chmod -R -f ug+wX "${directory}"
+         if ! exekutor chmod -R -f ug+wX "${directory}"
+         then
+            case "${MULLE_UNAME}" in
+               android)
+                  # sees that it can't protect symlinks, complains
+               ;;
+
+               *)
+                  _internal_fail "Could not unprotect \"${directory}\""
+               ;;
+            esac
+         fi
       fi
    fi
 }
@@ -500,6 +522,9 @@ env::r_get_existing_tool_filepath()
 }
 
 
+# 0 dont compile
+# 1 need compile
+# 4 nothing defined
 env::get_tool_status()
 {
    log_entry "env::get_tool_status" "$@"
@@ -511,11 +536,9 @@ env::get_tool_status()
 
    log_debug "Checking if compile is needed with: ${filepath}"
 
-   local compile
    local anymatch
 
    anymatch='NO'
-   compile='NO'
 
    .foreachpath file in ${filepath}
    .do
@@ -525,21 +548,16 @@ env::get_tool_status()
          log_debug "\"${file}\" is not newer than \"${MULLE_ENV_HOST_VAR_DIR}/tool\""
       else
          log_fluff "Compile is needed because \"${file}\" has edits"
-         compile='YES'
+         return 1
       fi
       anymatch='YES'
    .done
 
-   if [ "${compile}" = 'NO' ]
+   if [ "${anymatch}" = 'YES' -o -f "${MULLE_ENV_HOST_VAR_DIR}/tool" ]
    then
-      if [ "${anymatch}" = 'YES' -o -f "${MULLE_ENV_HOST_VAR_DIR}/tool" ]
-      then
-         return 0
-      fi
-      return 4
+      return 0
    fi
-
-   return 1
+   return 4
 }
 
 
@@ -593,11 +611,11 @@ env::r_get_saved_version()
    local sharedir="$1"
    local fallbackroot="$2"
 
-   RVAL="`rexekutor egrep -v '^#' "${sharedir}/version" 2> /dev/null`"
+   RVAL="`rexekutor grep -E -v '^#' "${sharedir}/version" 2> /dev/null`"
    if [ "${RVAL}" = "" ]
    then
       # old location
-      RVAL="`rexekutor egrep -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
+      RVAL="`rexekutor grep -E -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
    fi
 
    case "${RVAL}" in
@@ -987,7 +1005,7 @@ env::run_subenv()
       ;;
    esac
 
-   env::_setup_environment "${directory}" "YES"
+   env::setup_environment "${directory}" "YES"
 
    local mode
 
@@ -1007,14 +1025,27 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
       exekutor cd "${directory}" || exit 1
    fi
 
+#   local script
+#
+#   case "${MULLE_UNAME}" in
+#      android)
+#         script="${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell.sh"
+#      ;;
+
+#      *)
+         script="${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell"
+#      ;;
+#   esac
+
    eval_exekutor env \
       "${CUSTOM_ENVIRONMENT}" \
-      "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
+      "'${script}'" \
         "'${MULLE_UNAME}'" \
         "'${MULLE_HOSTNAME}'" \
         "'${MULLE_USERNAME}'" \
         "'${MULLE_VIRTUAL_ROOT}'" \
         "'${MULLE_ENV_HOST_VAR_DIR}'" \
+        "'${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
         "'${PATH}'" \
         "'${mode}'" \
         "'none/wild'" \
@@ -1074,17 +1105,24 @@ env::run_subshell()
    # directory is where we are supposed to execute
    local directory
 
-   if [ ! -z "${OPTION_DIRECTORY}" ]
-   then
-      directory="${OPTION_DIRECTORY}"
-   else
-      if [ -z "${arg}" ]
-      then
-         directory="${callerdirectory}"
-      else
-         directory="$arg"
-      fi
-   fi
+   case "${OPTION_DIRECTORY}" in
+      PWD)
+         directory="${PWD}"
+      ;;
+
+      "")
+         if [ -z "${arg}" ]
+         then
+            directory="${callerdirectory}"
+         else
+            directory="$arg"
+         fi
+      ;;
+
+      *)
+         directory="${OPTION_DIRECTORY}"
+      ;;
+   esac
 
    if [ ! -d "${directory}" ]
    then
@@ -1173,7 +1211,7 @@ env::run_subshell()
    fi
 
    case "${MULLE_UNAME}" in
-      mingw*)
+      mingw)
          case "${_style}" in
             */wild)
             ;;
@@ -1207,6 +1245,11 @@ env::run_subshell()
          fail "unknown style \"${_style}\""
       ;;
    esac
+
+#   if [ -z "`command -v sed`" ]
+#   then
+#      fail "sed not installed, can't run subshell"
+#   fi
 
    local customenvironment
 
@@ -1290,11 +1333,23 @@ undefined (old mulle-bashfunctions)"
       exekutor cd "${rundirectory}" || exit 1
    fi
 
+#   local script
+#
+#   case "${MULLE_UNAME}" in
+#      android)
+#         script="${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell.sh"
+#      ;;
+#
+#      *)
+         script="${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell"
+#      ;;
+#   esac
+
    local rval
 
    env::invoke_shell "${_style#*/}" \
                       "${customenvironment}" \
-                      "'${MULLE_ENV_LIBEXEC_DIR}/mulle-env-shell'" \
+                      "'${script}'" \
                       "'${MULLE_UNAME}'" \
                       "'${MULLE_HOSTNAME}'" \
                       "'${MULLE_USERNAME}'" \
@@ -1417,6 +1472,17 @@ env::invoke_shell()
       *)
          fail "unknown envstyle \"${envstyle}\""
       ;;
+   esac
+
+   # needed to get termux going
+   case "${MULLE_UNAME}" in
+      android)
+         case "${envstyle}" in
+            tight|relax|restrict|inherit)
+            [ ${PREFIX+x} ]     && r_concat "${s}" "PREFIX='${PREFIX}'" && s="${RVAL}"
+            [ ${LD_PRELOAD+x} ] && r_concat "${s}" "LD_PRELOAD='${LD_PRELOAD}'" && s="${RVAL}"
+         ;;
+      esac
    esac
 
    eval_exekutor env ${env_flag} \
@@ -1640,6 +1706,10 @@ env::main()
    case "${MULLE_UNAME}" in
       "")
          _internal_fail "MULLE_UNAME not set"
+      ;;
+
+      android)
+         RESTRICTED_PATH="/data/data/com.termux/files/usr/bin:/bin"
       ;;
 
       *)
@@ -1873,7 +1943,7 @@ env::main()
    if [ ! -z "${OPTION_DIRECTORY}" -a "$arg" != "init" ] && [ -d "${OPTION_DIRECTORY}" ]
    then
       exekutor cd "${OPTION_DIRECTORY}" || exit 1
-      OPTION_DIRECTORY=""
+      OPTION_DIRECTORY="PWD"
    fi
 
    case "${arg}" in

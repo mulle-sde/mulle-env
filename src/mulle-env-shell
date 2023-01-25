@@ -31,13 +31,34 @@
 #
 
 # check with TRACE below
-[ "${9}" = 'YES' ] && set -x && : "mulle-env-shell" "$@"
+[ "${10}" = 'YES' ] && set -x && : "mulle-env-shell" "$@"
 
 
 _fail()
 {
    printf "%s\n" "$*" >&2
    exit 255
+}
+
+
+r_uuidgen()
+{
+   # https://www.bsdhowto.ch/uuid.html
+   local i
+
+   local -a v
+
+   # start with one for zsh :(
+   for i in 1 2 3 4 5 6 7 8
+   do
+      v[$i]=$(($RANDOM+$RANDOM))
+   done
+   v[4]=$((${v[4]}|16384))
+   v[4]=$((${v[4]}&20479))
+   v[5]=$((${v[5]}|32768))
+   v[5]=$((${v[5]}&49151))
+   printf -v RVAL "%x%x-%x-%x-%x-%x%x%x" ${v[1]} ${v[2]} ${v[3]} ${v[4]} \
+                                         ${v[5]} ${v[6]} ${v[7]} ${v[8]}
 }
 
 
@@ -57,33 +78,17 @@ r_make_tmp_in_dir()
    name="${name:-${MULLE_EXECUTABLE_NAME}}"
    name="${name:-mulle}"
 
-   local UUIDGEN
-
-   UUIDGEN="`command -v "uuidgen"`"
-   if [ -z "${UUIDGEN}" ]
-   then
-      case "${filetype}" in
-         *d*)
-            TMPDIR="${tmpdir}" mktemp -d "${name}-XXXXXXXX"
-            return $?
-         ;;
-
-         *)
-            TMPDIR="${tmpdir}" mktemp "${name}-XXXXXXXX"
-            return $?
-         ;;
-      esac
-   fi
-
    local filename
    local prev
 
    while :
    do
       prev="${filename}"
-      filename="${tmpdir}/${name}-`"${UUIDGEN}"`"
 
-      if [ "${prev}" = "${filename}" ]
+      r_uuidgen
+      filename="${tmpdir}/${name}-${RVAL}" 
+
+      if [ -z "${filename}" -o "${prev}" = "${filename}" ]
       then
          _fail "uuidgen malfunction"
       fi
@@ -155,7 +160,7 @@ emit_initfile()
    then
       echo "set -x"
    fi
-   echo "set +o posix"  # turn back to default
+   echo "set +o posix"  # turn off posix
 
    local envfile
 
@@ -194,7 +199,7 @@ emit_initfile()
       #
       # run in envelope subshell to squelch job control message
       #
-      echo "( ( /bin/sleep 1 ; /bin/rm \"${initfile}\" 2> /dev/null ) &)"
+      echo "(( PATH='/bin:/usr/bin'; sleep 1 ; rm \"${initfile}\" 2> /dev/null ) &)"
    fi
 }
 
@@ -264,7 +269,7 @@ run_interactive_shell()
    local cmd_options
 
    case "${MULLE_UNAME}" in
-      darwin)
+      darwin|*bsd|dragonfly)
         cmd_options="--rcfile '${initfile}'"
       ;;
 

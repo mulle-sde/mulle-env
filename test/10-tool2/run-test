@@ -36,7 +36,7 @@ main()
 
    run_mulle_env -s init --style none/tight
 
-   value="`run_mulle_env -s tool list --no-color | egrep '^mudo$'`"
+   value="`run_mulle_env -s tool list --no-color | grep -E '^mudo$'`"
    [ "${value}" != 'mudo' ] && fail "#1: not mudo is wrong here"
 
    log_verbose "----- #1 PASSED -----"
@@ -53,7 +53,7 @@ main()
 
    log_verbose "----- #3 PASSED -----"
 
-   value="`run_mulle_env -s tool list --no-color | egrep awk`"
+   value="`run_mulle_env -s tool list --no-color | grep -E awk`"
    [ ! -z "${value}" ] && fail "#4: awk is wrong here"
 
    if ! run_mulle_env tool add awk
@@ -61,7 +61,7 @@ main()
       fail "#4: Unexpected add failure"
    fi
 
-   value="`run_mulle_env -s tool list --no-color | egrep awk`"
+   value="`run_mulle_env -s tool list --no-color | grep -E awk`"
    [ "${value}" != "awk" ] && fail "#2: Not awk is wrong here"
 
    log_verbose "----- #4 PASSED -----"
@@ -137,6 +137,8 @@ mudo"
    fi
 
    log_info "----- ALL PASSED -----"
+
+   cd ..
 
    rmdir_safer "${directory}"
 }

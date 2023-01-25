@@ -236,7 +236,7 @@ env::scope::r_read_auxscope_file()
    # eval it to resolve USER and so on
    local tmp
 
-   tmp="`rexekutor egrep -v '^#' "${auxscopefile}"`"
+   tmp="`rexekutor grep -E -v '^#' "${auxscopefile}"`"
 
    local aux_scope
    local result 
@@ -279,7 +279,7 @@ env::scope::r_read_auxscope_file()
 # Also make right odd tenners, and left even tenners
 #
 # -----|---------------------------------------|--------------------
-#   0  |                                       | <hardcoded>
+#   1  |                                       | <hardcoded>
 #  10  |                                       | environment-plugin.sh
 #  15  |                                       | environment-plugin-os-\${MULLE_UNAME}.sh
 #  20  | environment-project.sh                |
@@ -305,7 +305,7 @@ env::scope::r_priority_for_scopeid()
 
    case "${scopeid}" in
       'hardcoded')
-         RVAL=0
+         RVAL=1
          return 0
       ;;
 
@@ -369,7 +369,15 @@ env::scope::r_priority_for_scopeid()
 
 env::scope::csv_field_1_by_sorting_numeric_field_2()
 {
-   sort -t';' -k2 -n <<< "${1}" | sed -e '/^$/d' -e 's/\(.*\);.*/\1/'
+   case "${MULLE_UNAME}" in 
+      netbsd)
+         LC_ALL=C sort -t';' -k2n <<< "${1}" | sed -e '/^$/d' -e 's/\(.*\);.*/\1/'
+      ;;
+
+      *)
+         LC_ALL=C sort -t';' -k2 -n <<< "${1}" | sed -e '/^$/d' -e 's/\(.*\);.*/\1/'
+      ;;
+   esac
 }
 
 
@@ -389,7 +397,7 @@ env::scope::r_get_scopes()
 
    if [ "${option_hardcoded}" = 'YES' ]
    then
-      share_scopes="h:hardcoded;0"
+      share_scopes="h:hardcoded;1"
    fi
 
    if [ "${option_plugin}" = 'YES' ]
@@ -968,7 +976,7 @@ env::scope::get_main()
             esac
 
             r_escaped_grep_pattern "${scopeid}"
-            if ! rexekutor egrep -q -s "^${RVAL}\;"  "${filename}"
+            if ! rexekutor grep -E -q -s "^${RVAL}\;"  "${filename}"
             then
                if [ "${OPTION_QUIET}" = 'NO' ]
                then
@@ -1233,7 +1241,7 @@ env::scope::remove()
    scopeid="${scope:2}"
 
    r_escaped_grep_pattern "${scopeid}"
-   if ! rexekutor egrep -q "^${RVAL}\;"  "${filename}"
+   if ! rexekutor grep -E -q "^${RVAL};"  "${filename}"
    then
       fail "Scope \"${scopeid}\" is built-in and can not be deleted"
    fi
@@ -1244,7 +1252,7 @@ env::scope::remove()
    fi
 
    r_escaped_sed_pattern "${scopeid}"
-   inplace_sed -e "/^${RVAL}\;/d" "${filename}" || exit 1
+   inplace_sed -e "/^${RVAL};/d" "${filename}" || exit 1
 
    if [ "${remove_file}" = 'YES' ]
    then

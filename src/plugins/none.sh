@@ -51,6 +51,13 @@ then
 your convenience" >&2
 fi
 
+if [ -z "\${MULLE_UNAME}" ]
+then
+   MULLE_UNAME="\`PATH=/bin:/usr/bin uname -s 2> /dev/null | tr '[:upper:]' '[:lower:]'\`"
+   MULLE_UNAME="\${MULLE_UNAME:-unknown}"
+   echo "Using \${MULLE_UNAME} as MULLE_UNAME for your convenience" >&2
+fi
+
 #
 # now read in custom envionment (required)
 #
@@ -71,7 +78,7 @@ case "\${MULLE_SHELL_MODE}" in
          ;;
 
          *\\\\h*)
-            PS1="\$(sed 's/\\\\h/\\\\h\\['\${envname}'\\]/' <<< '\${PS1}' )"
+            PS1="\$(sed 's/\\\\h/\\\\h\\['\${envname}'\\]/' <<< "\${PS1}" )"
          ;;
 
          *)
@@ -83,8 +90,11 @@ case "\${MULLE_SHELL_MODE}" in
       unset envname
 
       # install cd catcher
-      . "\${MULLE_ENV_LIBEXEC_DIR}/mulle-env-cd.sh"
-      unset MULLE_ENV_LIBEXEC_DIR
+      if [ ! -z "\${MULLE_ENV_LIBEXEC_DIR}" ]
+      then
+         . "\${MULLE_ENV_LIBEXEC_DIR}/mulle-env-cd.sh"
+         unset MULLE_ENV_LIBEXEC_DIR
+      fi
 
       # install mulle-env-reload
 
@@ -108,7 +118,7 @@ case "\${MULLE_SHELL_MODE}" in
       unset DEFAULT_IFS
       unset FILENAME
 
-      vardir="\${MULLE_VIRTUAL_ROOT}/.mulle/var/\${MULLE_HOSTNAME}"
+      vardir="\${MULLE_VIRTUAL_ROOT}/.mulle/var/\${MULLE_HOSTNAME:-unknown-host}"
       [ -d "\${vardir}" ] || mkdir -p "\${vardir}"
 
       HISTFILE="\${vardir}/bash_history"
@@ -209,10 +219,13 @@ fi
 
 #
 # Load scopes according to priority now
+# put in local var for crazy old bashes
 #
-for scope in \`printf "%s\\n" "\${scopes}" \\
+prioscopes=\`printf "%s\\n" "\${scopes}" \\
               | PATH=/bin:/usr/bin sort -t';' -k2n -k1 \\
               | PATH=/bin:/usr/bin sed -n -e 's/\(.*\);.*$/\1/p'\`
+
+for scope in \${prioscopes}
 do
    case "\${scope}" in
       e:*)

@@ -86,6 +86,10 @@ main()
 
 #   test_simple
    test_hard
+
+   cd ..
+
+   rmdir_safer "${directory}"
 }
 
 

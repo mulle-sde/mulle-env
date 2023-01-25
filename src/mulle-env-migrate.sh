@@ -196,7 +196,7 @@ env::migrate::migrate_from_v1_to_v2()
 
    .foreachfile i in .mulle-env/share/environment*.sh .mulle-env/etc/environment*.sh
    .do
-      if egrep -q '^MULLE_SOURCETREE_SHARE_DIR=' "$i"
+      if grep -E -q '^MULLE_SOURCETREE_SHARE_DIR=' "$i"
       then
          inplace_sed 's/^MULLE_SOURCETREE_SHARE_DIR=/MULLE_SOURCETREE_STASH_DIRNAME=/' "${i}"
       fi
@@ -268,7 +268,7 @@ env::migrate::migrate_from_v2_2_to_v3()
    #
    # auxscopes have changed
    #
-   lines="`rexekutor egrep -v '^#' ".mulle/share/env/auxscope" 2> /dev/null`"
+   lines="`rexekutor grep -E -v '^#' ".mulle/share/env/auxscope" 2> /dev/null`"
 
    .foreachline scope in ${lines}
    .do
@@ -314,7 +314,7 @@ env::migrate::migrate_from_v2_2_to_v3()
    .done
 
    order=100
-   lines="`rexekutor egrep -v '^#' ".mulle/etc/env/auxscope" 2> /dev/null`"
+   lines="`rexekutor grep -E -v '^#' ".mulle/etc/env/auxscope" 2> /dev/null`"
 
    .foreachline scope in ${lines}
    .do

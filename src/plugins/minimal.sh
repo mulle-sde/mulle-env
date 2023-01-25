@@ -70,7 +70,8 @@ env::plugin::minimal::print_tools()
 #
 # http://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s04.html
 # i am not really sure that this is POSIX so I called it minimal
-# though posix would be nicer
+# though posix would be nicer. Now some are optional, because mknod
+# f.e. is not on dragonfly. tty is in there for mulle-make
 #
    MINIMAL_BIN_BINARIES="
 cat
@@ -79,32 +80,33 @@ chmod
 chown
 cp
 date
-dd
-df
-dmesg
+dd;optional
+df;optional
+dmesg;optional
 echo
 false
 hostname
 kill
 ln
-login
+login;optional
 ls
 mkdir
-mknod
+mknod;optional
 more
-mount
+mount;optional
 mv
-ps
+ps;optional
 pwd
 rm
 rmdir
 sed
 sh
-stty
-su
-sync
+stty;optional
+tty;optional
+su;optional
+sync;optional
 true
-umount
+umount;optional
 uname
 "
 

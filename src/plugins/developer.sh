@@ -69,8 +69,8 @@ env::plugin::developer::print_tools()
    env::plugin::minimal::print_tools "$@"
 
 #
-# somewhat arbitrarily hand-picked. Rule of thumb: if a mulle script uses
-# it, it's in here for sure (like base64 by mulle-sourcetree) and not optional
+# somewhat arbitrarily hand-picked. Rule of thumb: if a mulle-script uses
+# it, it's in here for sure (like stat by mulle-bashfunctions) and not optional
 # on a bare minimum ubuntu, the following commands are not there:
 #  ed, vi
 #
@@ -78,16 +78,17 @@ env::plugin::developer::print_tools()
 #
    DEVELOPER_BINARIES="awk
 basename
-base64
+base64;optional
 bash
 clear
 cut
 dirname
-egrep
+egrep;optional
 env
 expr
 find
-fgrep
+file;optional
+fgrep;optional
 grep
 head
 less;optional
@@ -101,7 +102,7 @@ test
 tee
 touch
 tr
-uuidgen
+uuidgen;optional
 wc
 which
 ed;optional
