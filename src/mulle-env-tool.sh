@@ -108,6 +108,7 @@ Examples:
 
 Options:
    --optional : it's not a fatal error if command is not available
+   --required : it's a fatal error
 
 EOF
    exit 1
@@ -203,8 +204,11 @@ EOF
 
 
 
-# new tool file format
+# new tool file format:
+# since mulle-bashfunctions 6.0.0 the default is optional
+#
 # <tool>
+# <tool>;required
 # <tool>;optional
 # <tool>;remove
 #
@@ -258,10 +262,9 @@ env::tool::link_mulle_tool()
    # TODO: might need to modify PATH if our .mulle/bin is part of it
    #       which can happen if we are called from another environment
    #
-   exefile="`command -v "${toolname}" `"
-   if [ -z "${exefile}" ]
+   if ! exefile="`command -v "${toolname}" `"
    then
-      if [ "${optional}" != 'optional' ]
+      if [ "${optional}" = 'required' ]
       then
          fail "${toolname} not in PATH"
       fi
@@ -288,7 +291,7 @@ env::tool::link_mulle_tool()
          local version
 
          version="`"${exefile}" version `" || exit 1
-         dstlibname="`sed 's/-env$//' <<< "${toolname}" `"
+         dstlibname="${toolname%-env}"
          dstlibdir="${dstlibexecdir}/${dstlibname}/${version}"
       else
          dstlibdir="${dstlibexecdir}/${dstlibname}"
@@ -540,9 +543,9 @@ env::tool::add()
                tool="${tool%;${mark}}"
             fi
          else
-            if [ "${OPTION_OPTIONALITY}" = 'YES' ]
+            if [ "${OPTION_OPTIONALITY}" = 'NO' ]
             then
-               mark="optional"
+               mark="required"
             fi
 
             # this overrides/ignores optional
@@ -615,36 +618,17 @@ env::tool::add()
 
          if [ "${OPTION_REMOVE}" != 'YES' ]
          then
-            if [ "${OPTION_OPTIONALITY}" = 'YES' ]
-            then
-               case "${os}" in
-                  'DEFAULT')
-                     _log_info "Tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added.
+            case "${os}" in
+               'DEFAULT')
+                  _log_info "Tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added.
 Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict tool to a certain OS."
-                  ;;
+               ;;
 
-                  *)
-                     _log_info "Tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
+               *)
+                  _log_info "Tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
 Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platforms."
-                  ;;
-               esac
-            else
-               case "${os}" in
-                  'DEFAULT')
-                     _log_info "Requirement for tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added.
-${C_VERBOSE}The project will not be usable without it being installed.
-Use ${C_RESET_BOLD}add --optional${C_INFO} to add tools that aren't required.
-Use ${C_RESET_BOLD}--os <os> add${C_INFO} to restrict requirement for a certain OS."
-                  ;;
-
-                  *)
-                     _log_info "Requirement for tool ${C_MAGENTA}${C_BOLD}${tool}${C_INFO} added for ${C_MAGENTA}${C_BOLD}${os}${C_INFO}.
-${C_VERBOSE}The project will not be usable on ${C_MAGENTA}${C_BOLD}${os}${C_VERBOSE} without ${tool} being installed.
-Use ${C_RESET_BOLD}add --optional${C_VERBOSE} to add tools that aren't required.
-Use ${C_RESET_BOLD}--global add${C_VERBOSE} to extend requirement to all platforms."
-                  ;;
-               esac
-            fi
+               ;;
+            esac
          fi
       done
    )
@@ -755,7 +739,7 @@ env::tool::compile()
                fi
             ;;
 
-            *';optional')
+            *';required')
                r_add_line "${result}" "${i}"
                result="${RVAL}"
             ;;
@@ -893,11 +877,11 @@ env::tool::link_tool()
    local use_script
 
    case "${MULLE_UNAME}" in
-      mingw)
+      'mingw'|'msys')
          use_script='YES'
       ;;
 
-      windows)
+      'windows')
          use_script='MAYBE'
       ;;
 
@@ -923,7 +907,7 @@ env::tool::link_tool()
          then
             local text
 
-            text="Required tool \"${toolname}\" not found (${PWD#"${MULLE_USER_PWD}/"}) not found in:
+            text="Required tool \"${toolname}\" not found (${PWD#"${MULLE_USER_PWD}/"}) not found in PATH:
 ${C_RESET}${searchpath}"
             if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
             then
@@ -1015,14 +999,14 @@ env::tool::link_tools()
 
    .foreachline toolline in ${toollines}
    .do
-      isrequired='YES'
+      isrequired='NO'
       operation="link"
 
       IFS=";" read -r toolname mark <<< "${toolline}"
 
       case "${mark}" in
-         optional)
-            isrequired='NO'
+         required)
+            isrequired='YES'
          ;;
 
          remove)

@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="4.2.0"
+MULLE_EXECUTABLE_VERSION="5.0.0"
 
 
 #
@@ -114,7 +114,7 @@ EOF
    then
       cat <<EOF >&2
 
-   Use style "none/wild" for no PATH and environment restrictions. Aliases
+   Use --style "none/wild" for no PATH and environment restrictions. Aliases
    and shell settings will still be suppressed.
 EOF
    fi
@@ -130,67 +130,15 @@ EOF
 Commands:
    clean         : force relink of tools on next entry
    environment   : manage subshell environment variables
-   envstyles     : list available environment styles
    init          : set up the subshell for the first time
    invoke        : execute a shell command with restricted environment
-   style         : show style of directory (PWD)
+   style         : manage environment style of directory (PWD)
    subenv        : enter a sub environment
    tool          : manage subshell tools
-   toolstyles    : list available tool styles (including plugins)
    uname         : return the ${MULLE_USAGE_NAME} specific uname
    upgrade       : upgrade a subshell to a newer mulle-env version
    version       : return the ${MULLE_USAGE_NAME} version
    --            : enter the subshell
-EOF
-
-   if [ ! -z "${MULLE_TRACE}" ]
-   then
-      cat <<EOF >&2
-
-Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
-   none          : a fairly empty virtual environment
-   minimal       : a minimal set of tools (like cd, ls)
-   developer     : a common set of tools (like cd, ls, awk, man) (default)
-
-Env-style:
-   tight         : all environment variables must be user defined
-   restrict      : inherit some environment (e.g. SSH_TTY) (default)
-   relax         : restrict plus all /bin and /usr/bin tools.
-   inherit       : relax plus all tools in PATH
-   wild          : no restrictions
-
-EOF
-   else
-      echo "      (Use -v help to see more env::usage text)"
-   fi
-
-  exit 1
-}
-
-
-env::style_usage()
-{
-   [ $# -ne 0 ] && log_error "$1"
-
-    cat <<EOF >&2
-Usage:
-   ${MULLE_USAGE_NAME} [options] style 
-
-   Print the style currently used by the mulle-env environment. The style
-   is a pair of tool-style/env-style.
-
-Tool-style: (built-in only, see \`mulle-sde toolstyles\` for all available)
-   none          : a fairly empty virtual environment
-   minimal       : a minimal set of tools (like cd, ls)
-   developer     : a common set of tools (like cd, ls, awk, man) (default)
-
-Env-style:
-   tight         : all environment variables must be user defined
-   restrict      : inherit some environment (e.g. SSH_TTY) (default)
-   relax         : restrict plus all /bin and /usr/bin tools.
-   inherit       : relax plus all tools in PATH
-   wild          : no restrictions
-
 EOF
 
   exit 1
@@ -346,7 +294,9 @@ env::setup_environment()
    # people with read-only read/write setups
    #
    case "${MULLE_UNAME}" in
-      mingw|windows)
+      'mingw'|'msys')
+         #
+         # (actual windows works though)
          #
          # on windows the project directory is likely on a windows filesystem
          # so the symlinks don't work out (e.g. cmake.exe) ???? Still true ??
@@ -358,15 +308,16 @@ env::setup_environment()
          #
          if [ -z "${MULLE_ENV_HOST_VAR_DIR}" ]
          then
-            hash="`shasum -a 256 -b <<< "${physicaldir}" | cut -c1-8`" || exit 1
+            r_fnv1a_32 "${physicaldir}"
+            printf -v hash "%08x" "${RVAL}"
             MULLE_ENV_HOST_VAR_DIR="${HOME}/.mulle/${directory##*/}-${hash}.var/${MULLE_HOSTNAME}/env"
          fi
-         MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-${HOME}/.mulle/${directory##*/}.var/.env}"
+         MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-"${HOME}/.mulle/${directory##*/}.var/.env"}"
       ;;
 
       *)
-         MULLE_ENV_HOST_VAR_DIR="${MULLE_ENV_HOST_VAR_DIR:-${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env}"
-         MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-${physicaldir}/.mulle/var/.env}"
+         MULLE_ENV_HOST_VAR_DIR="${MULLE_ENV_HOST_VAR_DIR:-"${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env"}"
+         MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-"${physicaldir}/.mulle/var/.env"}"
       ;;
    esac
 
@@ -845,11 +796,9 @@ env::load_flavor_plugin()
 
    local flavor="$1"
 
-   if ! [ ${MULLE_ENV_PLUGIN_SH+x} ]
-   then
-      # shellcheck source=src/mulle-env-plugin.sh
-      . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugin.sh" || exit 1
-   fi
+   log_debug "load env::plugin ->"
+   include "env::plugin"
+   log_debug "load env::plugin <-"
 
    local searchpath
 
@@ -867,10 +816,10 @@ ${C_INFO}Fixes:
    * change to an available style with ${MULLE_USAGE_NAME} --style"
       fi
       return 1
-   else
-      log_fluff "Env plugin \"${flavor}\" loaded"
-   	log_verbose "Using plugin ${C_MAGENTA}${C_BOLD}${flavor}"
    fi
+
+   log_fluff "Env plugin \"${flavor}\" loaded"
+	log_verbose "Using plugin ${C_MAGENTA}${C_BOLD}${flavor}"
 }
 
 
@@ -1097,6 +1046,8 @@ env::run_subshell()
 {
    log_entry "env::run_subshell" "$@"
 
+   local arg="$1"
+
    # callerdirectory is where we are called from
    local callerdirectory
 
@@ -1211,7 +1162,7 @@ env::run_subshell()
    fi
 
    case "${MULLE_UNAME}" in
-      mingw)
+      'mingw'|'msys')
          case "${_style}" in
             */wild)
             ;;
@@ -1318,6 +1269,12 @@ undefined (old mulle-bashfunctions)"
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
    then
+      # used by mulle-sde style set
+      if [ "${OPTION_SHELL_COMMAND}" = ":" ]
+      then
+         return
+      fi
+
       log_verbose "Run shell command \"${OPTION_SHELL_COMMAND}\" (${MULLE_VIRTUAL_ROOT})"
       mode="SCRIPT"
       [ -z "${MULLE_USER_PWD}" ] && _internal_fail "MULLE_USER_PWD must be set"
@@ -1566,56 +1523,6 @@ env::reset()
    env::clean "$@" && env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
 }
 
-
-env::style()
-{
-   local directory="$1"
-
-   case "${directory}" in
-      --help|help|-h)
-         env::style_usage
-      ;;
-   esac
-
-   directory="${directory:-${MULLE_VIRTUAL_ROOT}}"
-   directory="${directory:-${PWD}}"
-   r_simplified_absolutepath "${directory}"
-   directory="${RVAL}"
-   if [ ! -d "${directory}" ]
-   then
-      fail "Directory \"${directory}\" does not exist.
-${C_INFO}Hint: Use --style to switch styles."
-   fi
-
-   local envdirectory
-
-   case "${MULLE_UNAME}" in
-      windows)
-         envdirectory="${HOME}/.mulle/${directory##*/}.var/${MULLE_HOSTNAME}/env"
-      ;;
-
-      *)
-         envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
-      ;;
-   esac
-
-   local _style
-   local _flavor
-
-   _style="${OPTION_STYLE}"
-   if [ "${_style}" = "DEFAULT" ]
-   then
-      if ! env::__get_saved_style_flavor "${envdirectory}" \
-                                         "${directory}/.mulle/share/env"
-      then
-         env::fail_get_saved_style_flavor "${envdirectory}" \
-                                          "${directory}/.mulle/share/env"
-      fi
-   fi
-
-   printf "%s\n" "${_style}"
-   return 0
-}
 
 
 env::reinit()
@@ -1969,7 +1876,7 @@ env::main()
          return 0
       ;;
 
-      'environment')
+      'env'|'environment')
          # shellcheck source=src/mulle-env-environment.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-environment.sh" || exit 1
 
@@ -1980,16 +1887,6 @@ env::main()
 
          env::environment::main --protect-flag "${OPTION_PROTECT}" "$@"
          return $?
-      ;;
-
-      'envstyles')
-         log_info "Envstyle"
-         echo "inherit
-relax
-restrict
-tight
-wild"
-         return 0
       ;;
 
       # shortcuts for environment
@@ -2110,7 +2007,7 @@ wild"
          return $?
       ;;
 
-      'scope')
+      'scope'|'scopes')
          # shellcheck source=src/mulle-env-scope.sh
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh" || exit 1
 
@@ -2119,18 +2016,6 @@ wild"
             env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
          fi
          env::scope::main "$@"
-         return $?
-      ;;
-
-      'scopes')
-         # shellcheck source=src/mulle-env-scope.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh" || exit 1
-
-         if ! env::is_help_request_commandline "$@"
-         then
-            env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
-         fi
-         env::scope::main list "$@"
          return $?
       ;;
 
@@ -2144,16 +2029,11 @@ wild"
          return
       ;;
 
-      'show')
-         log_verbose "Use --style <toolstyle>/<envstyle>"
 
-         main toolstyles
-         main envstyles
-         return $?
-      ;;
+      'style'|'styles')
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-style.sh" || exit 1
 
-      'style')
-         env::style "$@"
+         env::style::main "$@"
          return $?
       ;;
 
@@ -2184,14 +2064,6 @@ wild"
          return $?
       ;;
 
-      'toolstyles'|'plugins')
-         # shellcheck source=src/mulle-env-plugin.sh
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-plugin.sh" || exit 1
-
-         log_info "Toolstyle"
-         env::plugin::all_names
-         return $?
-      ;;
 
       'tweak')
          env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
@@ -2280,7 +2152,7 @@ environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack. (${PWD#"${MULLE
 
    # inherits all options ....
 
-   env::run_subshell
+   env::run_subshell "${arg}"
 }
 
 

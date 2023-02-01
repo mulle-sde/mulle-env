@@ -158,7 +158,7 @@ env::scope::list_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment list [options]
+   ${MULLE_USAGE_NAME} scope list [options]
 
    Show currently known scopes.
 

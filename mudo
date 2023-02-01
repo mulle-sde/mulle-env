@@ -1,7 +1,8 @@
-#! /usr/bin/env mulle-bash
-# shellcheck shell=bash
+#! /bin/sh
+# shellcheck shell=sh
 #
-# shellcheck shell=bash
+# try to keep it bourne shell so it stays snappy
+#
 # shellcheck disable=SC2236
 # shellcheck disable=SC2166
 # shellcheck disable=SC2006
@@ -89,18 +90,12 @@ fi
 # does not work with builtins like `command -v ps`
 #
 
-quote="'"
-argv=
-for arg in "$@"
-do
-   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
-   argv="$argv '$arg'"
-done
+set -- exec env -i - "${environment}" "$@"
 
 if [ -z "${MULLE_OLDPATH}" ]
 then
-   eval exec env -i - "${environment}" "${argv}"
+   "$@"
 else
-   PATH="${MULLE_OLDPATH}" eval exec env -i - "${environment}" "${argv}"
+   PATH="${MULLE_OLDPATH}" "$@"
 fi
 

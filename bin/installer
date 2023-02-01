@@ -153,11 +153,11 @@ main()
 
    if [ $# -ne 0 ]
    then
-      installer_fail "usage: install.sh [prefix] [mode]"
+      installer_fail "usage: installer [prefix] [mode]"
    fi
    case "${prefix}" in
       -h|--help|help)
-         installer_fail "usage: install.sh [prefix] [mode]"
+         installer_fail "usage: installer [prefix] [mode]"
       ;;
    esac
 
@@ -173,8 +173,8 @@ main()
    share="${prefix}/share/mulle-env"
    libexec="${prefix}/libexec/mulle-env"
 
-   mkdir -p "${bin}" || installer_fail "could not create ${bin}"
-   mkdir -p "${share}" || installer_fail "could not create ${share}"
+   mkdir -p "${bin}"     || installer_fail "could not create ${bin}"
+   mkdir -p "${share}"   || installer_fail "could not create ${share}"
    mkdir -p "${libexec}" || installer_fail "could not create ${libexec}"
 
    install -m "${mode}" "mulle-env" "${bin}/mulle-env" || exit 1

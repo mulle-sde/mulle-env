@@ -73,42 +73,41 @@ env::plugin::minimal::print_tools()
 # though posix would be nicer. Now some are optional, because mknod
 # f.e. is not on dragonfly. tty is in there for mulle-make
 #
-   MINIMAL_BIN_BINARIES="
-cat
-chgrp
-chmod
-chown
-cp
-date
-dd;optional
-df;optional
-dmesg;optional
-echo
-false
+   MINIMAL_BIN_BINARIES="\
+cat;required
+chgrp;required
+chmod;required
+chown;required
+cp;required
+date;required
+dd
+df
+dmesg
+echo;required
+false;required
 hostname
-kill
-ln
-login;optional
-ls
-mkdir
-mknod;optional
-more
-mount;optional
-mv
-ps;optional
-pwd
-rm
-rmdir
-sed
-sh
-stty;optional
-tty;optional
-su;optional
-sync;optional
-true
-umount;optional
-uname
-"
+kill;required
+ln;required
+login
+ls;required
+mkdir;required
+mknod
+more;required
+mount
+mv;required
+ps
+pwd;required
+rm;required
+rmdir;required
+sed;required
+sh;required
+stty
+tty
+su
+sync
+true;required
+umount
+uname;required"
 
    printf "%s\n" "${MINIMAL_BIN_BINARIES}"
 }
