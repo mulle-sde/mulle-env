@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_INIT_SH="included"
+MULLE_ENV_INIT_SH='included'
 
 
 env::init::usage()
@@ -242,7 +242,7 @@ env::init::main()
       local auxscopefile
       local stylefile
       local versionfile
-      local completionfile
+      # local completionfile
       local toolfile
 
       # need proper flavor for migration
@@ -262,7 +262,7 @@ env::init::main()
       envincludefile="${sharedir}/include-environment.sh"
 
       pluginfile="${sharedir}/environment-plugin.sh"
-      completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
+      # completionfile="${sharedir}/libexec/mulle-env-bash-completion.sh"
       auxscopefile="${sharedir}/auxscope"
       toolfile="${sharedir}/tool-plugin"
       versionfile="${sharedir}/version"
@@ -342,10 +342,10 @@ env::init::main()
       fi
       redirect_exekutor "${toolfile}" printf "%s\n" "${text}" || exit 1
 
-      mkdir_if_missing "${sharedir}/libexec"
-      log_verbose "Installing \"${completionfile}\""
-      exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
-                   ${completionfile}
+      # mkdir_if_missing "${sharedir}/libexec"
+      # log_verbose "Installing \"${completionfile}\""
+      # exekutor cp "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-bash-completion.sh" \
+      #              ${completionfile}
 
       log_verbose "Creating \"${stylefile}\""
       redirect_exekutor "${stylefile}" printf "%s\n" "${_style}" || exit 1

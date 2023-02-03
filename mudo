@@ -76,7 +76,21 @@ fi
 #    MULLE_ENV_ETC_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/etc/env'
 #    MULLE_ENV_SHARE_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/share/env'
 #
-eval "`mulle-env --search-as-is mulle-tool-env env`" || exit 1
+# If this doesn't work we are in a "none" environment, presumably
+if ! MULLE_ENV="${MULLE_ENV:-"`command -v mulle-env`"}"
+then
+   echo "error: mulle-env not in PATH ($PATH)
+Tip: mudo can not be used from a \"none\" environment." >&2
+   exit 1
+fi
+
+eval "`"${MULLE_ENV}" --search-as-is mulle-tool-env env`"
+
+if [ -z "${MULLE_ENV_VAR_DIR}" ]
+then
+   echo "error: mulle-env failed to provide MULLE_ENV_VAR_DIR" >&2
+   exit 1
+fi
 
 filename="${MULLE_ENV_VAR_DIR}/old-environment"
 environment="`cat "${filename}" 2> /dev/null`"
@@ -89,13 +103,19 @@ fi
 #
 # does not work with builtins like `command -v ps`
 #
-
-set -- exec env -i - "${environment}" "$@"
+OLDIFS="${IFS}"
+IFS="
+"
+for line in ${environment}
+do
+   set -- "${line}" "$@"
+done
+IFS="${OLDIFS}"
 
 if [ -z "${MULLE_OLDPATH}" ]
 then
-   "$@"
+   exec env -i - "$@"
 else
-   PATH="${MULLE_OLDPATH}" "$@"
+   PATH="${MULLE_OLDPATH}" exec env -i - "$@"
 fi
 

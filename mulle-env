@@ -604,7 +604,7 @@ env::check_version()
          exit 1
       ;;
 
-      0\.*|1\.*|2\.*)
+      [012]\.*)
          # incompatible change of -c execution, otherwise try to support
          # and make this a warning
          fail "This environment with version ${version} is too old for
@@ -614,7 +614,7 @@ ${C_RESET_BOLD}   cd \"${MULLE_VIRTUAL_ROOT}\"
 ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} upgrade"
       ;;
 
-      3\.*|4\.*)
+      [345]\.*)
       ;;
 
       *)
@@ -1034,7 +1034,7 @@ env::print_env()
 
          if [ ! -z "${value}" ]
          then
-            printf "${sep}%s=%q" "${key}" "${value}"
+            printf "${sep}%s=%s\n" "${key}" "${value}"
             sep=" "
          fi
       fi
@@ -1263,7 +1263,7 @@ undefined (old mulle-bashfunctions)"
    #
    log_fluff "Saving current environment into ${vardir}/old-environment"
 
-   redirect_exekutor "${vardir}/old-environment" env::print_env
+   redirect_exekutor "${vardir}/old-environment" env
 
    local mode
 

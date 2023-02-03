@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_STYLE_SH="included"
+MULLE_ENV_STYLE_SH='included'
 
 
 # Internally:
@@ -63,9 +63,9 @@ Usage:
    is a pair of tool-style/env-style.
 
 Tool-style: (built-in only, see all with \`mulle-sde style --toolstyles\`)
-   none          : a fairly empty virtual environment
-   minimal       : a minimal set of tools (like cd, ls)
-   developer     : a common set of tools (like cd, ls, awk, man) (default)
+   none          : a fairly empty virtual environment, fairly unusable
+   minimal       : a minimal set of tools (like mudo, cd, ls)
+   developer     : a common set of tools (like mudo, cd, awk, sort) (default)
 
 Env-style:
    tight         : all environment variables must be user defined

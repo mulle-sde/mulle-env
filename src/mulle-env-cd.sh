@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_CD_SH="included"
+MULLE_ENV_CD_SH='included'
 
 
 #
@@ -97,7 +97,7 @@ function cd()
          ;;
 
          -w)
-            wildok="YES"
+            wildok='YES'
             shift
          ;;
       esac

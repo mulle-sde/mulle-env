@@ -121,27 +121,7 @@ env::plugin::developer::setup_tools()
 {
    log_entry "env::plugin::developer::setup_tools" "$@"
 
-   local bindir="$1"
-   local libexecdir="$2"
-
    env::plugin::minimal::setup_tools "$@"
-
-   #
-   # Since the PATH is restricted, we need a basic set of tools
-   # in directory/bin to get things going
-   # (We'd also need in PATH: git, tar, sed, tr, gzip, zip. But that's not
-   # checked yet)
-   #
-   (
-      env::tool::link_mulle_tool "mulle-bash"          "${bindir}" \
-      &&
-      env::tool::link_mulle_tool "mulle-bashfunctions" "${bindir}"  \
-                                                       "${libexecdir}" \
-                                                       "library" \
-      &&
-      env::tool::link_mulle_tool "mulle-env"           "${bindir}" \
-                                                       "${libexecdir}"
-   ) || return 1
 }
 
 

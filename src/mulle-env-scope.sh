@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_SCOPE_SH="included"
+MULLE_ENV_SCOPE_SH='included'
 
 
 # Internally:
@@ -486,7 +486,7 @@ env::scope::r_scopeprefix_for_scopeid()
 
    local scopes
 
-   env::scope::r_get_scopes "YES" "YES" "YES" "YES" "YES"
+   env::scope::r_get_scopes 'YES' 'YES' 'YES' 'YES' 'YES'
    scopes="${RVAL}"
    RVAL=""
 
@@ -690,7 +690,7 @@ env::scope::env_validate_scope_write()
    local scopes
    local line
 
-   env::scope::r_get_scopes "YES" "YES" "YES" "YES" "YES"
+   env::scope::r_get_scopes 'YES' 'YES' 'YES' 'YES' 'YES'
    scopes="${RVAL}"
 
    .foreachline line in ${scopes}
@@ -1224,11 +1224,11 @@ env::scope::remove()
    case "${scope}" in
       's:'*)
          filename="${MULLE_ENV_SHARE_DIR}/auxscope"
-         protect="YES"
+         protect='YES'
       ;;
       'e:'*)
          filename="${MULLE_ENV_ETC_DIR}/auxscope"
-         protect="NO"
+         protect='NO'
       ;;
 
       *)

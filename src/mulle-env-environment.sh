@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_ENVIRONMENT_SH="included"
+MULLE_ENV_ENVIRONMENT_SH='included'
 
 
 env::environment::usage()
@@ -139,8 +139,10 @@ Example:
    ${MULLE_USAGE_NAME} environment --global set FOO "A value"
 
 Options:
-   --append           : add value to existing values (using separator :)
-   --prepend          : prepent value to existing values (using separator :)
+   --append           : add value to existing values (using separator ':'')
+   --concat           : add value to existing value with space
+   --concat0          : add value to existing value without separator
+   --prepend          : prepent value to existing values (using separator ':')
    --separator <sep>  : sepecify custom separator for --append
 EOF
    exit 1
@@ -796,6 +798,14 @@ env::environment::set_main()
             OPTION_COMMENT_OUT_EMPTY='YES'
          ;;
 
+         --concat)
+            OPTION_ADD='CONCAT'
+         ;;
+
+         --concat0)
+            OPTION_ADD='CONCAT0'
+         ;;
+
          -p|--prepend)
             OPTION_ADD='PREPEND'
          ;;
@@ -847,38 +857,55 @@ env::environment::set_main()
 
    if [ "${OPTION_ADD}" != 'NO' ]
    then
+
       local prev
-      local oldvalue
+
 
       prev="`env::environment::get_main "${scopename}" "${key}"`"
       log_debug "Previous value is \"${prev}\""
 
-      case "${value}" in
-         *${OPTION_SEPARATOR}*)
-            fail "${value} contains '${OPTION_SEPARATOR}', which is not possible for addition \
-as this is used to concatenate values.
+      case "${OPTION_ADD}" in
+         CONCAT)
+            r_concat "${prev}" "${value}"
+            value="${RVAL}"
+         ;;
+
+         CONCAT0)
+            value="${prev}${value}"
+         ;;
+
+         *)
+            case "${value}" in
+               *${OPTION_SEPARATOR}*)
+                  fail "${value} contains '${OPTION_SEPARATOR}', which is not \
+possible for addition as this is used to concatenate values.
 ${C_INFO}Tip: use multiple addition statements."
+               ;;
+            esac
+
+            local oldvalue
+
+            IFS="${OPTION_SEPARATOR}"
+            .for oldvalue in ${prev}
+            .do
+               if [ "${oldvalue}" = "${value}" ]
+               then
+                  log_fluff "\"${value}\" already set"
+                  return 0
+               fi
+            .done
+            IFS="${DEFAULT_IFS}"
+
+            if [ "${OPTION_ADD}" = 'PREPEND' ]
+            then
+               r_concat "${value}" "${prev}" "${OPTION_SEPARATOR}"
+               value="${RVAL}"
+            else
+               r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
+               value="${RVAL}"
+            fi
          ;;
       esac
-
-      IFS="${OPTION_SEPARATOR}"
-      .for oldvalue in ${prev}
-      .do
-         if [ "${oldvalue}" = "${value}" ]
-         then
-            log_fluff "\"${value}\" already set"
-            return 0
-         fi
-      .done
-
-      if [ "${OPTION_ADD}" = 'APPEND' ]
-      then
-         r_concat "${prev}" "${value}" "${OPTION_SEPARATOR}"
-         value="${RVAL}"
-      else
-         r_concat "${value}" "${prev}" "${OPTION_SEPARATOR}"
-         value="${RVAL}"
-      fi
    fi
 
    local filename
@@ -1747,7 +1774,7 @@ env::environment::list_main()
       ;;
 
       *)
-         env::scope::r_get_scopes "YES" "YES" "YES" "YES" "YES"
+         env::scope::r_get_scopes 'YES' 'YES' 'YES' 'YES' 'YES'
          scopes="${RVAL}"
 
          local i

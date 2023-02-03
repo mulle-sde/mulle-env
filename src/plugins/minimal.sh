@@ -74,6 +74,7 @@ env::plugin::minimal::print_tools()
 # f.e. is not on dragonfly. tty is in there for mulle-make
 #
    MINIMAL_BIN_BINARIES="\
+bash;optional
 cat;required
 chgrp;required
 chmod;required
@@ -94,9 +95,11 @@ mkdir;required
 mknod
 more;required
 mount
+mudo;required
 mv;required
 ps
 pwd;required
+readlink;required
 rm;required
 rmdir;required
 sed;required
@@ -107,7 +110,8 @@ su
 sync
 true;required
 umount
-uname;required"
+uname;required
+zsh;optional"
 
    printf "%s\n" "${MINIMAL_BIN_BINARIES}"
 }
@@ -119,9 +123,19 @@ env::plugin::minimal::setup_tools()
 
    env::plugin::none::setup_tools "$@"
 
-   # there are no "special" tools to do here
-   # minimal is still an environment, where you don't do mulle stuff
-   # so no mulle-env or mulle-bashfunctions here
+   #
+   # We need all this for mudo to work
+   #
+   (
+      env::tool::link_mulle_tool "mulle-bash"          "${bindir}" \
+      &&
+      env::tool::link_mulle_tool "mulle-bashfunctions" "${bindir}"  \
+                                                       "${libexecdir}" \
+      &&
+      env::tool::link_mulle_tool "mulle-env"           "${bindir}" \
+                                                       "${libexecdir}" \
+                                                       "library"
+   ) || return 1
 }
 
 

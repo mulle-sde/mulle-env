@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_UNVEIL_SH="included"
+MULLE_ENV_UNVEIL_SH='included'
 
 
 #
@@ -204,14 +204,14 @@ env::unveil::emit()
    .done
 
 #   env::unveil::emit_directory "${MULLE_ENV_HOST_VAR_DIR}/bin"
-   env::unveil::emit_directory "${MULLE_ENV_HOST_VAR_DIR}/lib"     ""  "NO"
-   env::unveil::emit_directory "${MULLE_ENV_HOST_VAR_DIR}/share"   "r" "NO"
-   env::unveil::emit_directory "${MULLE_ENV_HOST_VAR_DIR}/libexec" ""  "YES"
+   env::unveil::emit_directory "${MULLE_ENV_HOST_VAR_DIR}/lib"     ""  'NO'
+   env::unveil::emit_directory "${MULLE_ENV_HOST_VAR_DIR}/share"   "r" 'NO'
+   env::unveil::emit_directory "${MULLE_ENV_HOST_VAR_DIR}/libexec" ""  'YES'
 
 #   env::unveil::emit_directory "${MULLE_ENV_VAR_DIR}/bin"
-   env::unveil::emit_directory "${MULLE_ENV_VAR_DIR}/lib"     ""  "NO"
-   env::unveil::emit_directory "${MULLE_ENV_VAR_DIR}/share"   "r" "NO"
-   env::unveil::emit_directory "${MULLE_ENV_VAR_DIR}/libexec" ""  "YES"
+   env::unveil::emit_directory "${MULLE_ENV_VAR_DIR}/lib"     ""  'NO'
+   env::unveil::emit_directory "${MULLE_ENV_VAR_DIR}/share"   "r" 'NO'
+   env::unveil::emit_directory "${MULLE_ENV_VAR_DIR}/libexec" ""  'YES'
 }
 
 

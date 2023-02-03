@@ -32,17 +32,19 @@ main()
    r_make_tmp_directory || exit 1
    directory="${RVAL:-/tmp/exekutor}"
 
-   cd "${directory}" || exit 1
+   exekutor cd "${directory}" || exit 1
 
-   run_mulle_env -s init --style none/tight
+   run_mulle_env -s init --style minimal/tight
+   run_mulle_env -ld -lx tool compile
+   run_mulle_env -ld -lx tool link
 
-   value="`run_mulle_env -s tool list --no-color | grep -E '^mudo$'`"
-   [ "${value}" != 'mudo' ] && fail "#1: not mudo is wrong here"
+   value="`run_mulle_env -s tool list --no-color | grep -E '^mudo;'`"
+   [ "${value}" != 'mudo;required' ] && fail "#1: not mudo;required is wrong here ($value)"
 
    log_verbose "----- #1 PASSED -----"
 
    value="`run_mulle_env -s tool get mudo`"
-   [ "${value}" != 'mudo' ] && fail "#2: no mudo after get is wrong"
+   [ "${value}" != 'mudo' ] && fail "#2: no mudo after get is wrong ($value)"
 
    log_verbose "----- #2 PASSED -----"
 
@@ -66,19 +68,19 @@ main()
 
    log_verbose "----- #4 PASSED -----"
 
-   if ! run_mulle_env tool --os foobar add ls
+   if ! run_mulle_env tool --os foobar add grep
    then
       fail "#5: Unexpected add failure"
    fi
 
    value="`run_mulle_env -s tool list --no-color os`"
-   [ "${value}" = "foobar"  ] && fail "#5: foobar not known"
+   [ "${value}" = "foobar"  ] && fail "#5: foobar not known ($value)"
 
-   value="`run_mulle_env -s tool get ls`"
-   [ ! -z "${value}"  ] && fail "#5: ls only available in foobar"
+   value="`run_mulle_env -s tool get grep`"
+   [ ! -z "${value}"  ] && fail "#5: grep only available in foobar ($value)"
 
-   value="`run_mulle_env -s tool --os foobar get ls`"
-   [ "${value}" != "ls" ] && fail "#5: ls not available in foobar"
+   value="`run_mulle_env -s tool --os foobar get grep`"
+   [ "${value}" != "grep" ] && fail "#5: grep not available in foobar ($value)"
 
    run_mulle_env -s tool compile
 
@@ -86,12 +88,49 @@ main()
 
    result="`cat "${vardir}/tool"`"
    expect="awk
-mudo"
-   [ "${expect}" != "${result}" ] && fail "#5: result ${result} did not match ${expect}"
+bash
+cat;required
+chgrp;required
+chmod;required
+chown;required
+cp;required
+date;required
+dd
+df
+dmesg
+echo;required
+false;required
+hostname
+kill;required
+ln;required
+login
+ls;required
+mkdir;required
+mknod
+more;required
+mount
+mudo;required
+mv;required
+ps
+pwd;required
+readlink;required
+rmdir;required
+rm;required
+sed;required
+sh;required
+stty
+su
+sync
+true;required
+tty
+umount
+uname;required
+zsh"
+   [ "${expect}" != "${result}" ] && fail "#5: result \"${result}\" did not match \"${expect}\""
 
    log_verbose "----- #5 PASSED -----"
 
-   [ -x "${vardir}/bin/ls" ] && fail "#6: ls already in bin"
+   [ -x "${vardir}/bin/grep" ] && fail "#6: grep already in bin"
 
    if ! run_mulle_env -s tool link
    then
@@ -99,13 +138,13 @@ mudo"
    fi
 
    [ ! -x "${vardir}/bin/awk" ] && fail "#6: awk not in bin"
-   [ -x "${vardir}/bin/ls" ] && fail "#6: ls in bin, but should not be"
+   [ -x "${vardir}/bin/grep" ] && fail "#6: grep in bin, but should not be"
 
    log_verbose "----- #7 PASSED -----"
 
    if [ -z "`command -v ishouldnotexist`" ]
    then
-      if ! run_mulle_env tool --current add ishouldnotexist
+      if ! run_mulle_env tool --current add --required ishouldnotexist
       then
          fail "#7: Unexpected add failure"
       fi

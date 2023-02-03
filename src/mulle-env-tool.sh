@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_ENV_TOOL_SH="included"
+MULLE_ENV_TOOL_SH='included'
 
 #
 # This needs a complete rewrite:
@@ -473,19 +473,19 @@ env::tool::add()
          ;;
 
          -o|--optional|--no-required)
-            OPTION_OPTIONALITY="YES"
+            OPTION_OPTIONALITY='YES'
          ;;
 
          --if-missing)
-            OPTION_IF_MISSING="YES"
+            OPTION_IF_MISSING='YES'
          ;;
 
          --csv)
-            OPTION_CSV="YES"
+            OPTION_CSV='YES'
          ;;
 
          --required|--no-optional)
-            OPTION_OPTIONALITY="NO"
+            OPTION_OPTIONALITY='NO'
          ;;
 
          --remove)
@@ -493,11 +493,11 @@ env::tool::add()
          ;;
 
          --compile-link)
-            OPTION_COMPILE_LINK="YES"
+            OPTION_COMPILE_LINK='YES'
          ;;
 
          --no-compile-link)
-            OPTION_COMPILE_LINK="NO"
+            OPTION_COMPILE_LINK='NO'
          ;;
 
          -*)
@@ -737,6 +737,11 @@ env::tool::compile()
                then
                   result="`grep -F -v -x "${name}" <<< "${result}"`"
                fi
+
+               if find_line "${result}" "${name};required"
+               then
+                  result="`grep -F -v -x "${name};required" <<< "${result}"`"
+               fi
             ;;
 
             *';required')
@@ -745,7 +750,7 @@ env::tool::compile()
             ;;
 
             *)
-               # silently remove any ; crap
+               # silently remove any ; tail
                r_add_line "${result}" "${i%;*}"
                result="${RVAL}"
             ;;
@@ -818,11 +823,17 @@ env::tool::get()
    local scope="$1" ; shift
    local os="$1" ; shift
 
+   local OPTION_CSV='NO'
+
    while :
    do
       case "$1" in
          -h*|--help|help)
             env::tool::get_usage
+         ;;
+
+         --csv)
+            OPTION_CSV='YES'
          ;;
 
          -*)
@@ -850,7 +861,20 @@ env::tool::get()
       return 1
    fi
 
-   printf "%s\n" "${RVAL}"
+   if [ "${OPTION_CSV}" = 'YES' ]
+   then
+      case "${RVAL}" in
+         *\;*)
+            printf "%s\n" "${RVAL}"
+         ;;
+
+         *)
+            printf "%s;optional\n" "${RVAL}"
+         ;;
+      esac
+   else
+      printf "%s\n" "${RVAL%%;*}"
+   fi
 }
 
 
@@ -1106,11 +1130,11 @@ env::tool::doctor()
    local any
 
    rval=0
-   any="NO"
+   any='NO'
 
    .foreachfile symlink in "${bindir}"/*
    .do
-      any="YES"
+      any='YES'
       #https://stackoverflow.com/questions/8049132/how-can-i-detect-whether-a-symlink-is-broken-in-bash
       if [ ! -e "${symlink}" ]
       then
@@ -1276,9 +1300,9 @@ env::tool::list()
    [ -z "${MULLE_ENV_ETC_DIR}" ]   && _internal_fail "MULLE_ENV_ETC_DIR not defined"
    [ -z "${MULLE_ENV_SHARE_DIR}" ] && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
 
-   local OPTION_COLOR="YES"
-   local OPTION_CSV="YES"
-   local OPTION_BUILTIN="YES"
+   local OPTION_COLOR='YES'
+   local OPTION_CSV='YES'
+   local OPTION_BUILTIN='YES'
 
    local os="$1" ; shift
 

@@ -292,9 +292,7 @@ env::plugin::none::print_auxscope()
 
 env::plugin::none::setup_tools()
 {
-   log_entry "env::plugin::none::setup_tools" "$@"
-
-   # there are no "special" tools to do here
+   log_entry "env::plugin::developer::setup_tools" "$@"
 }
 
 
@@ -302,12 +300,5 @@ env::plugin::none::setup_tools()
 env::plugin::none::print_tools()
 {
    log_entry "env::plugin::none::print_tools" "$@"
-
-   echo "mudo"
-
-   if [ ! -z "${OPTION_OTHER_TOOLS}" ]
-   then
-      printf "%s\n" "${OPTION_OTHER_TOOLS}"
-   fi
 }
 
