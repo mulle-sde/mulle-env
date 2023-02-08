@@ -316,7 +316,7 @@ env::setup_environment()
       ;;
 
       *)
-         MULLE_ENV_HOST_VAR_DIR="${MULLE_ENV_HOST_VAR_DIR:-"${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/env"}"
+         MULLE_ENV_HOST_VAR_DIR="${MULLE_ENV_HOST_VAR_DIR:-"${physicaldir}/.mulle/var/${MULLE_HOSTNAME}/${MULLE_USERNAME}/env"}"
          MULLE_ENV_VAR_DIR="${MULLE_ENV_VAR_DIR:-"${physicaldir}/.mulle/var/.env"}"
       ;;
    esac
@@ -357,7 +357,7 @@ env::default_setup_environment()
    then
       if [ "${failonerror}" = 'YES' -a "${FLAG_OUTSIDE_ENV}" != 'YES' ]
       then
-         fail "No suitable environment found for ${directory} (init it first)"
+         fail "No suitable environment found for \"${directory#${MULLE_USER_PWD}#}\" (init it first)"
       fi
       return 1
    fi
@@ -366,7 +366,7 @@ env::default_setup_environment()
 
    directory="${RVAL}"
 
-   log_fluff "Environment directory determined to be \"${directory}\""
+   log_fluff "Environment directory determined to be \"${directory#${MULLE_USER_PWD}#}\""
    env::setup_environment "${directory}" "${setroot}"
 }
 
@@ -389,7 +389,7 @@ env::protect_dir_if_exists()
                ;;
 
                *)
-                  _internal_fail "Could not protect \"${directory}\""
+                  _internal_fail "Could not protect \"${directory#${MULLE_USER_PWD}#}\""
                ;;
             esac
          fi
@@ -416,7 +416,7 @@ env::unprotect_dir_if_exists()
                ;;
 
                *)
-                  _internal_fail "Could not unprotect \"${directory}\""
+                  _internal_fail "Could not unprotect \"${directory#${MULLE_USER_PWD}#}\""
                ;;
             esac
          fi
@@ -1537,7 +1537,7 @@ env::reinit()
       ;;
 
       *)
-         envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/env"
+         envdirectory="${directory}/.mulle/var/${MULLE_HOSTNAME}/${MULLE_USERNAME}/env"
       ;;
    esac
 

@@ -35,8 +35,8 @@ main()
    exekutor cd "${directory}" || exit 1
 
    run_mulle_env -s init --style minimal/tight
-   run_mulle_env -ld -lx tool compile
-   run_mulle_env -ld -lx tool link
+   run_mulle_env tool compile
+   run_mulle_env tool link
 
    value="`run_mulle_env -s tool list --no-color | grep -E '^mudo;'`"
    [ "${value}" != 'mudo;required' ] && fail "#1: not mudo;required is wrong here ($value)"
