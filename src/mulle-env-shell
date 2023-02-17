@@ -193,6 +193,7 @@ emit_initfile()
       echo "set +x"
    fi
    echo "unset TRACE"
+#   echo "unset ENV"  # unsure
 
    if [ "${OPTION_KEEP_TMP}" = 'NO' ]
    then

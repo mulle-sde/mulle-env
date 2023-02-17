@@ -1,0 +1,9 @@
+### Manage tools
+
+Tools are your standard unix tools, executables like `cc`, `ls` or `make`.
+With the PATH restrictions enforced my mulle-env, you can prune the number
+of available tools to the subshell.
+
+To list all tools use `mulle-env tool list`. You can add a tool with
+`mulle-env tool add git` and remove it with `mulle-env tool remove git`.
+

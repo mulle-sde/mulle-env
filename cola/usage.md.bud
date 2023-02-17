@@ -1,0 +1,5 @@
+{% includes "init.md.bud" %}
+{% includes "environment.md.bud" %}
+{% includes "tool.md.bud" %}
+{% includes "style.md.bud" %}
+

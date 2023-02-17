@@ -1,0 +1,7 @@
+| Executable          | Description
+|---------------------|--------------------------------
+| `mulle-env`         | Virtual environment sub-shell
+| `mudo`              | Run a command with the unrestricted PATH/environment
+| `mulle-env-reload`  | Refresh virtual environment variables
+
+

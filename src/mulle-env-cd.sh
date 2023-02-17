@@ -100,6 +100,12 @@ function cd()
             wildok='YES'
             shift
          ;;
+
+         -)
+            log_warning "cd - can fail in mulle-env"
+            builtin cd "$1"
+            return $?
+         ;;
       esac
       break
    done
@@ -129,6 +135,10 @@ function cd()
       #
    fi
 
+   local nextstyle
+
+   nextstyle="`mulle-env -s -d "${directory}" style get 2> /dev/null`"
+
    #
    # warn once when stepping out
    #
@@ -140,10 +150,10 @@ function cd()
    C_RED="\033[0;31m"
    C_BOLD="\033[1m"
 
-   if [ ! -d "${directory}/.mulle/share/env" ]
+   if [ -z "${nextstyle}" ]
    then
       printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Directory \"${directory}\" is \
-outside of the virtual environment. Leave the shell or override with:
+outside of a virtual environment. Leave the shell or override with:
    ${C_RESET}${C_BOLD}cd -f $1"
       return 1
    fi
@@ -152,9 +162,6 @@ outside of the virtual environment. Leave the shell or override with:
    # We inherit environment variables from our environment if the destination
    # style is "wild",which can be catastrophic.
    #
-   local nextstyle
-
-   nextstyle="`mulle-env style "${directory}"`"
    case "${nextstyle}" in
       "")
          printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Can not figure out \

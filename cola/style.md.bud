@@ -1,0 +1,26 @@
+### Styles
+
+A style is mix of a tool-style and an env-style of the form
+`<tool>/<env>`. The env-style determines the filtering of the environment
+variables. The tool-style influences the content of the `PATH` variable.
+
+> Toolstyles can be augmented with plugins. See `mulle-env toolstyles` for
+> what's available.
+
+| Tool Style  | Descripton
+|-------------|--------------------------
+| `none`      | No default commands available.
+| `minimal`   | PATH with a minimal `/bin` like set of tools like `ls` or `chmod`
+| `developer` | PATH with a a set of common unix tools like `awk` or `man` in addition to `minimal`
+| `mulle`     | *if mulle-sde is installed this tool style is also available*
+
+
+| Environment Style | Description
+|-------------------|--------------------------
+| `tight`           | All environment variables must be defined via `mulle-env` (academic needs only)
+| `restrict`        | Inherit some environment environment variables (e.g. SSH_TTY)
+| `relax`           | Like `restrict` plus `PATH` adds all `/bin` and `/usr/bin` tools
+| `inherit`         | The environment is restricted but tool style is ignored and the original PATH is unchanged.
+| `wild`            | The user environment remains unchanged and the tool style is ignored.
+
+

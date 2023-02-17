@@ -1,0 +1,23 @@
+**mulle-env** provides a virtual environment as an interactive bash shell.
+Developing inside the virtual environment protects you from the following
+common mistakes:
+
+* inadvertant reliance on non-standard tools
+* reproducability problems due to personal or non-standard environment variables
+
+With **mulle-env** you can easily manage
+
+* the command line tools available in the virtual environment
+* additional environment variables with multiple scopes, like on a per-user or per-host basis.
+
+You can turn any directory into a self contained virtual environment.
+`mulle-env init` will create a `.mulle` folder to hold all permanent and
+temporary data. Remove that folder and the virtual environment is gone.
+
+Another benefit of the virtual environment is a per-project command shell
+history.
+
+
+
+
+

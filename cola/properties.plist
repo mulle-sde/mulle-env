@@ -1,0 +1,12 @@
+{
+   project =
+   {
+      description="🌳 Virtual environment for C and Objective-C";
+      domain="github";
+      name="mulle-env";
+      username="mulle-sde";
+      reponame="mulle-env";
+      homepage="https://github.com/mulle-sde/mulle-env";
+      license="BSD-3-Clause"
+   };
+}

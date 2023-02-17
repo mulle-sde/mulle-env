@@ -178,6 +178,16 @@ env::init::main()
       return 4
    fi
 
+   if [ -d "${sharedir}.old" ]
+   then
+      log_warning "An previous upgrade didn't finish. Restoring old configuration and go on from there"
+      if [ -d "${sharedir}" ]
+      then
+         exekutor mv "${sharedir}" "${sharedir}.broken"
+      fi
+      exekutor mv "${sharedir}.old" "${sharedir}"
+   fi
+
    local _style
    local _flavor
 
@@ -229,6 +239,7 @@ env::init::main()
          fail "Unknown style \"${_style}\""
       ;;
    esac
+
    log_verbose "Init style is \"${_style}\""
 
    # chmoding the share directory is bad for git
@@ -269,18 +280,14 @@ env::init::main()
 
       stylefile="${sharedir}/style"
 
-
+      rmdir_safer "${sharedir}.old"
+      mv "${sharedir}" "${sharedir}.old"
       mkdir_if_missing "${sharedir}"
 
       # indicate a fresh init by removing a possibly old versionfile
       # unprotect sharedir if already present and protected
       exekutor chmod -R +wX "${sharedir}" || exit 1
 
-      remove_file_if_present "${versionfile}.old"
-      if [ -f "${versionfile}" ]
-      then
-         exekutor mv "${versionfile}" "${versionfile}.old" || exit 1
-      fi
 
       log_verbose "Creating \"${envfile}\""
 
@@ -388,6 +395,8 @@ EOF
       # we create this last, if its present than the init ran through
       log_verbose "Creating \"${versionfile}\""
       redirect_exekutor "${versionfile}" printf "%s\n" "${MULLE_EXECUTABLE_VERSION}" || exit 1
+
+      rmdir_safer "${sharedir}.old"
    )
    rval=$?
 

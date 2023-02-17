@@ -1,0 +1,24 @@
+## Packages
+
+OS      | Command
+--------|------------------------------------
+macos   | `brew install mulle-kybernetik/software/mulle-env`
+debian  | `sudo apt-get -y install mulle-env` (but see below)
+ubuntu  | same as debian
+
+
+Otherwise see [mulle-sde-developer](//github.com/mulle-sde/mulle-sde-developer)
+how to install mulle-sde, which will also install **mulle-env**.
+
+
+#### Debian Mulle kybernetiK repository
+
+For apt installation you need to add the Mulle kybernetiK debian repository
+first:
+
+```
+wget -O - "https://www.mulle-kybernetik.com/dists/debian-admin-pub.asc" | sudo apt-key add -
+echo "deb [arch=all] http://www.mulle-kybernetik.com `lsb_release -c -s` main" | sudo tee "/etc/apt/sources.list.d/mulle-kybernetik.com-main.list" > /dev/null
+sudo apt-get update
+```
+

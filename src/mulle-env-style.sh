@@ -130,6 +130,7 @@ Usage:
    ${MULLE_USAGE_NAME} style get
 
    List currently set style.
+
 EOF
    exit 1
 }

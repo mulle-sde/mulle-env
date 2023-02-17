@@ -32,6 +32,24 @@
 MULLE_ENV_ENVIRONMENT_SH='included'
 
 
+env::environment::print_options()
+{
+   local space="$1"
+
+   cat <<EOF
+Options:
+   --host <name>  ${space}: narrow scope to host with name
+   --os <name>    ${space}: narrow scope to operating system
+   --scope <name> ${space}: use an arbitrarily named scope
+   --user <name>  ${space}: narrow scope to user with name
+   --this-host    ${space}: narrow scope to this host ($MULLE_HOSTNAME)
+   --this-os      ${space}: narrow scope to this operating system ($MULLE_UNAME)
+   --this-user    ${space}: user with name ($MULLE_USERNAME)
+   --[a-z]*       ${space}: shortcut for --scope <name> (e.g. --global)
+EOF
+}
+
+
 env::environment::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -61,16 +79,10 @@ Example:
    Clear a user set environment variable:
       ${MULLE_USAGE_NAME} environment --user set MULLE_FETCH_SEARCH_PATH ""
 
-Options:
-   -h                : show this usage
-   --host <name>     : narrow scope to host with name
-   --os <name>       : narrow scope to operating system
-   --scope <name>    : use an arbitrarily named scope
-   --user <name>     : narrow scope to user with name
-   --this-host       : narrow scope to this host ($MULLE_HOSTNAME)
-   --this-os         : narrow scope to this operating system ($MULLE_UNAME)
-   --this-user       : user with name ($MULLE_USERNAME)
-   --[a-z]*          : shortcut for --scope <name> (e.g. --global)
+EOF
+   env::environment::print_options >&2
+
+   cat <<EOF >&2
 
 Commands:
 EOF
@@ -92,7 +104,7 @@ env::environment::get_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment get [options] <key>
+   ${MULLE_USAGE_NAME} environment [options] get [cmd-options] <key>
 
    Get the value of an environment variable. You can check the return value
    to determine if a key exists and is empty (0), or absence of the key (1).
@@ -108,10 +120,16 @@ Usage:
 
       mulle-env -c env | sed -n 's/^MULLE_FETCH_SEARCH_PATH=\(.*\)/\1/p'
 
-Options:
-   --lenient     : return 0 on not found instead of 4
-   --output-eval : resolve value with other environment variables. This will
-                   not evaluate values from other scopes though
+EOF
+
+   env::environment::print_options >&2
+
+   cat <<EOF >&2
+
+Cmd Options:
+   --lenient      : return 0 on not found instead of 4
+   --output-eval  : resolve value with other environment variables. This will
+                    not evaluate values from other scopes though
 
 EOF
    exit 1
@@ -124,7 +142,7 @@ env::environment::set_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment set [options] <key> [value] [comment]
+   ${MULLE_USAGE_NAME} env [options] set [cmd-options] <key> [value] [comment]
 
    Set the value of an environment variable. By default it will save into
    the user scope. Set the desired scope with 'environment' options.
@@ -138,12 +156,19 @@ Usage:
 Example:
    ${MULLE_USAGE_NAME} environment --global set FOO "A value"
 
-Options:
-   --append           : add value to existing values (using separator ':'')
-   --concat           : add value to existing value with space
-   --concat0          : add value to existing value without separator
-   --prepend          : prepent value to existing values (using separator ':')
-   --separator <sep>  : sepecify custom separator for --append
+EOF
+
+   env::environment::print_options "   " >&2
+
+   cat <<EOF >&2
+
+Cmd Options:
+   --append          : add value to existing values (using separator ':'')
+   --concat          : add value to existing value with space
+   --concat0         : add value to existing value without separator
+   --prepend         : prepent value to existing values (using separator ':')
+   --separator <sep> : sepecify custom separator for --append
+
 EOF
    exit 1
 }
@@ -155,10 +180,10 @@ env::environment::remove_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment remove <key>
+   ${MULLE_USAGE_NAME} environment [options] remove <key>
 
    Remove an environment variable. By default it will remove the variable
-   from all user scopes. Set the desired scope with 'environment' options.
+   from all user scopes. Set the desired scope with options.
 
    Use the alias \`mulle-env-reload\` to update your interactive shell
    after edits.
@@ -168,7 +193,13 @@ Usage:
 
 Example:
       ${MULLE_USAGE_NAME} environment remove FOO
+
 EOF
+
+   env::environment::print_options >&2
+
+   echo
+
    exit 1
 }
 
@@ -179,19 +210,27 @@ env::environment::list_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment list [options]
+   ${MULLE_USAGE_NAME} environment [options] list [cmd-options]
 
-   List environment variables. If you specified no scope, you will get
-   a combined listing of all scopes. Specify the scope using the
-   environment options. See \`${MULLE_USAGE_NAME} environment scope help\` for
-   more information about scopes and the files used by them.
+   List environment variables. If you specified no scope (before "list"),
+   you will get a combined listing of all scopes. Specify the scope using the
+   options. See \`${MULLE_USAGE_NAME} environment scope help\` for information
+   about scopes and the files used by them.
 
 Example:
       mulle-env environment --scope merged list
 
-Options:
+EOF
+
+   env::environment::print_options "  " >&2
+
+   cat <<EOF >&2
+
+Cmd Options:
    --output-eval    : resolve values
    --output-command : emit as mulle-env commands
+   --sort           : sort output
+
 EOF
    exit 1
 }
@@ -203,7 +242,7 @@ env::environment::scope_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} environment scope [options]
+   ${MULLE_USAGE_NAME} environment scope [cmd-options]
 
    List scopes applicable to this session. The scopes vary by platform, host
    and user. Use \`${MULLE_USAGE_NAME} environment list\` to see the
@@ -221,7 +260,7 @@ Scopes:
    host-<name>        : host specific settings (user defined)
    user-<name>        : user specific settings (user defined)
 
-Options:
+Cmd Options:
    --all              : show also plugin, project and extension scopes
    --output-filename  : emit filename of the scope file
 
@@ -604,8 +643,6 @@ env::environment::safe_remove_file_if_present()
    return ${rval}
 }
 
-
-
 #
 # Set
 #
@@ -617,6 +654,7 @@ env::environment::_set()
    local key="$2"
    local value="$3"
    local comment="$4"
+   local safe="$5"
 
    #
    # put quotes around it
@@ -675,11 +713,17 @@ shell environment"
          return 4
       fi
 
-      # inplace sed creates a temporary file, so we need create to unprotect
-      # the parent
-      env::environment::safe_modify_file "${filename}" \
+      # if you get weird protection errors here, it might because of lljail
+      if [ "${safe}" = 'YES' ]
+      then
+         env::environment::safe_modify_file "${filename}" \
+            inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
+# \\1/" "${filename}"
+      else
+         exekutor chmod ug+w "${filename}"
          inplace_sed -e "s/^\\( *export *${sed_escaped_key}=.*\\)/\
 # \\1/" "${filename}"
+      fi
       return $?
    fi
 
@@ -692,9 +736,16 @@ shell environment"
       then
          # inplace sed creates a temporary file, so we need create to unprotect
          # the parent
-         env::environment::safe_modify_file "${filename}" \
+         if [ "${safe}" = 'YES' ]
+         then
+            env::environment::safe_modify_file "${filename}" \
+               inplace_sed -e "s/^[ #]*export *${sed_escaped_key}=.*/\
+export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
+         else
+            exekutor chmod ug+w "${filename}"
             inplace_sed -e "s/^[ #]*export *${sed_escaped_key}=.*/\
 export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
+         fi
          return $?
       fi
    fi
@@ -732,8 +783,14 @@ export ${key}=${value}
 
 "
    # unprotect if needed
-   env::environment::safe_create_or_write_file "${filename}" \
+   if [ "${safe}" = 'YES' ]
+   then
+      env::environment::safe_create_or_write_file "${filename}" \
+         redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
+   else
+      exekutor chmod ug+w "${filename}"
       redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
+   fi
    # protect if unprotected
 }
 
@@ -917,7 +974,7 @@ ${C_INFO}Tip: use multiple addition statements."
    if [ "${scopename}" = 'DEFAULT' ]
    then
       filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
-      env::environment::_set "${filename}" "${key}" "${value}" "${comment}" &&
+      env::environment::_set "${filename}" "${key}" "${value}" "${comment}" 'NO' &&
       env::environment::remove_from_global_subscopes "${key}"
       return $?
    fi
@@ -935,7 +992,14 @@ ${C_INFO}Tip: use multiple addition statements."
    fi
    filename="${RVAL}"
 
-   env::environment::_set "${filename}" "${key}" "${value}" "${comment}"
+   safe='YES'
+   case "${filename}" in
+      ${MULLE_ENV_ETC_DIR}/*)
+         safe='NO'
+      ;;
+   esac
+
+   env::environment::_set "${filename}" "${key}" "${value}" "${comment}" "${safe}"
    rval=$?
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
@@ -970,6 +1034,10 @@ env::environment::mset_main()
    while [ $# -ne 0 ]
    do
       case "$1" in
+         -h|--help)
+            fail "mset is an internal command, no help available"
+         ;;
+
          *+=\"*\"*)
             key="${1%%+=*}"
             value="${1#${key}+=}"
@@ -1355,6 +1423,50 @@ env::environment::_remove()
 }
 
 
+env::environment::clobber_main()
+{
+   log_entry "env::environment::clobber_main" "$@"
+
+   local scopename="$1"; shift
+
+   while :
+   do
+      case "$1" in
+         -*)
+            fail "clobber is an internal command, help is unavailable"
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ $# -ne 0 ] && fail "Superflous arguments \"$*\""
+
+   # shellcheck source=src/mulle-env-scope.sh
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+
+   local filename
+   local filenames
+
+   if [ "${scopename}" = "DEFAULT" ]
+   then
+      fail "won't clobber default scope"
+   fi
+
+   env::scope::r_get_existing_scope_files "${scopename}"
+   filenames="${RVAL}"
+
+   .foreachline filename in ${filenames}
+   .do
+      env::environment::safe_remove_file_if_present "${filename}"
+   .done
+}
+
+
 env::environment::remove_main()
 {
    log_entry "env::environment::remove_main" "$@"
@@ -1397,6 +1509,7 @@ env::environment::remove_main()
 
    local filename
    local filenames
+
    if [ "${scopename}" = "DEFAULT" ]
    then
       env::scope::r_get_existing_scope_files "--with-inferiors" "global"
@@ -1412,8 +1525,6 @@ env::environment::remove_main()
    rval=1
    .foreachline filename in ${filenames}
    .do
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
-
       if env::environment::_file_defines_key "${filename}" "${key}"
       then
          if env::environment::_remove "${filename}" "${key}"
@@ -1441,9 +1552,10 @@ env::environment::merge_awk_filter()
 
    awkcode='{ left=substr( $0, 1, index( $0, "=") - 1); \
 right=substr( $0, index( $0, "=") + 1); \
-value[ left] = right }; \
-END{for(i in value) \
-print i "=\"" substr(value[ i], 2, length(value[ i]) - 2) "\"" }'
+value[ left] = right; \
+keys[ keylen++] = left }; \
+END{ for( i in keys) \
+print keys[ i] "=\"" substr(value[ keys[ i]], 2, length(value[ keys[ i]]) - 2) "\"" }'
    rexekutor awk "${awkcode}"
 }
 
@@ -1454,7 +1566,7 @@ env::environment::merge_environment_text()
 
    rexekutor sed -n 's/^ *export *\(.*= *\".*\"\).*/\1/p' <<< "${1}" | \
    env::environment::merge_awk_filter | \
-   LC_ALL=C rexekutor sort
+   LC_ALL=C rexekutor ${MULLE_ENV_CONTENT_SORT}
 }
 
 
@@ -1464,7 +1576,7 @@ env::environment::merge_environment_file()
 
    rexekutor sed -n 's/^ *export *\(.*= *\".*\"\).*/\1/p' "${1}" | \
    env::environment::merge_awk_filter | \
-   LC_ALL=C rexekutor sort
+   LC_ALL=C rexekutor ${MULLE_ENV_CONTENT_SORT}
 }
 
 
@@ -1651,7 +1763,7 @@ env::environment::_eval_list()
 
    r_concat "${cmdline}" "${files}"
    cmdline="${RVAL}"
-   r_concat "${cmdline}" "env | LC_ALL=C sort '"
+   r_concat "${cmdline}" "env | LC_ALL=C ${MULLE_ENV_CONTENT_SORT} '"
    cmdline="${RVAL}"
 
    #
@@ -1834,6 +1946,7 @@ env::environment::main()
    local OPTION_SED_KEY_SUFFIX
    local OPTION_PROTECT='YES'
 
+   MULLE_ENV_CONTENT_SORT='cat'
    #
    # handle options
    #
@@ -1911,6 +2024,10 @@ env::environment::main()
             OPTION_SCOPE="$1"
          ;;
 
+         --sort)
+            MULLE_ENV_CONTENT_SORT='sort'
+         ;;
+
          --[a-z]*)
             env::environment::assert_default_scope
 
@@ -1941,7 +2058,7 @@ env::environment::main()
    fi
 
    case "${cmd}" in
-      'mset'|'remove'|'set')
+      'clobber'|'mset'|'remove'|'set')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
          if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a "${OPTION_PROTECT}" = 'YES' ]

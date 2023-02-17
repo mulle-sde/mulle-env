@@ -1,8 +1,8 @@
 
-PIX=mulle-env-overview.png
+PIX=mulle-env-overview.svg
 
-%.png: %.dot
-	dot -Tpng -o $*.png $<
+%.svg: %.dot
+	dot -Tsvg -o $*.svg $<
 
 
 all: $(PIX)

@@ -134,7 +134,6 @@ EOF
 }
 
 
-
 env::scope::file_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -164,6 +163,7 @@ Usage:
 
 Options:
    --all                      : show all scopes
+   --existing                 : list only existing/used scopes
    --output-filename          : show file for scope
    --output-existing-filename : show file for scope, only if it exists
    --[no-]aux                 : list auxiliary scopes
@@ -172,7 +172,8 @@ Options:
    --[no-]share-aux           : list predefined auxiliary scopes
    --[no-]plugin              : list plugin scopes
    --[no-]user                : list user scopes
-   --existing                 : list only existing/used scopes
+   --sort                     : sort output
+
 EOF
    exit 1
 }
@@ -727,6 +728,8 @@ env::scope::list_main()
    local OPTION_HARDCODED_SCOPES='NO'
    local OPTION_EXISTING_FILENAME='NO'
 
+   local MULLE_ENV_CONTENT_SORT=cat
+
    while :
    do
       case "$1" in
@@ -765,6 +768,10 @@ env::scope::list_main()
             OPTION_ETC_AUX_SCOPES='NO'
          ;;
 
+         --existing)
+            OPTION_EXISTING='YES'
+         ;;
+
          --hardcoded)
             OPTION_HARDCODED_SCOPES='YES'
          ;;
@@ -797,8 +804,8 @@ env::scope::list_main()
             OPTION_USER_SCOPES='NO'
          ;;
 
-         --existing)
-            OPTION_EXISTING='YES'
+         --sort)
+            MULLE_ENV_CONTENT_SORT='sort'
          ;;
 
          -*)
@@ -826,7 +833,7 @@ env::scope::list_main()
          rexekutor ls -1 "${MULLE_ENV_SHARE_DIR}"/environment-*.sh \
                          "${MULLE_ENV_ETC_DIR}"/environment-*.sh \
             | sed '-e s|^.*/environment-\(.*\)\.sh$|\1|'
-      ) | LC_ALL=C sort -u | sed -e '/^include/d'
+      ) | LC_ALL=C ${MULLE_ENV_CONTENT_SORT} -u | sed -e '/^include/d'
 
       return 0
    fi

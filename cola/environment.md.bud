@@ -1,0 +1,42 @@
+## Environment
+
+### In an out
+
+Enter the subshell with `mulle-env` and leave the subshell `exit`.
+Run any command in the subshell (from the outside to the inside) with a
+command like `mulle-env -c env` and escape the subshell (from the inside to
+the outside) with `mudo -e env`.
+
+## Upgrade an environment
+
+To upgrade an environment to a newer mulle-env release use
+
+``` sh
+mulle-env upgrade
+```
+
+
+### Manage variables
+
+List all environment variables defined by the virtual environment
+with `mulle-env environment list`. Set an environment variable
+with `mulle-env environment --scope global set FOO "whatever"`.
+
+You can also get an environment variable with `mulle-env environment get FOO`
+and remove it with `mulle-env environment remove FOO`.
+
+#### Scopes
+
+There are multiple environment variable scopes, that override each other
+in top (weakest) to bottom (strongest) fashion. Non-user values will lose
+changes on mulle-env upgrades, so don't write into those scopes.
+
+
+| Scope         | User Value | Description
+|---------------|------------|----------------------------------
+| `plugin`      | NO         | Values set by a mulle-env plugin
+| `global`      | YES        | Global user values
+| `os-<name>`   | YES        | Operating system specific user values
+| `host-<name>` | YES        | Host specific user values
+| `user-<name>` | YES        | User specific user values
+

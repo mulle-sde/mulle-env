@@ -1,0 +1,50 @@
+## Init a directory to use mulle-env
+
+A directory must be initialized, before you can run the **mulle-env** subshell
+it it. Let's try an example with a `project` directory. We want a minimal
+portable set of commandline tools, so we specify the 'style' as "minimal/tight".
+
+``` sh
+mulle-env init -d project --style minimal/tight
+```
+
+And this is what happens:
+
+![Filesystem overview](dox/mulle-env-overview.svg)
+
+Temporary and host-specific data is kept in `var`. User edits in `etc`.
+`mulle-env` installs its content in `share` (and write protects it).
+
+``` sh
+$ mulle-env project
+Enter the environment:
+   mulle-env "project"
+$ mulle-env "project"
+$ ls
+$ echo $PATH
+/tmp/project/.mulle/var/<hostname>-<username>/env/bin
+$ ls -l $PATH
+total 0
+lrwxrwxrwx 1 nat nat 12 Jan 21 22:28 awk -> /usr/bin/awk
+lrwxrwxrwx 1 nat nat 15 Jan 21 22:28 base64 -> /usr/bin/base64
+...
+...
+...
+lrwxrwxrwx 1 nat nat 14 Jan 21 22:28 which -> /usr/bin/which
+```
+
+And we leave the subshell with
+
+``` sh
+$ exit
+```
+
+You can also run a command in the environment without an interactive subshell
+with the '-c' flag, like you would using bash:
+
+
+``` sh
+$ mulle-env -c 'printf "%s\n" "${PATH}"'
+```
+
+
