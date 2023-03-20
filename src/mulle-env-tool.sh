@@ -133,6 +133,7 @@ Options:
 
 Domains:
    file       : list files
+   compiled   : show the compiled tools list for this host
    tool       : list tools (default)
    os         : list specified OS
 
@@ -185,7 +186,6 @@ Usage:
 EOF
    exit 1
 }
-
 
 
 env::tool::doctor_usage()
@@ -733,15 +733,8 @@ env::tool::compile()
          case "${i}" in
             *';remove')
                name="${i%;remove}"
-               if find_line "${result}" "${name}"
-               then
-                  result="`grep -F -v -x "${name}" <<< "${result}"`"
-               fi
-
-               if find_line "${result}" "${name};required"
-               then
-                  result="`grep -F -v -x "${name};required" <<< "${result}"`"
-               fi
+               r_escaped_grep_pattern "${name}"
+               result="`grep -E -v -x "^${RVAL}$|^${RVAL};" <<< "${result}"`"
             ;;
 
             *';required')
@@ -759,7 +752,7 @@ env::tool::compile()
    .done
 
    mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
-   redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/tool" sort <<< "${result}" || exit 1
+   redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/tool" sort -u <<< "${result}" || exit 1
 }
 
 
@@ -1052,7 +1045,7 @@ env::tool::link()
    local compile_if_needed='NO'
    local compile='NO'
    local compile_flags
-
+   local OPTION_DELETE='YES'
    local bindir
 
    bindir="${MULLE_ENV_HOST_VAR_DIR}/bin"
@@ -1067,6 +1060,10 @@ env::tool::link()
       case "$1" in
          -h*|--help|help)
             env::tool::link_usage
+         ;;
+
+         --no-delete)
+            OPTION_DELETE='NO'
          ;;
 
          --compile)
@@ -1100,6 +1097,12 @@ env::tool::link()
    if [ "${compile}" = 'YES' ]
    then
       env::tool::compile ${compile_flags}
+   fi
+
+   if [ "${OPTION_DELETE}" = 'YES' ]
+   then
+      rmdir_safer "${bindir}"
+      mkdir_if_missing "${bindir}"
    fi
 
    local toolfile
@@ -1353,6 +1356,14 @@ env::tool::list()
          return 0
       ;;
 
+      compiled)
+         if [ ! -f "${MULLE_ENV_HOST_VAR_DIR}/tool" ]
+         then
+            fail "No compiled tool list available yet (compile to make one)"
+         fi
+         rexekutor cat "${MULLE_ENV_HOST_VAR_DIR}/tool"
+      ;;
+
       ""|tool|tools)
          env::tool::_list "${os}" "${OPTION_COLOR}" "${OPTION_CSV}" "${OPTION_BUILTIN}"
       ;;
@@ -1508,7 +1519,7 @@ env::tool::main()
 
       list)
          env::tool::list "${OPTION_OS}" \
-                        "$@"
+                         "$@"
       ;;
 
       remove)

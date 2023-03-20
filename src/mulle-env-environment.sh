@@ -727,6 +727,8 @@ shell environment"
       return $?
    fi
 
+   local file_exists
+
    #
    # first try inplace-replacement
    #
@@ -748,6 +750,7 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
          fi
          return $?
       fi
+      file_exists='YES'
    fi
 
    case "${comment}" in
@@ -788,7 +791,10 @@ export ${key}=${value}
       env::environment::safe_create_or_write_file "${filename}" \
          redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
    else
-      exekutor chmod ug+w "${filename}"
+      if [ "${file_exists}" = 'YES' ]
+      then
+         exekutor chmod ug+w "${filename}"
+      fi
       redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
    fi
    # protect if unprotected

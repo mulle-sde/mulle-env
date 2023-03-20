@@ -40,7 +40,7 @@ env::plugin::r_installdir()
 {
 #   log_entry "env::plugin::r_installdir"
 
-   local dev="${1:-YES}"
+   local dev="${1:-NO}"
 
    # dev support
    if [ "${dev}" = 'YES' ]
@@ -63,9 +63,10 @@ env::plugin::r_searchpath()
 {
 #   log_entry "env::plugin::r_searchpath"
 
-   if [ ${_ENV_PLUGIN_SEARCHPATH+x} ]
+   if [ ${_ENV_PLUGIN_PATH+x} ]
    then
-      RVAL="${_ENV_PLUGIN_SEARCHPATH}"
+      RVAL="${_ENV_PLUGIN_PATH}"
+      return
    fi
 
 	local searchpath
@@ -80,8 +81,8 @@ env::plugin::r_searchpath()
    r_colon_concat "${searchpath}" "${RVAL}"
    searchpath="${RVAL}"
 
-   r_colon_concat "${searchpath}" "${MULLE_SDE_EXTENSION_BASE_PATH:-}"
-   searchpath="${RVAL}"
+#   r_colon_concat "${searchpath}" "${MULLE_SDE_EXTENSION_BASE_PATH:-}"
+#   searchpath="${RVAL}"
 
    r_colon_concat "${searchpath}" "/usr/local/share/mulle-env/plugins"
    searchpath="${RVAL}"
@@ -205,7 +206,7 @@ env::plugin::initialize()
 {
    env::plugin::r_searchpath
 
-   _ENV_PLUGIN_SEARCHPATH="${RVAL}"
+   _ENV_PLUGIN_PATH="${RVAL}"
 }
 
 env::plugin::initialize

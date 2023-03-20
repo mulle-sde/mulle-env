@@ -21,3 +21,4 @@ var/
 cola/wilted/
 mulle-markdown-preview-*.html
 build-*/
+src/mulle-env-shell.sh.notneeded

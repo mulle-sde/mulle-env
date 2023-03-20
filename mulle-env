@@ -1349,6 +1349,7 @@ LOGNAME \
 LS_COLORS \
 MULLE_ENV_PLUGIN_PATH \
 MULLE_NO_COLOR \
+MULLE_SOURCETREE_PLUGIN_PATH \
 MULLE_SDE_EXTENSION_PATH \
 MULLE_USER_PWD \
 MULLE_VIRTUAL_ROOT \
@@ -1409,11 +1410,12 @@ env::invoke_shell()
          [ ${LS_COLORS+x} ]       && r_concat "${s}" "LS_COLORS='${LS_COLORS}'" && s="${RVAL}"
          [ ${NO_COLOR+x} ]        && r_concat "${s}" "NO_COLOR='${NO_COLOR}'" && s="${RVAL}"
          [ ${PS1+x} ]             && r_concat "${s}" "PS1='${PS1}'" && s="${RVAL}"
-         [ ${SSH_CONNECTION+x} ] \
-                                       && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
+         [ ${SSH_CONNECTION+x} ]  && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
          [ ${SSH_TTY+x} ]         && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
-         [ ${MULLE_ENV_PLUGIN_PATH+x} ]    && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
-         [ ${MULLE_SDE_EXTENSION_PATH+x} ] && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
+         [ ${MULLE_ENV_PLUGIN_PATH+x} ]         && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
+         [ ${MULLE_SOURCETREE_PLUGIN_PATH+x} ]  && r_concat "${s}" "MULLE_SOURCETREE_PLUGIN_PATH='${MULLE_SOURCETREE_PLUGIN_PATH}'" && s="${RVAL}"
+         [ ${MULLE_SDE_EXTENSION_PATH+x} ]      && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
+         [ ${MULLE_SDE_SANDBOX_RUNNING+x} ]     && r_concat "${s}" "MULLE_SDE_SANDBOX_RUNNING='${MULLE_SDE_SANDBOX_RUNNING}'" && s="${RVAL}"
          [ ${MULLE_USER_PWD+x} ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
          [ ${MULLE_NO_COLOR+x} ]  && r_concat "${s}" "MULLE_NO_COLOR='${MULLE_NO_COLOR}'" && s="${RVAL}"
          [ ${TERM+x} ]            && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"

@@ -95,7 +95,6 @@ mkdir;required
 mknod
 more;required
 mount
-mudo;required
 mv;required
 ps
 pwd;required
@@ -134,7 +133,9 @@ env::plugin::minimal::setup_tools()
       &&
       env::tool::link_mulle_tool "mulle-env"           "${bindir}" \
                                                        "${libexecdir}" \
-                                                       "library"
+                                                       "library" \
+      &&
+      env::tool::link_mulle_tool "mudo"                "${bindir}"
    ) || return 1
 }
 
