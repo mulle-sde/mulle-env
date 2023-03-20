@@ -120,6 +120,9 @@ env::plugin::minimal::setup_tools()
 {
    log_entry "env::plugin::minimal::setup_tools" "$@"
 
+   local bindir="$1"
+   local libexecdir="$2"
+
    env::plugin::none::setup_tools "$@"
 
    #

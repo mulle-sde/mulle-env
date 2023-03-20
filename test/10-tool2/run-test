@@ -38,19 +38,19 @@ main()
    run_mulle_env tool compile
    run_mulle_env tool link
 
-   value="`run_mulle_env -s tool list --no-color | grep -E '^mudo;'`"
-   [ "${value}" != 'mudo;required' ] && fail "#1: not mudo;required is wrong here ($value)"
+   value="`run_mulle_env -s tool list --no-color | grep -E '^mv;'`"
+   [ "${value}" != 'mv;required' ] && fail "#1: not mv;required is wrong here ($value)"
 
    log_verbose "----- #1 PASSED -----"
 
-   value="`run_mulle_env -s tool get mudo`"
-   [ "${value}" != 'mudo' ] && fail "#2: no mudo after get is wrong ($value)"
+   value="`run_mulle_env -s tool get mv`"
+   [ "${value}" != 'mv' ] && fail "#2: no mv after get is wrong ($value)"
 
    log_verbose "----- #2 PASSED -----"
 
-   if run_mulle_env tool add mudo
+   if run_mulle_env -s --no-errors tool add mv
    then
-      fail "#3: Unexpected success of mudo add (should be 4)"
+      fail "#3: Unexpected success of mv add (should be 4)"
    fi
 
    log_verbose "----- #3 PASSED -----"
@@ -86,8 +86,9 @@ main()
 
    vardir="`run_mulle_env mulle-tool-env env | sed -n -e 's/^MULLE_ENV_VAR_DIR=.\(.*\).$/\1/p'`"
 
-   result="`cat "${vardir}/tool"`"
-   expect="awk
+   result="`cat "${vardir}/tool" | LC_ALL=C sort`"
+   expect="`LC_ALL=C sort <<EOF
+awk
 bash
 cat;required
 chgrp;required
@@ -109,7 +110,6 @@ mkdir;required
 mknod
 more;required
 mount
-mudo;required
 mv;required
 ps
 pwd;required
@@ -125,8 +125,11 @@ true;required
 tty
 umount
 uname;required
-zsh"
-   [ "${expect}" != "${result}" ] && fail "#5: result \"${result}\" did not match \"${expect}\""
+zsh
+EOF
+`"
+   [ "${expect}" != "${result}" ] \
+   && fail "#5: result \"${result}\" did not match \"${expect}\" (`diff <( echo "${result}" ) <( echo "${expect}" ) `)"
 
    log_verbose "----- #5 PASSED -----"
 
@@ -146,28 +149,28 @@ zsh"
    then
       if ! run_mulle_env tool --current add --required ishouldnotexist
       then
-         fail "#7: Unexpected add failure"
+         fail "#7.1: Unexpected add failure"
       fi
 
-      if run_mulle_env -s tool link --compile-if-needed
+      if run_mulle_env -s --no-errors tool link --compile-if-needed
       then
-         fail fail "#7: link succeeded unexpectedly"
+         fail "#7.2: link succeeded unexpectedly"
       fi
       log_info "Failed as expected"
 
       if ! run_mulle_env tool --current remove ishouldnotexist
       then
-         fail "#7: Unexpected remove failure"
+         fail "#7.3: Unexpected remove failure"
       fi
 
       if ! run_mulle_env tool --current add --optional ishouldnotexist
       then
-         fail "#7: Unexpected add failure"
+         fail "#7.4: Unexpected add failure"
       fi
 
       if ! run_mulle_env -s tool link --compile-if-needed
       then
-         fail fail "#7: link failed unexpectedly"
+         fail "#7.5: link failed unexpectedly"
       fi
 
       [ -e "${vardir}/bin/ishouldnotexist" ] && fail "#7: ishouldnotexist in bin, but should not be"

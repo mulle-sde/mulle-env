@@ -753,6 +753,11 @@ export ${sed_escaped_key}=${sed_escaped_value}/" "${filename}"
       file_exists='YES'
    fi
 
+   if [ -z "${value}" -a "${OPTION_ADD_EMPTY}" = 'NO' ]
+   then
+      return 0
+   fi
+
    case "${comment}" in
       '#'*)
          comment="#
@@ -773,11 +778,6 @@ ${comment}
       ;;
    esac
 
-   if [ -z "${value}" -a "${OPTION_ADD_EMPTY}" = 'NO' ]
-   then
-      return 0
-   fi
-
    local text
 
    text="\
@@ -794,6 +794,8 @@ export ${key}=${value}
       if [ "${file_exists}" = 'YES' ]
       then
          exekutor chmod ug+w "${filename}"
+      else
+         r_mkdir_parent_if_missing "${filename}"
       fi
       redirect_append_exekutor "${filename}" printf "%s\n" "${text}"
    fi
@@ -1211,7 +1213,7 @@ env::environment::_eval_get()
 
    local environment
 
-   env::environment::r_environment_string
+   env::r_environment_string
    environment="${RVAL}"
 
    value="`eval_rexekutor env -i "${environment}" '${BASH}' -c "'${cmd}'" `"
@@ -1685,45 +1687,6 @@ env::environment::_list()
 }
 
 
-env::environment::r_append_environment_variable()
-{
-   log_entry "env::environment::r_append_environment_variable" "$@"
-
-   local environment="$1"
-   local key="$2"
-
-   # if undefined don't output
-   if [ -z ${!key+x} ]
-   then
-      RVAL="${environment}"
-      return
-   fi
-
-   r_shell_indirect_expand "${key}"
-   r_escaped_shell_string "${RVAL}"
-   r_concat "${environment} "${key}=\"${RVAL}\"
-}
-
-
-env::environment::r_environment_string()
-{
-   log_entry "env::environment::r_environment_string" "$@"
-
-   local keys="${1:-"${MULLE_ENVIRONMENT_KEYS} ${RELAX_ENVIRONMENT_KEYS}"}"
-
-   local environment
-
-   .for key in ${keys}
-   .do
-      env::environment::r_append_environment_variable "${environment}" "${key}"
-      environment="${RVAL}"
-   .done
-
-   RVAL="${environment}"
-}
-
-
-
 env::environment::_eval_list()
 {
    log_entry "env::environment::_eval_list" "$@"
@@ -1738,7 +1701,7 @@ env::environment::_eval_list()
 
    local environment
 
-   env::environment::r_environment_string
+   env::r_environment_string
    environment="${RVAL}"
 
    cmdline="env -i ${environment} \"${BASH}\" -c '"

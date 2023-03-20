@@ -643,6 +643,17 @@ env::setup_if_needed()
    bindir="${vardir}/bin"
    libexecdir="${vardir}/libexec"
 
+   local toolsbindir
+   local toolslibexecdir
+
+   toolsbindir="${MULLE_ENV_VAR_DIR}/bin"
+   toolslibexecdir="${MULLE_ENV_VAR_DIR}/libexec"
+
+   log_setting "bindir          = ${bindir}"
+   log_setting "libexecdir      = ${libexecdir}"
+   log_setting "toolsbindir     = ${toolsbindir}"
+   log_setting "toolslibexecdir = ${toolslibexecdir}"
+
    local needs_flavor_update
    local needs_bin_update
 
@@ -687,12 +698,14 @@ check your tool list.
 
       env::unprotect_dir_if_exists "${bindir}"
       env::unprotect_dir_if_exists "${libexecdir}"
+      env::unprotect_dir_if_exists "${toolsbindir}"
+      env::unprotect_dir_if_exists "${toolslibexecdir}"
       (
 	      (
 	         callback="env::plugin::${flavor}::setup_tools"
 	         if shell_is_function "${callback}"
 	         then
-	            ${callback} "${bindir}" "${libexecdir}" || exit 1
+	            ${callback} "${toolsbindir}" "${toolslibexecdir}" || exit 1
 	         fi
 	      ) || exit 1
 
@@ -708,8 +721,10 @@ check your tool list.
 	   )
 	   rval=$?
 
-      env::protect_dir_if_exists "${bindir}"
+      env::unprotect_dir_if_exists "${toolslibexecdir}"
+      env::unprotect_dir_if_exists "${toolsbindir}"
       env::protect_dir_if_exists "${libexecdir}"
+      env::protect_dir_if_exists "${bindir}"
 
       [ "$rval" -ne 0 ] && exit $rval
    fi
@@ -1219,7 +1234,9 @@ undefined (old mulle-bashfunctions)"
                               "${oldstyle}" \
                               "${oldflavor}"
 
+         # this is .mulle/var/<hostname>/<username>/env/bin
          r_colon_concat "${runpath}" "${vardir}/bin"
+         # this is .mulle/var/.env/bin
          r_colon_concat "${RVAL}" "${MULLE_ENV_VAR_DIR}/bin"
          runpath="${RVAL}"
 
@@ -1340,19 +1357,13 @@ AUXENVFILENAME \
 NO_MOTD"
 
 
-RELAX_ENVIRONMENT_KEYS="\
+MULLE_ENVIRONMENT_RELAX_KEYS="\
 DBUS_SESSION_BUS_ADDRESS
 DISPLAY \
 EDITOR \
 HOME \
 LOGNAME \
 LS_COLORS \
-MULLE_ENV_PLUGIN_PATH \
-MULLE_NO_COLOR \
-MULLE_SOURCETREE_PLUGIN_PATH \
-MULLE_SDE_EXTENSION_PATH \
-MULLE_USER_PWD \
-MULLE_VIRTUAL_ROOT \
 NO_COLOR \
 PS1 \
 SSH_CONNECTION \
@@ -1361,8 +1372,48 @@ TERM \
 TMPDIR \
 USER \
 USERNAME \
-VISUAL \
-"
+VISUAL"
+
+
+
+env::r_append_environment_variable()
+{
+   log_entry "env::r_append_environment_variable" "$@"
+
+   local environment="$1"
+   local key="$2"
+
+   # if undefined don't output
+   if ! shell_is_variable_defined "${key}"
+   then
+      RVAL="${environment}"
+      return
+   fi
+
+   r_shell_indirect_expand "${key}"
+   r_escaped_singlequotes "${RVAL}"
+   r_concat "${environment}" "${key}='${RVAL}'"
+}
+
+
+env::r_environment_string()
+{
+   log_entry "env::r_environment_string" "$@"
+
+   local keys="${1:-"${MULLE_ENVIRONMENT_KEYS} ${MULLE_ENVIRONMENT_RELAX_KEYS}"}"
+
+   local environment
+
+   .for key in ${keys}
+   .do
+      env::r_append_environment_variable "${environment}" "${key}"
+      environment="${RVAL}"
+   .done
+
+   RVAL="${environment}"
+}
+
+
 
 #
 # this is more lowlevel, it executes with a limited environment a shell command
@@ -1398,34 +1449,13 @@ env::invoke_shell()
       ;;
 
       tight)
-         # USERNAME is used by mulle-env to discern environment files and styles
-         [ ! -z "${LOGNAME}" ]    && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
+         # LOGNAME is used by mulle-env to discern environment files and styles
+         [ ! -z "${LOGNAME}" ] && s="LOGNAME='${LOGNAME}'"
       ;;
 
       relax|restrict|inherit)
-         [ ${DISPLAY+x} ]         && r_concat "${s}" "DISPLAY='${DISPLAY}'" && s="${RVAL}"
-         [ ${EDITOR+x} ]          && r_concat "${s}" "EDITOR='${EDITOR}'" && s="${RVAL}"
-         [ ${HOME+x} ]            && r_concat "${s}" "HOME='${HOME}'" && s="${RVAL}"
-         [ ${LOGNAME+x} ]         && r_concat "${s}" "LOGNAME='${LOGNAME}'" && s="${RVAL}"
-         [ ${LS_COLORS+x} ]       && r_concat "${s}" "LS_COLORS='${LS_COLORS}'" && s="${RVAL}"
-         [ ${NO_COLOR+x} ]        && r_concat "${s}" "NO_COLOR='${NO_COLOR}'" && s="${RVAL}"
-         [ ${PS1+x} ]             && r_concat "${s}" "PS1='${PS1}'" && s="${RVAL}"
-         [ ${SSH_CONNECTION+x} ]  && r_concat "${s}" "SSH_CONNECTION='${SSH_CONNECTION}'" && s="${RVAL}"
-         [ ${SSH_TTY+x} ]         && r_concat "${s}" "SSH_TTY='${SSH_TTY}'" && s="${RVAL}"
-         [ ${MULLE_ENV_PLUGIN_PATH+x} ]         && r_concat "${s}" "MULLE_ENV_PLUGIN_PATH='${MULLE_ENV_PLUGIN_PATH}'" && s="${RVAL}"
-         [ ${MULLE_SOURCETREE_PLUGIN_PATH+x} ]  && r_concat "${s}" "MULLE_SOURCETREE_PLUGIN_PATH='${MULLE_SOURCETREE_PLUGIN_PATH}'" && s="${RVAL}"
-         [ ${MULLE_SDE_EXTENSION_PATH+x} ]      && r_concat "${s}" "MULLE_SDE_EXTENSION_PATH='${MULLE_SDE_EXTENSION_PATH}'" && s="${RVAL}"
-         [ ${MULLE_SDE_SANDBOX_RUNNING+x} ]     && r_concat "${s}" "MULLE_SDE_SANDBOX_RUNNING='${MULLE_SDE_SANDBOX_RUNNING}'" && s="${RVAL}"
-         [ ${MULLE_USER_PWD+x} ]  && r_concat "${s}" "MULLE_USER_PWD='${MULLE_USER_PWD}'" && s="${RVAL}"
-         [ ${MULLE_NO_COLOR+x} ]  && r_concat "${s}" "MULLE_NO_COLOR='${MULLE_NO_COLOR}'" && s="${RVAL}"
-         [ ${TERM+x} ]            && r_concat "${s}" "TERM='${TERM}'" && s="${RVAL}"
-         [ ${TMPDIR+x} ]          && r_concat "${s}" "TMPDIR='${TMPDIR}'" && s="${RVAL}"
-         [ ${USER+x} ]            && r_concat "${s}" "USER='${USER}'" && s="${RVAL}"
-         # mingw is USERNAME
-         [ ${USERNAME+x} ]        && r_concat "${s}" "USERNAME='${USERNAME}'" && s="${RVAL}"
-         [ ${VISUAL+x} ]          && r_concat "${s}" "VISUAL='${VISUAL}'" && s="${RVAL}"
-         [ ${DBUS_SESSION_BUS_ADDRESS+x} ] \
-                                  && r_concat "${s}" "DBUS_SESSION_BUS_ADDRESS='${DBUS_SESSION_BUS_ADDRESS}'" && s="${RVAL}"
+         env::r_environment_string "${MULLE_ENVIRONMENT_RELAX_KEYS}"
+         s="${RVAL}"
       ;;
 
       *)
@@ -1512,9 +1542,7 @@ env::clean()
 
    env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
 
-   # shellcheck source=src/mulle-env-clean.sh
-   . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh" \
-      || fail "failed to load \"${MULLE_ENV_LIBEXEC_DIR}/mulle-env-clean.sh\""
+   include "env::clean"
 
    env::clean::main "$@"
 }
@@ -1597,14 +1625,6 @@ env::main()
    local OPTION_PROTECT="YES"
    local OPTION_SCOPE_SUBDIRS=
 
-   local MULLE_TRACE
-   local MULLE_FLAG_EXEKUTOR_DRY_RUN='NO'
-   local MULLE_FLAG_LOG_DEBUG='NO'
-   local MULLE_FLAG_LOG_EXEKUTOR='NO'
-   local MULLE_FLAG_LOG_SETTINGS='NO'
-   local MULLE_FLAG_LOG_FLUFF='NO'
-   local MULLE_FLAG_LOG_VERBOSE='NO'
-   local MULLE_FLAG_LOG_TERSE='NO'
    local OPTION_COPY_MULLE_TOOL='NO'
    local CUSTOM_ENVIRONMENT=""
    local FLAG_OUTSIDE_ENV='NO'

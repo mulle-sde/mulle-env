@@ -281,7 +281,10 @@ env::init::main()
       stylefile="${sharedir}/style"
 
       rmdir_safer "${sharedir}.old"
-      mv "${sharedir}" "${sharedir}.old"
+      if [ -d "${sharedir}" ]
+      then
+         mv "${sharedir}" "${sharedir}.old"
+      fi
       mkdir_if_missing "${sharedir}"
 
       # indicate a fresh init by removing a possibly old versionfile

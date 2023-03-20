@@ -734,7 +734,7 @@ env::tool::compile()
             *';remove')
                name="${i%;remove}"
                r_escaped_grep_pattern "${name}"
-               result="`grep -E -v -x "^${RVAL}$|^${RVAL};" <<< "${result}"`"
+               result="`grep -E -v -x "^${RVAL}$|^${RVAL};.*$" <<< "${result}"`"
             ;;
 
             *';required')
@@ -1241,7 +1241,7 @@ env::tool::_list_file()
                      then
                         printmark=";builtin"
                      else
-                        printmark=",builtin"
+                        printmark="${printmark},builtin"
                      fi
                   fi
                ;;
