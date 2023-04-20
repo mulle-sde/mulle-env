@@ -1,3 +1,22 @@
+# 5.0.0
+
+* the relax environment keys can now be expanded by plugins, meaning that there are now less `MULLE_SDE` specific key in there by default
+* mudo is now a properly linked mulle-tool
+* you can now get the list of compiled tools with `tool list compiled`
+* fix tool compilation by removing duplicated and doing proper removal
+* support for ``MULLE_SOURCETREE_PLUGIN_PATH`` and ``MULLE_SDE_SANDBOX_RUNNING`` in restrict mode
+* don't sort environment keys in output by default anymore, because it confuses the user about the replacement order in values
+* changed internal .mulle/var/`<hostname>` path to .mulle/var/`<hostname>`/`<user>`. This makes changing logins and working on the same source without major cleaning possible.
+* you can now use --concat and --concat0 for environment set
+* mudo is now only available in minimal mode (none didn't really work)
+* minimal gains some more tool entries to make mudo and mulle-env work properly
+* reworked the various style commands into a command with subcommands
+* tools are now optional by default and must be explicitly set as required, which makes everything much easier
+* fix some crossplatform bugs
+* give hardcoded scope prio 1 (instead of 0) mostly for the benefit of a test
+* more commands are now optional, because they are usually not needed (like dd for instance)
+
+
 ## 4.2.0
 
 * added unveil command
