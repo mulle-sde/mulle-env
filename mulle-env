@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.0.0"
+MULLE_EXECUTABLE_VERSION="5.1.0"
 
 
 #
@@ -701,15 +701,14 @@ check your tool list.
       env::unprotect_dir_if_exists "${toolsbindir}"
       env::unprotect_dir_if_exists "${toolslibexecdir}"
       (
-	      (
+	      if ! (
 	         callback="env::plugin::${flavor}::setup_tools"
 	         if shell_is_function "${callback}"
 	         then
 	            ${callback} "${toolsbindir}" "${toolslibexecdir}" || exit 1
 	         fi
-	      ) || exit 1
-
-	      if ! (
+	      ) ||
+	      ! (
 	         env::tool::link --compile \
 	                         --bindir "${bindir}"
 	      )
@@ -1987,7 +1986,8 @@ env::main()
 
          local upper
 
-         r_uppercase "$1"
+         r_identifier "$1"
+         r_uppercase "${RVAL}"
          upper="${RVAL}"
 
          r_filepath_concat "${MULLE_ENV_HOST_VAR_DIR%/*}" "${1}"

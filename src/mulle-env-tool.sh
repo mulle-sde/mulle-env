@@ -219,7 +219,7 @@ EOF
 # Eine liste für alle und dann was spezielles für die einzelnen OS
 #
 # Eine toolliste ist nur additiv. Es gibt nur eine operation "remove"
-# Die wie optional am toolnamen hängt. Ein "remove" hängt also einen
+# Die wie optional am toolnamen hängt. Ein "remove" command hängt also einen
 # Eintrag in eine Liste dran.
 #
 # Danach wird stumpf die Liste abgearbeitet und das wars.
@@ -1126,11 +1126,31 @@ env::tool::doctor()
    log_entry "env::tool::doctor" "$@"
 
    local bindir="$1"
+   local toolfile="$2"
 
    local symlink
    local rval
    local found 
    local any
+   local cmd
+
+   .foreachline cmd in `grep -E -v '^#' "${toolfile}" 2>/dev/null`
+   .do
+      if shell_is_builtin_command "${cmd}"
+      then
+         continue
+      fi
+
+      if [ ! -e "${bindir}/${cmd}" ]
+      then
+         if mudo -f which "${cmd}" 2> /dev/null
+         then
+            _log_warning "Tool ${C_RESET_BOLD}${cmd}${C_WARNING} has recently been installed
+${C_INFO}Refresh your custom environment with
+${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
+         fi
+      fi
+   .done
 
    rval=0
    any='NO'
@@ -1145,7 +1165,7 @@ env::tool::doctor()
 
          r_basename "${symlink}"
 
-         found="`mudo which "${RVAL}" `"
+         found="`mudo -f which "${RVAL}" `"
          if [ ! -z "${found}" ]
          then
             _log_error "Tool ${C_RESET_BOLD}${RVAL}${C_ERROR} is in a different place
@@ -1163,7 +1183,7 @@ ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
       then
          log_warning "No tools found"
       else
-         log_info "No problems found"
+         log_info "No link problems found"
       fi
    fi
 
@@ -1185,6 +1205,7 @@ env::tool::_list_file()
    local color_start
    local color_end
    local printmark
+   local toolfilename
 
    .foreachline toolline in `grep -E -v '^#' "${filename}"`
    .do
@@ -1203,12 +1224,10 @@ env::tool::_list_file()
          color_start="${C_RESET}"
          color_end="${C_RESET}"
 
-         local filename
-
          if [ "${mark}" != "remove" ]
          then
-            filename="`command -v "${toolname}" `"
-            case "${filename}" in
+            toolfilename="`command -v "${toolname}" `"
+            case "${toolfilename}" in
                /*)
                   if [ -x "${MULLE_ENV_HOST_VAR_DIR}/bin/${toolname}" ]
                   then
@@ -1492,7 +1511,7 @@ env::tool::main()
       ;;
 
       doctor)
-         env::tool::doctor "${bindir}"
+         env::tool::doctor "${bindir}" "${MULLE_ENV_HOST_VAR_DIR}/tool"
       ;;
 
       compile)

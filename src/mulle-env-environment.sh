@@ -46,6 +46,7 @@ Options:
    --this-os      ${space}: narrow scope to this operating system ($MULLE_UNAME)
    --this-user    ${space}: user with name ($MULLE_USERNAME)
    --[a-z]*       ${space}: shortcut for --scope <name> (e.g. --global)
+   --cat          ${space}: unsorted output
 EOF
 }
 
@@ -163,10 +164,11 @@ EOF
    cat <<EOF >&2
 
 Cmd Options:
-   --append          : add value to existing values (using separator ':'')
+   --append          : add value to existing values (using separator ':')
    --concat          : add value to existing value with space
    --concat0         : add value to existing value without separator
    --prepend         : prepent value to existing values (using separator ':')
+   --remove          : remove value from existing values (using separator ':')
    --separator <sep> : sepecify custom separator for --append
 
 EOF
@@ -229,7 +231,6 @@ EOF
 Cmd Options:
    --output-eval    : resolve values
    --output-command : emit as mulle-env commands
-   --sort           : sort output
 
 EOF
    exit 1
@@ -875,6 +876,10 @@ env::environment::set_main()
             OPTION_ADD='PREPEND'
          ;;
 
+         --remove)
+            OPTION_ADD='REMOVE'
+         ;;
+
          -s|--separator|--seperator)
             [ "$#" -eq 1 ] && env::environment::set_usage "Missing argument to \"$1\""
             shift
@@ -922,9 +927,7 @@ env::environment::set_main()
 
    if [ "${OPTION_ADD}" != 'NO' ]
    then
-
       local prev
-
 
       prev="`env::environment::get_main "${scopename}" "${key}"`"
       log_debug "Previous value is \"${prev}\""
@@ -937,6 +940,38 @@ env::environment::set_main()
 
          CONCAT0)
             value="${prev}${value}"
+         ;;
+
+         REMOVE)
+            case "${value}" in
+               *${OPTION_SEPARATOR}*)
+                  fail "${value} contains '${OPTION_SEPARATOR}', which is not \
+possible for removal as this is used to concatenate values.
+${C_INFO}Tip: use multiple removal statements."
+               ;;
+            esac
+
+            local oldvalue
+            local newvalue
+
+            IFS="${OPTION_SEPARATOR}"
+            .for oldvalue in ${prev}
+            .do
+               if [ "${oldvalue}" = "${value}" ]
+               then
+                  .continue
+               fi
+               r_concat "${newvalue}" "${oldvalue}" "${OPTION_SEPARATOR}"
+               newvalue="${RVAL}"
+            .done
+            IFS="${DEFAULT_IFS}"
+
+            if [ "${newvalue}" = "${oldvalue}" ]
+            then
+               log_verbose "No change"
+               return
+            fi
+            value="${newvalue}"
          ;;
 
          *)
@@ -1915,7 +1950,8 @@ env::environment::main()
    local OPTION_SED_KEY_SUFFIX
    local OPTION_PROTECT='YES'
 
-   MULLE_ENV_CONTENT_SORT='cat'
+   MULLE_ENV_CONTENT_SORT='sort'
+
    #
    # handle options
    #
@@ -1991,6 +2027,10 @@ env::environment::main()
 
             env::environment::assert_default_scope
             OPTION_SCOPE="$1"
+         ;;
+
+         --cat)
+            MULLE_ENV_CONTENT_SORT='cat'
          ;;
 
          --sort)
