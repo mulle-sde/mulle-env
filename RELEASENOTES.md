@@ -1,3 +1,9 @@
+## 5.1.0
+
+* added --remove option for environment values
+* environment variables are now listed sorted by default (per section) use --cat to get the old style back
+
+
 # 5.0.0
 
 * the relax environment keys can now be expanded by plugins, meaning that there are now less `MULLE_SDE` specific key in there by default

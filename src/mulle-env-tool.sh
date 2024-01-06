@@ -317,14 +317,14 @@ env::tool::link_mulle_tool()
    #
    if [ "${OPTION_COPY_MULLE_TOOL}" = 'YES' ]
    then
-      log_fluff "Copying \"${dstexefile}\""
+      log_debug "Copying \"${dstexefile}\""
 
       exekutor cp "${exefile}" "${dstexefile}" &&
       exekutor chmod 755 "${dstexefile}"
 
       if [ ! -z "${dstlibexecdir}" ]
       then
-         log_fluff "Copying \"${dstlibdir}\""
+         log_debug "Copying \"${dstlibdir}\""
 
          mkdir_if_missing "${dstlibdir}"
 
@@ -337,14 +337,14 @@ env::tool::link_mulle_tool()
    #
    # symlinks
    #
-   log_fluff "Creating symlink \"${dstexefile}\""
+   log_debug "Creating symlink \"${dstexefile}\""
    exekutor ln -s -f "${exefile}" "${dstexefile}" || exit 1
 
    if [ ! -z "${dstlibexecdir}" ]
    then
       r_mkdir_parent_if_missing "${dstlibdir}"
 
-      log_fluff "Creating symlink \"${dstlibdir}\""
+      log_debug "Creating symlink \"${dstlibdir}\""
       exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}" || exit 1
    fi
 }
@@ -964,14 +964,14 @@ ${C_RESET}${searchpath}"
 
       *)
          # not absolute
-         log_fluff "Skipping builtin \"${filename}\""
+         log_debug "Skipping builtin \"${filename}\""
          return
       ;;
    esac
 
    if [ "${use_script}" = 'YES' ]
    then
-      log_fluff "Creating script \"${bindir}/${toolname}\""
+      log_debug "Creating script \"${bindir}/${toolname}\""
 
       local script
 
@@ -981,7 +981,7 @@ exec '${filename}' \"\$@\""
       redirect_exekutor "${bindir}/${toolname}" printf "%s\n" "${script}" || exit 1
       exekutor chmod 755 "${bindir}/${toolname}"  || exit 1
    else
-      log_fluff "Creating symlink \"${bindir}/${toolname}\""
+      log_debug "Creating symlink \"${bindir}/${toolname}\""
 
       exekutor ln -sf "${filename}" "${bindir}/" || exit 1
    fi
@@ -995,7 +995,7 @@ env::tool::unlink_tool()
    local toolname="$1"
    local bindir="$2"
 
-   log_fluff "Removing \"${bindir}/${toolname}\""
+   log_debug "Removing \"${bindir}/${toolname}\""
 
    exekutor rm -f "${bindir}/${toolname}" || exit 1
 }

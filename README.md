@@ -28,13 +28,14 @@ history.
 
 | Release Version                                       | Release Notes
 |-------------------------------------------------------|--------------
-| ![Mulle kybernetiK tag](https://img.shields.io/github/tag/mulle-sde/mulle-env.svg?branch=release) | [RELEASENOTES](RELEASENOTES.md) |
+| ![Mulle kybernetiK tag](https://img.shields.io/github/tag/mulle-sde/mulle-env.svg?branch=release)  | [RELEASENOTES](RELEASENOTES.md) |
 
 | Executable          | Description
 |---------------------|--------------------------------
 | `mulle-env`         | Virtual environment sub-shell
 | `mudo`              | Run a command with the unrestricted PATH/environment
 | `mulle-env-reload`  | Refresh virtual environment variables
+
 
 
 
@@ -210,13 +211,57 @@ echo "FOO=xxx" > .mulle/etc/env/environment-global.sh
 
 
 
+## Environment
+
+### In an out
+
+Enter the subshell with `mulle-env` and leave the subshell `exit`.
+Run any command in the subshell (from the outside to the inside) with a
+command like `mulle-env -c env` and escape the subshell (from the inside to
+the outside) with `mudo -e env`.
+
+## Upgrade an environment
+
+To upgrade an environment to a newer mulle-env release use
+
+``` sh
+mulle-env upgrade
+```
+
+
+### Manage variables
+
+List all environment variables defined by the virtual environment
+with `mulle-env environment list`. Set an environment variable
+with `mulle-env environment --scope global set FOO "whatever"`.
+
+You can also get an environment variable with `mulle-env environment get FOO`
+and remove it with `mulle-env environment remove FOO`.
+
+#### Scopes
+
+There are multiple environment variable scopes, that override each other
+in top (weakest) to bottom (strongest) fashion. Non-user values will lose
+changes on mulle-env upgrades, so don't write into those scopes.
+
+
+| Scope         | User Value | Description
+|---------------|------------|----------------------------------
+| `plugin`      | NO         | Values set by a mulle-env plugin
+| `global`      | YES        | Global user values
+| `os-<name>`   | YES        | Operating system specific user values
+| `host-<name>` | YES        | Host specific user values
+| `user-<name>` | YES        | User specific user values
+
+
 
 
 
 ## Install
 
 See [mulle-sde-developer](//github.com/mulle-sde/mulle-sde-developer) how to
-install mulle-sde, which will also install mulle-env.
+install mulle-sde, which will also install mulle-env with required
+dependencies.
 
 The command to install only the latest mulle-env into
 `/usr/local` (with **sudo**) is:
@@ -231,3 +276,5 @@ curl -L 'https://github.com/mulle-sde/mulle-env/archive/latest.tar.gz' \
 ## Author
 
 [Nat!](https://mulle-kybernetik.com/weblog) for Mulle kybernetiK
+
+
