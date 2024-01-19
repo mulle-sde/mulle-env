@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.1.0"
+MULLE_EXECUTABLE_VERSION="5.2.0"
 
 
 #
@@ -1001,7 +1001,7 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
 #   esac
 
    eval_exekutor env \
-      "${CUSTOM_ENVIRONMENT}" \
+      "${CUSTOM_PRE_ENVIRONMENT}" \
       "'${script}'" \
         "'${MULLE_UNAME}'" \
         "'${MULLE_HOSTNAME}'" \
@@ -1016,6 +1016,7 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
         "'${ENVFILENAME}'" \
         "'${AUXENVFILENAME}'" \
         "'${NO_MOTD}'" \
+        "'${CUSTOM_AFTER_ENVIRONMENT}'" \
         "${OPTION_SHELL_COMMAND}"  # already escaped!
 }
 
@@ -1216,9 +1217,9 @@ env::run_subshell()
 #      fail "sed not installed, can't run subshell"
 #   fi
 
-   local customenvironment
+   local custom_pre_environment
 
-   customenvironment="${CUSTOM_ENVIRONMENT}"
+   custom_pre_environment="${CUSTOM_PRE_ENVIRONMENT}"
    case "${_style}" in
       */restrict|*/tight|*/relax)
 
@@ -1239,8 +1240,8 @@ undefined (old mulle-bashfunctions)"
          r_colon_concat "${RVAL}" "${MULLE_ENV_VAR_DIR}/bin"
          runpath="${RVAL}"
 
-         r_concat "${customenvironment}" "MULLE_OLDPATH='${PATH}'"
-         customenvironment="${RVAL}"
+         r_concat "${custom_pre_environment}" "MULLE_OLDPATH='${PATH}'"
+         custom_pre_environment="${RVAL}"
       ;;
    esac
 
@@ -1321,22 +1322,23 @@ undefined (old mulle-bashfunctions)"
    local rval
 
    env::invoke_shell "${_style#*/}" \
-                      "${customenvironment}" \
-                      "'${script}'" \
-                      "'${MULLE_UNAME}'" \
-                      "'${MULLE_HOSTNAME}'" \
-                      "'${MULLE_USERNAME}'" \
-                      "'${MULLE_VIRTUAL_ROOT}'" \
-                      "'${MULLE_ENV_HOST_VAR_DIR}'" \
-                      "'${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
-                      "'${runpath}'" \
-                      "'${mode}'" \
-                      "'${_style}'" \
-                      "'${TRACE:-}'" \
-                      "'${ENVFILENAME}'" \
-                      "'${AUXENVFILENAME}'" \
-                      "'${NO_MOTD:-}'" \
-                      "${OPTION_SHELL_COMMAND}"
+                     "${custom_pre_environment}" \
+                     "'${script}'" \
+                     "'${MULLE_UNAME}'" \
+                     "'${MULLE_HOSTNAME}'" \
+                     "'${MULLE_USERNAME}'" \
+                     "'${MULLE_VIRTUAL_ROOT}'" \
+                     "'${MULLE_ENV_HOST_VAR_DIR}'" \
+                     "'${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
+                     "'${runpath}'" \
+                     "'${mode}'" \
+                     "'${_style}'" \
+                     "'${TRACE:-}'" \
+                     "'${ENVFILENAME}'" \
+                     "'${AUXENVFILENAME}'" \
+                     "'${NO_MOTD:-}'" \
+                     "'${CUSTOM_POST_ENVIRONMENT}'" \
+                     "${OPTION_SHELL_COMMAND}"
    rval=$?
 
    log_debug "Subshell exited with $rval"
@@ -1344,7 +1346,7 @@ undefined (old mulle-bashfunctions)"
 }
 
 MULLE_ENVIRONMENT_KEYS="\
-MULLE_UNAME
+MULLE_UNAME \
 MULLE_HOSTNAME \
 MULLE_USERNAME \
 MULLE_VIRTUAL_ROOT \
@@ -1426,7 +1428,7 @@ env::invoke_shell()
    log_entry "env::invoke_shell" "$@"
 
    local envstyle="$1"
-   local customenvironment="$2"
+   local custom_pre_environment="$2"
 
    shift 2
 
@@ -1475,7 +1477,7 @@ env::invoke_shell()
 
    eval_exekutor env ${env_flag} \
                      "${s}" \
-                     "${customenvironment}" \
+                     "${custom_pre_environment}" \
                      "$@"
 }
 
@@ -1505,11 +1507,15 @@ env::assert_valid_environment_key()
 }
 
 
+#
+# $2 is either def (both), pre or post
+#
 env::define_custom_environment()
 {
    log_entry "env::define_custom_environment" "$@"
 
    local keyvalue="$1"
+   local preorpost="$2"
 
    if [ -z "${keyvalue}" ]
    then
@@ -1530,8 +1536,28 @@ env::define_custom_environment()
 
    env::assert_valid_environment_key "${key}"
 
-   r_concat "${CUSTOM_ENVIRONMENT}" "${key}='${value}'"
-   CUSTOM_ENVIRONMENT="${RVAL}"
+   #
+   # we get here either def, pre or pos
+   #
+   case "${preorpost}" in
+      *[Oo]*)
+      ;;
+
+      *)
+         r_concat "${CUSTOM_PRE_ENVIRONMENT}" "${key}='${value}'"
+         CUSTOM_PRE_ENVIRONMENT="${RVAL}"
+      ;;
+   esac
+
+   case "${preorpost}" in
+      *[Rr]*)
+      ;;
+
+      *)
+         r_concat "${CUSTOM_POST_ENVIRONMENT}" "${key}='${value}'"
+         CUSTOM_POST_ENVIRONMENT="${RVAL}"
+      ;;
+   esac
 }
 
 
@@ -1625,7 +1651,8 @@ env::main()
    local OPTION_SCOPE_SUBDIRS=
 
    local OPTION_COPY_MULLE_TOOL='NO'
-   local CUSTOM_ENVIRONMENT=""
+   local CUSTOM_PRE_ENVIRONMENT=""
+   local CUSTOM_POST_ENVIRONMENT=""
    local FLAG_OUTSIDE_ENV='NO'
    local RESTRICTED_PATH=""
 
@@ -1646,6 +1673,7 @@ env::main()
    esac
 
    local arg
+   local preorpost
 
    while [ $# -ne 0 ]
    do
@@ -1731,7 +1759,8 @@ env::main()
             OPTION_DIRECTORY="$1"
          ;;
 
-         --defines)
+         --defines|--pre-defines|--post-defines)
+            preorpost="${1:2:3}"
             [ $# -eq 1 ] && env::usage "Missing argument to $1"
             shift
 
@@ -1741,7 +1770,7 @@ env::main()
                arg="${arg## }"
                if [ ! -z "${arg}" ]
                then
-                  if ! env::define_custom_environment "${arg}"
+                  if ! env::define_custom_environment "${arg}" "${preorpost}"
                   then
                      exit 1
                   fi
@@ -1753,6 +1782,24 @@ env::main()
             arg="${1#-D}"
             arg="${arg## }"
             if ! env::define_custom_environment "${arg}"
+            then
+               exit 1
+            fi
+         ;;
+
+         -DB*)
+            arg="${1#-DD}"
+            arg="${arg## }"
+            if ! env::define_custom_environment "${arg}" "pre"
+            then
+               exit 1
+            fi
+         ;;
+
+         -DE*)
+            arg="${1#-DE}"
+            arg="${arg## }"
+            if ! env::define_custom_environment "${arg}" "pos"
             then
                exit 1
             fi
@@ -1948,9 +1995,9 @@ env::main()
       ;;
 
       'invoke')
-         env::define_custom_environment "PATH=${PATH}"
+         env::define_custom_environment "PATH=${PATH}" "pre"
          env::invoke_shell "restrict" \
-                           "${CUSTOM_ENVIRONMENT}" \
+                           "${CUSTOM_PRE_ENVIRONMENT}" \
                            "$@"
          return
       ;;

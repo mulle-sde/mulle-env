@@ -1949,9 +1949,13 @@ env::environment::main()
    local OPTION_SED_KEY_PREFIX
    local OPTION_SED_KEY_SUFFIX
    local OPTION_PROTECT='YES'
+   local OPTION_AUX_LIST_ARGS
 
    MULLE_ENV_CONTENT_SORT='sort'
 
+   include "env::scope"
+
+   local cmd
    #
    # handle options
    #
@@ -2040,11 +2044,22 @@ env::environment::main()
          --[a-z]*)
             env::environment::assert_default_scope
 
-            OPTION_SCOPE="${1:2}"
+            if env::scope::is_known_scopeid "${1:2}"
+            then
+               OPTION_SCOPE="${1:2}"
+            else
+               r_concat "${OPTION_AUX_LIST_ARGS}" "$1"
+               OPTION_AUX_LIST_ARGS="${RVAL}"
+            fi
          ;;
 
          -*)
-            env::environment::usage "Unknown option \"$1\""
+            cmd="list"
+
+            r_concat "${OPTION_AUX_LIST_ARGS}" "$1"
+            OPTION_AUX_LIST_ARGS="${RVAL}"
+            shift
+            break
          ;;
 
          *)
@@ -2055,15 +2070,22 @@ env::environment::main()
       shift
    done
 
-   include "env::scope"
 
-   local cmd="${1:-list}"
-   [ $# -ne 0 ] && shift
+   if [ -z "${cmd}" ]
+   then
+      cmd="${1:-list}"
+      [ $# -ne 0 ] && shift
+   fi
 
    # unset is used for definitions so support it
    if [ "${cmd}" = 'unset' ]
    then
       cmd='remove'
+   fi
+
+   if [ "${cmd}" != 'list' -a ! -z "${OPTION_AUX_LIST_ARGS}" ]
+   then
+      fail "Unknown flags \"${OPTION_AUX_LIST_ARGS}\""
    fi
 
    case "${cmd}" in
@@ -2077,14 +2099,24 @@ env::environment::main()
          env::environment::${cmd}_main "${OPTION_SCOPE}" "$@"
       ;;
 
-      'get'|'list')
+      'list')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
          if [ "${OPTION_SCOPE}" != "DEFAULT" ]
          then
             env::scope::is_known_scopeid "${OPTION_SCOPE}" || fail "Scope \"${OPTION_SCOPE}\" is unknown"
          fi
-         env::environment::${cmd}_main "${OPTION_SCOPE}" "$@"
+         env::environment::list_main "${OPTION_SCOPE}" ${OPTION_AUX_LIST_ARGS} "$@"
+      ;;
+
+      'get')
+         [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
+
+         if [ "${OPTION_SCOPE}" != "DEFAULT" ]
+         then
+            env::scope::is_known_scopeid "${OPTION_SCOPE}" || fail "Scope \"${OPTION_SCOPE}\" is unknown"
+         fi
+         env::environment::get_main "${OPTION_SCOPE}" "$@"
       ;;
 
       'scope'|'scopes')

@@ -20,4 +20,4 @@ LANGUAGE="bash"             # c,cpp, objc, bash ...
 DEPENDENCIES='${MULLE_NAT_TAP}mulle-bashfunctions
 '
 
-DEBIAN_DEPENDENCIES="mulle-bashfunctions (>= 5.0.0)"
+DEBIAN_DEPENDENCIES="mulle-bashfunctions (>= 6.0.0)"

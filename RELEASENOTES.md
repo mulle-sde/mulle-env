@@ -1,3 +1,9 @@
+## 5.2.0
+
+* you can now say mulle-env env --output-eval and this is correctly recognized as a list command
+* environment variables like -DFOO=BAR were always set before sourcing the environment. Now FOO=BAR will also clobber any FOO definitions made in the environment, therefore effectively overriding changes in the custom environfiles. You can choose though with the additional -DB and -DE flags.
+
+
 ## 5.1.0
 
 * added --remove option for environment values

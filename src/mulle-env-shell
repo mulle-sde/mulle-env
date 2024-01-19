@@ -150,19 +150,14 @@ r_get_envfile()
 }
 
 
-#
-# A separate file to that env can call it. there is no error checking or
-# log output here
-#
 emit_initfile()
 {
+   local envfile
+
    if [ "${TRACE}" = 'YES' ]
    then
       echo "set -x"
    fi
-   echo "set +o posix"  # turn off posix
-
-   local envfile
 
    r_get_envfile "ENVFILENAME"
    envfile="${RVAL}"
@@ -185,15 +180,42 @@ emit_initfile()
       fi
    fi
 
-   # try to set terminal title
+   if [ ! -z "${CUSTOM_ENVIRONMENT}" ]
+   then
+      echo "${CUSTOM_ENVIRONMENT}"
+   fi
+}
+
+
+#
+# A separate file to that env can call it. there is no error checking or
+# log output here
+#
+emit_interactive_initfile()
+{
+   emit_initfile "$@"
+
    echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
+
+   if [ "${OPTION_KEEP_TMP}" = 'NO' ]
+   then
+      #
+      # run in envelope subshell to squelch job control message
+      #
+      echo "(( PATH='/bin:/usr/bin'; sleep 1 ; rm \"${initfile}\" 2> /dev/null ) &)"
+   fi
 
    if [ "${TRACE}" = 'YES' ]
    then
       echo "set +x"
    fi
    echo "unset TRACE"
-#   echo "unset ENV"  # unsure
+}
+
+
+emit_script_initfile()
+{
+   emit_initfile "$@"
 
    if [ "${OPTION_KEEP_TMP}" = 'NO' ]
    then
@@ -205,6 +227,22 @@ emit_initfile()
 }
 
 
+r_create_init_file()
+{
+   local tmpdir
+
+   tmpdir="${MULLE_ENV_HOST_VAR_DIR}/tmp"
+
+   mkdir -p "${tmpdir}" 2> /dev/null
+
+   if ! r_make_tmp_in_dir "${tmpdir}"
+   then
+      _fail "Temporary init file creation failed"
+   fi
+}
+
+
+
 run_script_shell()
 {
    local args
@@ -212,6 +250,20 @@ run_script_shell()
 
    r_get_envfile "ENVFILENAME"
    envfile="${RVAL}"
+
+   if [ ! -z "${AUXENVFILENAME}" -o ! -z "${CUSTOM_ENVIRONMENT}" ]
+   then
+      local initfile
+
+      r_create_init_file
+      initfile="${RVAL}"
+
+      if ! emit_script_initfile > "${initfile}"
+      then
+         _fail "Could not write \"${initfile}\""
+      fi
+      envfile="${initfile}"
+   fi
 
    #
    # For script this is somewhat easy. We emit
@@ -243,21 +295,12 @@ run_interactive_shell()
    # check vs bash/dash
    # not sure dash can do this, or does even still exist
    #
-   local tmpdir
-
-   tmpdir="${MULLE_ENV_HOST_VAR_DIR}/tmp"
-
-   mkdir -p "${tmpdir}" 2> /dev/null
-
    local initfile
 
-   if ! r_make_tmp_in_dir "${tmpdir}"
-   then
-      _fail "Temporary initfile creation failed"
-   fi
+   r_create_init_file
    initfile="${RVAL}"
 
-   if ! emit_initfile > "${initfile}"
+   if ! emit_interactive_initfile > "${initfile}"
    then
       _fail "Could not write \"${initfile}\""
    fi
@@ -344,7 +387,7 @@ main()
       shift
    done
 
-   [ $# -lt 13 -o $# -gt 14 ] && _fail "API mismatch ($# args: $*)"
+   [ $# -lt 14 -o $# -gt 15 ] && _fail "API mismatch ($# args: $*)"
 
    local MULLE_UNAME
 
@@ -430,6 +473,12 @@ main()
    local NO_MOTD  # either YES or usually empty
 
    NO_MOTD="$1"
+   shift
+
+   #14
+   local CUSTOM_ENVIRONMENT  # the environment defined by -D
+
+   CUSTOM_ENVIRONMENT="$1"
    shift
 
    ####
