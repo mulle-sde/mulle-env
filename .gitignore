@@ -22,3 +22,4 @@ cola/wilted/
 mulle-markdown-preview-*.html
 build-*/
 src/mulle-env-shell.sh.notneeded
+.mulle/etc/project/publisher-info.sh
