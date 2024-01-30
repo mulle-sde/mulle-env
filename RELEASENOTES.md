@@ -1,3 +1,7 @@
+### 5.2.1
+
+* more is no longer required
+
 ## 5.2.0
 
 * you can now say mulle-env env --output-eval and this is correctly recognized as a list command

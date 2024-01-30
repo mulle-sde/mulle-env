@@ -72,6 +72,7 @@ env::plugin::minimal::print_tools()
 # i am not really sure that this is POSIX so I called it minimal
 # though posix would be nicer. Now some are optional, because mknod
 # f.e. is not on dragonfly. tty is in there for mulle-make
+# more is apparently obsolete on some systems...
 #
    MINIMAL_BIN_BINARIES="\
 bash;optional
@@ -93,7 +94,7 @@ login
 ls;required
 mkdir;required
 mknod
-more;required
+more
 mount
 mv;required
 ps
