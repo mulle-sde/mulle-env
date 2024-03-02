@@ -668,9 +668,6 @@ env::environment::_set()
          value="\"\""
       ;;
 
-      \"*\")
-      ;;
-
       *)
          r_escaped_doublequotes "${value}"
          value="\"${RVAL}\""
@@ -843,7 +840,7 @@ env::environment::set_main()
    local OPTION_SEPARATOR=":"  # convenient for PATH like behaviour
 
    # shellcheck source=src/mulle-env-scope.sh
-   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+   include "env::scope"
 
    while :
    do

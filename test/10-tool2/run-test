@@ -108,7 +108,7 @@ login
 ls;required
 mkdir;required
 mknod
-more;required
+more
 mount
 mv;required
 ps

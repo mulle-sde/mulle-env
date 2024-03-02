@@ -20,6 +20,7 @@ run_mulle_env()
 }
 
 
+
 main()
 {
    MULLE_ENV_FLAGS="$@"
@@ -35,61 +36,35 @@ main()
 
    run_mulle_env -s init --style none/tight
 
-   local value
-
    value="`run_mulle_env environment --me get FOO`"
    if [ ! -z "${value}" ]
    then
       fail "Non empty return value for get"
    fi
 
-   if ! run_mulle_env environment --me set FOO ""
-   then
-      fail "Negative return value for empty set"
-   fi
-   if ! value="`run_mulle_env environment --me get FOO`"
-   then
-      fail "Negative return value for get with empty value"
-   fi
-   if [ ! -z "${value}" ]
-   then
-      fail "Non empty return value"
-   fi
+   local count
+   count=1
 
-   log_verbose "----- #1 PASSED -----"
+   local string
+   local value
 
-
-   if ! run_mulle_env environment --me set FOO "foo with spaces"
-   then
-      fail "Negative return value for empty set"
-   fi
-   if ! value="`run_mulle_env environment --me get FOO`"
-   then
-      fail "Negative return value for get with value"
-   fi
-   if [ "${value}" != "foo with spaces" ]
-   then
-      fail "Wrong return value"
-   fi
-
-   log_verbose "----- #2 PASSED -----"
-
-
-   if ! run_mulle_env environment --me set FOO "bar with spaces"
-   then
-      fail "Negative return value for empty set"
-   fi
-   if ! value="`run_mulle_env environment --me get FOO`"
-   then
-      fail "Negative return value for get with value"
-   fi
-   if [ "${value}" != "bar with spaces" ]
-   then
-      fail "Wrong return value"
-   fi
-
-   log_verbose "----- #3 PASSED -----"
-
+   for string in ''  'foo with spaces' 'bar with spaces' '"doublequoted"' '"\"escaped\""'
+   do
+      if ! run_mulle_env environment --me set FOO "${string}"
+      then
+         fail "Negative return value for set with: ${string}"
+      fi
+      if ! value="`run_mulle_env environment --me get FOO`"
+      then
+         fail "Negative return value for get with: ${string}"
+      fi
+      if [ "${value}" != "${string}" ]
+      then
+         fail "Wrong return value >${value}< for get with: ${string}"
+      fi
+      log_verbose "----- #${count} PASSED -----"
+      count=$((count + 1))
+   done
 
    log_info "----- ALL PASSED -----"
 

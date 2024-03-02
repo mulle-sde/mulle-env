@@ -1,3 +1,7 @@
+### 5.2.2
+
+* fix environment set with a double quoted string
+
 ### 5.2.1
 
 * more is no longer required
