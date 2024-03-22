@@ -346,6 +346,16 @@ env::scope::r_priority_for_scopeid()
          return 0
       ;;
 
+      'user-'*'-os-'*)
+         RVAL=120
+         return 0
+      ;;
+
+      'user-'*'-host-'*)
+         RVAL=140
+         return 0
+      ;;
+
       'user-'*)
          RVAL=100
          return 0
@@ -353,12 +363,12 @@ env::scope::r_priority_for_scopeid()
 
       # strictly speaking these two should not be hardcoded here
       'post-extension')
-         RVAL=110
+         RVAL=170
          return 0
       ;;
 
       'post-global')
-         RVAL=120
+         RVAL=180
          return 0
       ;;
    esac
