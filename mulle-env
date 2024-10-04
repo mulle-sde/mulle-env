@@ -129,6 +129,7 @@ EOF
 
 Commands:
    clean         : force relink of tools on next entry
+   commands      : list of all available commands (some undocumented)
    environment   : manage subshell environment variables
    init          : set up the subshell for the first time
    invoke        : execute a shell command with restricted environment
@@ -1274,14 +1275,6 @@ undefined (old mulle-bashfunctions)"
    fi
    env::apply_style_to_directory "${rundirectory}" "${sharedir}" "${_style}" "${_flavor}"
 
-   #
-   # remember old environment in "var" as export statements
-   # for later use by "mudo -e" with env -i (if required)
-   #
-   log_fluff "Saving current environment into ${vardir}/old-environment"
-
-   redirect_exekutor "${vardir}/old-environment" env
-
    local mode
 
    if [ ! -z "${OPTION_SHELL_COMMAND}" ]
@@ -1319,6 +1312,17 @@ undefined (old mulle-bashfunctions)"
 #      ;;
 #   esac
 
+   #
+   # remember old environment in "var" as export statements
+   # for later use by "mudo -e" with env -i (if required)
+   #
+   log_fluff "Saving current environment into ${vardir}/old-environment.$$"
+
+   redirect_exekutor "${vardir}/old-environment.$$" env
+
+   log_fluff "Saving --defines to into ${vardir}/custom-post-environment.$$"
+   redirect_exekutor "${vardir}/custom-post-environment.$$" printf "%s" "${CUSTOM_POST_ENVIRONMENT}"
+
    local rval
 
    env::invoke_shell "${_style#*/}" \
@@ -1342,6 +1346,10 @@ undefined (old mulle-bashfunctions)"
    rval=$?
 
    log_debug "Subshell exited with $rval"
+
+   remove_file_if_present "${vardir}/old-environment.$$"
+   remove_file_if_present "${vardir}/custom-post-environment.$$"
+
    return $rval
 }
 
@@ -1373,8 +1381,11 @@ TERM \
 TMPDIR \
 USER \
 USERNAME \
-VISUAL"
+VISUAL
+XDG_RUNTIME_DIR"
 
+# the XDG_RUNTIME_DIR environment variable is apparently very important
+# for sound generation
 
 
 env::r_append_environment_variable()
@@ -1474,6 +1485,9 @@ env::invoke_shell()
          ;;
       esac
    esac
+
+   # need this for mudo
+   r_concat "${s}" "MULLE_ENV_PID=$$" && s="${RVAL}"
 
    eval_exekutor env ${env_flag} \
                      "${s}" \
@@ -1932,6 +1946,44 @@ env::main()
          return $?
       ;;
 
+      commands)
+         echo "\
+clean
+mulle-bin-dir
+mulle-libexec-dir
+env
+environment
+get
+set
+list
+hostname
+init
+install-dir
+invoke
+local
+mulle-tool-env
+project-dir
+reinit
+reset
+scope
+scopes
+searchpath
+style
+styles
+subenv
+tool
+tweak
+uname
+osname
+unveil
+username
+untweak
+upgrade
+libexec-dir
+version"
+         exit 0
+      ;;
+
       'mulle-bin-dir')
          env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
          printf "%s\n" "${MULLE_ENV_VAR_DIR}/bin"
@@ -2133,7 +2185,6 @@ env::main()
          return $?
       ;;
 
-
       'tweak')
          env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
          mkdir_if_missing "${MULLE_ENV_ETC_DIR}/tweak"
@@ -2191,12 +2242,10 @@ env::main()
          return 0
       ;;
 
-
       'version')
          printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
          return 0
       ;;
-
 
       "")
       ;;

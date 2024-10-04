@@ -690,7 +690,7 @@ env::tool::compile()
       shift
    done
 
-   [ $# -ne 0 ] && env::tool::compile_usage "superflous arguments \"$*\""
+   [ $# -ne 0 ] && env::tool::compile_usage "superfluous arguments \"$*\""
 
    if [ "${ifneeded}" = 'YES' ]
    then

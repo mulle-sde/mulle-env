@@ -203,7 +203,7 @@ env::migrate::migrate_from_v1_to_v2()
    .done
 
    #
-   # hack .gitignore for new paths, also remove some superflous stuff and
+   # hack .gitignore for new paths, also remove some superfluous stuff and
    # correct typos
    #
    if [ -f ".gitignore" ]

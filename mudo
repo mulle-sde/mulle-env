@@ -63,7 +63,7 @@ fi
 # remove -e
 shift
 
-# we are in a virtual env, so if -f is given remove it (do it one more time)
+# we are in a virtual env, so if -f is given, remove it (do it one more time)
 if [ "$1" = "-f" ]
 then
    shift
@@ -92,7 +92,8 @@ then
    exit 1
 fi
 
-filename="${MULLE_ENV_VAR_DIR}/old-environment"
+# TODO: should probably be in MULLE_ENV_TMP_DIR if that existed
+filename="${MULLE_ENV_VAR_DIR}/old-environment.${MULLE_ENV_PID}"
 environment="`cat "${filename}" 2> /dev/null`"
 if [ -z "${environment}" ]
 then
