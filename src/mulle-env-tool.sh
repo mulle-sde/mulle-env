@@ -516,6 +516,8 @@ env::tool::add()
 
    local tool
 
+   mkdir_if_missing "${MULLE_ENV_SHARE_DIR}"
+   env::lock_existing_directory "${MULLE_ENV_SHARE_DIR}"
    env::unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
 
    # zsh no like in loop locals
@@ -634,6 +636,7 @@ Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platfo
    )
    rval=$?
    env::protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
+   env::unlock_existing_directory "${MULLE_ENV_SHARE_DIR}"
 
    if [ $rval -ne 0 ]
    then
@@ -1489,6 +1492,8 @@ env::tool::main()
 
    case "${cmd:-list}" in
       add)
+         mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
+         env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          env::unprotect_dir_if_exists "${bindir}"
          env::unprotect_dir_if_exists "${libexecdir}"
          (
@@ -1499,6 +1504,7 @@ env::tool::main()
          rval=$?
          env::protect_dir_if_exists "${bindir}"
          env::protect_dir_if_exists "${libexecdir}"
+         env::unlock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          return $rval
       ;;
 
@@ -1525,6 +1531,8 @@ env::tool::main()
       ;;
 
       link)
+         mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
+         env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          env::unprotect_dir_if_exists "${bindir}"
          env::unprotect_dir_if_exists "${libexecdir}"
          (
@@ -1533,6 +1541,7 @@ env::tool::main()
          rval=$?
          env::protect_dir_if_exists "${bindir}"
          env::protect_dir_if_exists "${libexecdir}"
+         env::unlock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          return $rval
       ;;
 
@@ -1542,6 +1551,8 @@ env::tool::main()
       ;;
 
       remove)
+         mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
+         env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          env::unprotect_dir_if_exists "${bindir}"
          env::unprotect_dir_if_exists "${libexecdir}"
          (
@@ -1553,6 +1564,7 @@ env::tool::main()
          rval=$?
          env::protect_dir_if_exists "${bindir}"
          env::protect_dir_if_exists "${libexecdir}"
+         env::unlock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          return $rval
       ;;
 

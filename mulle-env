@@ -372,6 +372,70 @@ env::default_setup_environment()
 }
 
 
+
+#
+# returns 0 : locked successfully
+# return  1 : locked successfully after a timeout
+# return  2 : failed to lock
+#
+env::lock_existing_directory()
+{
+   log_entry "env::lock_existing_directory" "$@"
+
+   local directory="$1"
+
+   [ -d "${directory}" ] || fail "directory \"${directory}\" must exist"
+
+   local lockdir
+
+   lockdir="${directory}/.mulle-env-protect"
+
+   if exekutor mkdir "${lockdir}" 2>/dev/null
+   then
+      return 0
+   fi
+
+   local start_time
+   local current_time
+   local elapsed
+
+   start_time=$(date +%s)
+
+   while :
+   do
+      sleep 0.01
+
+      if ! exekutor mkdir "${lockdir}" 2>/dev/null
+      then
+         return 1
+      fi
+
+      current_time=$(date +%s)
+      elapsed=$((current_time - start_time))
+      if [ $elapsed -ge 2 ]
+      then
+         return 2
+      fi
+   done
+}
+
+
+env::unlock_existing_directory()
+{
+   log_entry "env::unlock_existing_directory" "$@"
+
+   local directory="$1"
+
+   local lockdir
+
+   lockdir="${directory}/.mulle-env-protect"
+
+   [ -d "${lockdir}" ] || fail "directory \"${directory}\" must exist"
+
+   exekutor rmdir "${lockdir}"
+}
+
+
 env::protect_dir_if_exists()
 {
    log_entry "env::protect_dir_if_exists" "$@"
@@ -657,6 +721,7 @@ env::setup_if_needed()
 
    local needs_flavor_update
    local needs_bin_update
+   local needs_rmdir
 
    needs_flavor_update='NO'
    needs_bin_update='DEFAULT'
@@ -666,8 +731,7 @@ env::setup_if_needed()
    #
    if [ "${style}" != "${oldstyle}" ]
    then
-      rmdir_safer "${bindir}"
-      rmdir_safer "${libexecdir}"
+      needs_rmdir='YES'
       needs_bin_update='YES'
    fi
 
@@ -689,18 +753,42 @@ check your tool list.
       fi
    fi
 
-   if [ "${needs_bin_update}" = 'YES' ]
+   if [ "${needs_bin_update}" != 'YES' ]
    then
-      [ -z "${MULLE_ENV_TOOL_SH}" ] && \
-         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh"
+      return
+   fi
 
-      local callback
-      local rval
+   [ -z "${MULLE_ENV_TOOL_SH}" ] && \
+      . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh"
+
+   local rval
+   local callback
+
+   exekutor mkdir -p "${MULLE_ENV_VAR_DIR}"
+
+   env::lock_existing_directory "${MULLE_ENV_VAR_DIR}"
+   case $? in
+      0|2)
+      ;;
+
+      1)
+         # if we a locked after a timeout, assume another process set it
+         # up already, so don't do it again
+         return
+      ;;
+   esac
 
       env::unprotect_dir_if_exists "${bindir}"
       env::unprotect_dir_if_exists "${libexecdir}"
       env::unprotect_dir_if_exists "${toolsbindir}"
       env::unprotect_dir_if_exists "${toolslibexecdir}"
+
+      if [ "${needs_rmdir}" ]
+      then
+         rmdir_safer "${bindir}"
+         rmdir_safer "${libexecdir}"
+      fi
+
       (
 	      if ! (
 	         callback="env::plugin::${flavor}::setup_tools"
@@ -726,9 +814,14 @@ check your tool list.
       env::protect_dir_if_exists "${libexecdir}"
       env::protect_dir_if_exists "${bindir}"
 
-      [ "$rval" -ne 0 ] && exit $rval
+   env::unlock_existing_directory "${MULLE_ENV_VAR_DIR}"
+   if [ "$rval" -ne 0 ]
+   then
+      exit $rval
    fi
 }
+
+
 
 
 #

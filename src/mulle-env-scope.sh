@@ -710,7 +710,8 @@ env::scope::env_validate_scope_write()
          's')
             if [ "${line:2}" = "${scope}" ]
             then
-               fail "Use -f to make environment variable changes, that will be lost in the next upgrade"
+               fail "Use -f to make environment variable changes, that would be lost in the next upgrade.
+${C_INFO}Hint:${C_VERBOSE} Consider clobbering the value with the global scope instead."
             fi
          ;;
 
