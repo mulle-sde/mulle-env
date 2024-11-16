@@ -48,7 +48,7 @@ main()
 
    log_verbose "----- #2 PASSED -----"
 
-   if run_mulle_env -s --no-errors tool add mv
+   if run_mulle_env -s --mulle-no-errors tool add mv
    then
       fail "#3: Unexpected success of mv add (should be 4)"
    fi
@@ -152,7 +152,7 @@ EOF
          fail "#7.1: Unexpected add failure"
       fi
 
-      if run_mulle_env -s --no-errors tool link --compile-if-needed
+      if run_mulle_env -s --mulle-no-errors tool link --compile-if-needed
       then
          fail "#7.2: link succeeded unexpectedly"
       fi

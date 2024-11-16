@@ -1,3 +1,13 @@
+## 5.3.0
+
+
+* protect against multiple scripts in parallel trying to setup the same .mulle/var directory and getting into protecting and unprotecting races
+
+* fix multiple mulle-env commands in same project possibly clobbering old-environment
+
+* add support for environment environment-user-...-os-... and environment user-...-host-... files
+
+
 ### 5.2.2
 
 * fix environment set with a double quoted string
