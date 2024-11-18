@@ -463,6 +463,7 @@ env::tool::add()
    local OPTION_COMPILE_LINK='DEFAULT'
    local OPTION_REMOVE='NO'
    local OPTION_CSV='NO'
+   local OPTION_RESOLVE='YES'
    local OPTION_IF_MISSING='NO'
 
    while :
@@ -482,6 +483,14 @@ env::tool::add()
 
          --csv)
             OPTION_CSV='YES'
+         ;;
+
+         --resolve)
+            OPTION_RESOLVE='YES'
+         ;;
+
+         --no-resolve)
+            OPTION_RESOLVE='NO'
          ;;
 
          --required|--no-optional)
@@ -555,6 +564,12 @@ env::tool::add()
             then
                mark="remove"
             fi
+         fi
+
+         if [ "${OPTION_RESOLVE}" = 'NO' ]
+         then
+            r_comma_concat "${mark}" "no-resolve"
+            mark="${RVAL}"
          fi
 
          if [ "${os}" = "DEFAULT" ]
@@ -881,6 +896,7 @@ env::tool::link_tool()
    local toolname="$1"
    local bindir="$2"
    local isrequired="$3"
+   local resolve="$4"
 
    #
    # when stepping back and forth from environments, it may be that
@@ -986,7 +1002,23 @@ exec '${filename}' \"\$@\""
    else
       log_debug "Creating symlink \"${bindir}/${toolname}\""
 
-      exekutor ln -sf "${filename}" "${bindir}/" || exit 1
+      local linkname
+
+      # memo: link name can change during "resolve" e.g awk -> gawk
+
+      r_basename "${filename}"
+      linkname="${RVAL}"
+
+      if [ "${resolve}" = 'YES' ]
+      then
+         if ! r_resolve_symlinks "${filename}"
+         then
+            fail "Broken symlink chain \"${filename}\""
+         fi
+         filename="${RVAL}"
+      fi
+
+      exekutor ln -sf "${filename}" "${bindir}/${linkname}" || exit 1
    fi
 }
 
@@ -1014,27 +1046,37 @@ env::tool::link_tools()
    local toolname
    local isrequired
    local mark
+   local resolve
 
    mkdir_if_missing "${bindir}"
 
    .foreachline toolline in ${toollines}
    .do
       isrequired='NO'
+      resolve='YES'
       operation="link"
 
       IFS=";" read -r toolname mark <<< "${toolline}"
 
-      case "${mark}" in
-         required)
-            isrequired='YES'
-         ;;
-
-         remove)
+      case ",${mark}," in
+         *,remove,*)
             operation="unlink"
          ;;
       esac
 
-      env::tool::${operation}_tool "${toolname}" "${bindir}" "${isrequired}"
+      case ",${mark}," in
+         *,required,*)
+            isrequired='YES'
+         ;;
+      esac
+
+      case ",${mark}," in
+         *,no-resolve,*)
+            resolve='NO'
+         ;;
+      esac
+
+      env::tool::${operation}_tool "${toolname}" "${bindir}" "${isrequired}" "${resolve}"
    .done
 
    rmdir_if_empty "${bindir}"
