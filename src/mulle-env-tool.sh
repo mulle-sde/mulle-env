@@ -107,8 +107,10 @@ Examples:
    ${MULLE_USAGE_NAME} tool --global add cmake
 
 Options:
-   --optional : it's not a fatal error if command is not available
-   --required : it's a fatal error
+   --no-resolve : do not deeply resolve symlinks
+   --optional   : it's not a fatal error if command is not available
+   --required   : it's a fatal error
+   --script     : force use of a script instead of a symlink
 
 EOF
    exit 1
@@ -465,6 +467,7 @@ env::tool::add()
    local OPTION_CSV='NO'
    local OPTION_RESOLVE='YES'
    local OPTION_IF_MISSING='NO'
+   local OPTION_SCRIPT='NO'
 
    while :
    do
@@ -491,6 +494,14 @@ env::tool::add()
 
          --no-resolve)
             OPTION_RESOLVE='NO'
+         ;;
+
+         --script)
+            OPTION_SCRIPT='YES'
+         ;;
+
+         --no-script)
+            OPTION_SCRIPT='NO'
          ;;
 
          --required|--no-optional)
@@ -569,6 +580,12 @@ env::tool::add()
          if [ "${OPTION_RESOLVE}" = 'NO' ]
          then
             r_comma_concat "${mark}" "no-resolve"
+            mark="${RVAL}"
+         fi
+
+         if [ "${OPTION_SCRIPT}" = 'YES' ]
+         then
+            r_comma_concat "${mark}" "script"
             mark="${RVAL}"
          fi
 
@@ -668,6 +685,25 @@ Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platfo
    fi
 }
 
+env::tool::sort()
+{
+   # reverse, sort
+   # 'abc;123;first
+   # def;456;old
+   # abc;789;second
+   # abc;999;last
+   # def;111;newest
+   # xyz;333;solo'
+   #
+   # produces:
+   #
+   # abc;999;last
+   # def;111;newest
+   # xyz;333;solo
+
+   sed '1!G;h;$!d' \
+   | sort -t';' -k1,1 -u
+}
 
 env::tool::compile()
 {
@@ -749,20 +785,14 @@ env::tool::compile()
       .foreachline i in ${lines}
       .do
          case "${i}" in
-            *';remove')
+            *';'*'remove'*)
                name="${i%;remove}"
                r_escaped_grep_pattern "${name}"
                result="`grep -E -v -x "^${RVAL}$|^${RVAL};.*$" <<< "${result}"`"
             ;;
 
-            *';required')
-               r_add_line "${result}" "${i}"
-               result="${RVAL}"
-            ;;
-
             *)
-               # silently remove any ; tail
-               r_add_line "${result}" "${i%;*}"
+               r_add_line "${result}" "${i}"
                result="${RVAL}"
             ;;
          esac
@@ -770,7 +800,7 @@ env::tool::compile()
    .done
 
    mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
-   redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/tool" sort -u <<< "${result}" || exit 1
+   redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/tool" env::tool::sort <<< "${result}" || exit 1
 }
 
 
@@ -897,6 +927,7 @@ env::tool::link_tool()
    local bindir="$2"
    local isrequired="$3"
    local resolve="$4"
+   local script="$5"
 
    #
    # when stepping back and forth from environments, it may be that
@@ -910,21 +941,23 @@ env::tool::link_tool()
    fi
 
    local filename
-   local use_script
 
-   case "${MULLE_UNAME}" in
-      'mingw'|'msys')
-         use_script='YES'
-      ;;
+   if [ -z "${script}" ]
+   then
+      case "${MULLE_UNAME}" in
+         'mingw'|'msys')
+            script='YES'
+         ;;
 
-      'windows')
-         use_script='MAYBE'
-      ;;
+         'windows')
+            script='MAYBE'
+         ;;
 
-      *)
-         use_script='NO'
-      ;;
-   esac
+         *)
+            script='NO'
+         ;;
+      esac
+   fi
 
    local searchpath
 
@@ -934,6 +967,9 @@ env::tool::link_tool()
       searchpath="${PATH}"
       log_debug "MULLE_OLDPATH is empty (searching for \"$toolname\")"
    fi
+
+   log_setting "MULLE_OLDPATH : ${searchpath}"
+   log_setting "PATH          : ${searchpath}"
 
    filename="`PATH="${searchpath}" command -v "${toolname}" `"
 
@@ -958,9 +994,9 @@ ${C_RESET}${searchpath}"
       ;;
 
       *.exe)
-         if [ "${use_script}" = 'MAYBE' ]
+         if [ "${script}" = 'MAYBE' ]
          then
-            use_script='YES'
+            script='YES'
          fi
       ;;
 
@@ -988,38 +1024,34 @@ ${C_RESET}${searchpath}"
       ;;
    esac
 
-   if [ "${use_script}" = 'YES' ]
+   if [ "${script}" = 'YES' ]
    then
       log_debug "Creating script \"${bindir}/${toolname}\""
 
-      local script
+      local script_text
 
-      script="#! /bin/sh
+      script_text="#! /bin/sh
 
 exec '${filename}' \"\$@\""
-      redirect_exekutor "${bindir}/${toolname}" printf "%s\n" "${script}" || exit 1
+      redirect_exekutor "${bindir}/${toolname}" printf "%s\n" "${script_text}" || exit 1
       exekutor chmod 755 "${bindir}/${toolname}"  || exit 1
-   else
-      log_debug "Creating symlink \"${bindir}/${toolname}\""
-
-      local linkname
-
-      # memo: link name can change during "resolve" e.g awk -> gawk
-
-      r_basename "${filename}"
-      linkname="${RVAL}"
-
-      if [ "${resolve}" = 'YES' ]
-      then
-         if ! r_resolve_symlinks "${filename}"
-         then
-            fail "Broken symlink chain \"${filename}\""
-         fi
-         filename="${RVAL}"
-      fi
-
-      exekutor ln -sf "${filename}" "${bindir}/${linkname}" || exit 1
+      return
    fi
+
+   log_debug "Creating symlink \"${bindir}/${toolname}\""
+
+   if [ "${resolve}" = 'YES' ]
+   then
+      if ! r_resolve_symlinks "${filename}"
+      then
+         fail "Broken symlink chain \"${filename}\""
+      fi
+      filename="${RVAL}"
+   fi
+
+   # memo: filename can change during "resolve" e.g awk -> gawk
+   #       so keep toolname
+   exekutor ln -sf "${filename}" "${bindir}/${toolname}" || exit 1
 }
 
 
@@ -1047,6 +1079,7 @@ env::tool::link_tools()
    local isrequired
    local mark
    local resolve
+   local script
 
    mkdir_if_missing "${bindir}"
 
@@ -1055,6 +1088,7 @@ env::tool::link_tools()
       isrequired='NO'
       resolve='YES'
       operation="link"
+      script=""
 
       IFS=";" read -r toolname mark <<< "${toolline}"
 
@@ -1076,7 +1110,23 @@ env::tool::link_tools()
          ;;
       esac
 
-      env::tool::${operation}_tool "${toolname}" "${bindir}" "${isrequired}" "${resolve}"
+      case ",${mark}," in
+         *,no-script,*)
+            script='NO'
+         ;;
+      esac
+
+      case ",${mark}," in
+         *,script,*)
+            script='YES'
+         ;;
+      esac
+
+      env::tool::${operation}_tool "${toolname}"   \
+                                   "${bindir}"     \
+                                   "${isrequired}" \
+                                   "${resolve}"    \
+                                   "${script}"
    .done
 
    rmdir_if_empty "${bindir}"
@@ -1147,7 +1197,13 @@ env::tool::link()
    if [ "${OPTION_DELETE}" = 'YES' ]
    then
       rmdir_safer "${bindir}"
-      mkdir_if_missing "${bindir}"
+      if [ ${ZSH_VERSION+x} ]
+      then
+         rehash # ensure that we don't do old commands
+      else
+         hash -r
+      fi
+      exekutor mkdir "${bindir}"
    fi
 
    local toolfile
@@ -1183,7 +1239,7 @@ env::tool::doctor()
    .do
       if shell_is_builtin_command "${cmd}"
       then
-         continue
+         .continue
       fi
 
       if [ ! -e "${bindir}/${cmd}" ]
@@ -1536,6 +1592,17 @@ env::tool::main()
       add)
          mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
          env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
+         case $? in
+            0|2)
+            ;;
+
+            1)
+               # if we a locked after a timeout, assume another process set it
+               # up already, so don't do it again
+               fail "Unable to lock \"${MULLE_ENV_HOST_VAR_DIR}\", competing process is stuck ?"
+            ;;
+         esac
+
          env::unprotect_dir_if_exists "${bindir}"
          env::unprotect_dir_if_exists "${libexecdir}"
          (
@@ -1575,6 +1642,17 @@ env::tool::main()
       link)
          mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
          env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
+         case $? in
+            0|2)
+            ;;
+
+            1)
+               # if we a locked after a timeout, assume another process set it
+               # up already, so don't do it again
+               fail "Unable to lock \"${MULLE_ENV_HOST_VAR_DIR}\", competing process is stuck ?"
+            ;;
+         esac
+
          env::unprotect_dir_if_exists "${bindir}"
          env::unprotect_dir_if_exists "${libexecdir}"
          (

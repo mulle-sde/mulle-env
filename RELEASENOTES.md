@@ -1,10 +1,11 @@
 ## 5.3.0
 
-
+* improve locking scheme: move lock dir outside protected directory and add error handling for failed locks
+* Add --script and --no-script options for tool commands
+* Fix symlink resolution and add --no-resolve option
+* tool symlinks are now resolved, which fixes cmake breakage. you can specify 'no-resolve' as a tool mark to get back to the old behaviour
 * protect against multiple scripts in parallel trying to setup the same .mulle/var directory and getting into protecting and unprotecting races
-
 * fix multiple mulle-env commands in same project possibly clobbering old-environment
-
 * add support for environment environment-user-...-os-... and environment user-...-host-... files
 
 

@@ -373,6 +373,23 @@ env::default_setup_environment()
 
 
 
+env::r_lock_dir()
+{
+   log_entry "env::r_lock_dir" "$@"
+
+   local directory="$1"
+
+   local name
+
+   r_basename "${directory}"
+   name="${RVAL}"
+
+   r_dirname "${directory}"
+   [ -w "${RVAL}" ] || fail "Locking scheme needs write access to \"${RVAL}\""
+
+   RVAL="${RVAL}/.mulle-env-${name}.lock"
+}
+
 #
 # returns 0 : locked successfully
 # return  1 : locked successfully after a timeout
@@ -388,9 +405,10 @@ env::lock_existing_directory()
 
    local lockdir
 
-   lockdir="${directory}/.mulle-env-protect"
+   env::r_lock_dir "${directory}"
+   lockdir="${RVAL}"
 
-   if exekutor mkdir "${lockdir}" 2>/dev/null
+   if exekutor mkdir "${lockdir}"
    then
       return 0
    fi
@@ -428,9 +446,10 @@ env::unlock_existing_directory()
 
    local lockdir
 
-   lockdir="${directory}/.mulle-env-protect"
+   env::r_lock_dir "${directory}"
+   lockdir="${RVAL}"
 
-   [ -d "${lockdir}" ] || fail "directory \"${directory}\" must exist"
+   [ -d "${lockdir}" ] || log_warning "Directory \"${lockdir}\" should exist"
 
    exekutor rmdir "${lockdir}"
 }
