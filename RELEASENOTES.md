@@ -1,3 +1,7 @@
+### 5.3.1
+
+* reuse stale locks
+
 ## 5.3.0
 
 * improve locking scheme: move lock dir outside protected directory and add error handling for failed locks

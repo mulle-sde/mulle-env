@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.3.0"
+MULLE_EXECUTABLE_VERSION="5.3.1"
 
 
 #
@@ -394,6 +394,7 @@ env::r_lock_dir()
 # returns 0 : locked successfully
 # return  1 : locked successfully after a timeout
 # return  2 : failed to lock
+# return  3 : lock considered stale
 #
 env::lock_existing_directory()
 {
@@ -413,17 +414,28 @@ env::lock_existing_directory()
       return 0
    fi
 
+
    local start_time
    local current_time
    local elapsed
 
    start_time=$(date +%s)
 
+   local creation_time
+
+   creation_time="`modification_timestamp "${lockdir}" `"
+
+   elapsed=$((start_time - creation_time))
+   if [ $elapsed -ge 60 ]
+   then
+      return 3
+   fi
+
    while :
    do
       sleep 0.01
 
-      if ! exekutor mkdir "${lockdir}" 2>/dev/null
+      if exekutor mkdir "${lockdir}" 2>/dev/null
       then
          return 1
       fi
@@ -787,7 +799,7 @@ check your tool list.
 
    env::lock_existing_directory "${MULLE_ENV_VAR_DIR}"
    case $? in
-      0|2)
+      0|2|3)
       ;;
 
       1)

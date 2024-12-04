@@ -1596,6 +1596,10 @@ env::tool::main()
             0|2)
             ;;
 
+            3)
+               log_warning "Overriding stale lock"
+            ;;
+
             1)
                # if we a locked after a timeout, assume another process set it
                # up already, so don't do it again
@@ -1646,6 +1650,11 @@ env::tool::main()
             0|2)
             ;;
 
+            3)
+               log_warning "Overriding stale lock"
+            ;;
+
+
             1)
                # if we a locked after a timeout, assume another process set it
                # up already, so don't do it again
@@ -1673,6 +1682,22 @@ env::tool::main()
       remove)
          mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
          env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
+         case $? in
+            0|2)
+            ;;
+
+            3)
+               log_warning "Overriding stale lock"
+            ;;
+
+
+            1)
+               # if we a locked after a timeout, assume another process set it
+               # up already, so don't do it again
+               fail "Unable to lock \"${MULLE_ENV_HOST_VAR_DIR}\", competing process is stuck ?"
+            ;;
+         esac
+
          env::unprotect_dir_if_exists "${bindir}"
          env::unprotect_dir_if_exists "${libexecdir}"
          (
