@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.15)
 
-project( mulle-env VERSION 5.3.1 LANGUAGES NONE)
+project( mulle-env VERSION 5.3.2 LANGUAGES NONE)
 
 execute_process( COMMAND ./mulle-env version
                  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"

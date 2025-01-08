@@ -455,9 +455,6 @@ env::tool::add()
 {
    log_entry "env::tool::add" "$@"
 
-   [ -z "${MULLE_ENV_ETC_DIR}" ]   && _internal_fail "MULLE_ENV_ETC_DIR not defined"
-   [ -z "${MULLE_ENV_SHARE_DIR}" ] && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
-
    local scope="$1" ; shift
    local os="$1" ; shift
 
@@ -536,8 +533,25 @@ env::tool::add()
 
    local tool
 
+   [ -z "${MULLE_ENV_ETC_DIR}" ]   && _internal_fail "MULLE_ENV_ETC_DIR not defined"
+   [ -z "${MULLE_ENV_SHARE_DIR}" ] && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
+
    mkdir_if_missing "${MULLE_ENV_SHARE_DIR}"
+
    env::lock_existing_directory "${MULLE_ENV_SHARE_DIR}"
+   case $? in
+      0|2)
+      ;;
+
+      3)
+         log_warning "Overriding stale lock"
+      ;;
+
+      1)
+         fail "Unable to lock \"${MULLE_ENV_HOST_VAR_DIR}\", competing process is stuck ?"
+      ;;
+   esac
+
    env::unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
 
    # zsh no like in loop locals
@@ -1531,6 +1545,7 @@ env::tool::main()
 {
    log_entry "env::tool::main" "$@"
 
+ 
    #
    # handle options
    #
@@ -1581,9 +1596,12 @@ env::tool::main()
       shift
    fi
 
+
    local rval
    local bindir
    local libexecdir
+
+   [ -z "${MULLE_ENV_HOST_VAR_DIR}" ] && _internal_fail "MULLE_ENV_HOST_VAR_DIR not defined"
 
    bindir="${MULLE_ENV_HOST_VAR_DIR}/bin"
    libexecdir="${MULLE_ENV_HOST_VAR_DIR}/libexec"

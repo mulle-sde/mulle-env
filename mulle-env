@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.3.1"
+MULLE_EXECUTABLE_VERSION="5.3.2"
 
 
 #
@@ -372,7 +372,10 @@ env::default_setup_environment()
 }
 
 
-
+#
+# MEMO: if you see errors like .mulle-env-.env.lock" should exist
+#       consider that .env is actually the correct directory we want to lock
+#       the filename is correct.
 env::r_lock_dir()
 {
    log_entry "env::r_lock_dir" "$@"
@@ -411,9 +414,9 @@ env::lock_existing_directory()
 
    if exekutor mkdir "${lockdir}"
    then
+      log_debug "$$ created \"${lockdir}\" immediately" 
       return 0
    fi
-
 
    local start_time
    local current_time
@@ -428,6 +431,7 @@ env::lock_existing_directory()
    elapsed=$((start_time - creation_time))
    if [ $elapsed -ge 60 ]
    then
+      log_debug "$$ found stale \"${lockdir}\"" 
       return 3
    fi
 
@@ -437,13 +441,15 @@ env::lock_existing_directory()
 
       if exekutor mkdir "${lockdir}" 2>/dev/null
       then
+         log_debug "$$ created \"${lockdir}\"" 
          return 1
       fi
 
       current_time=$(date +%s)
       elapsed=$((current_time - start_time))
-      if [ $elapsed -ge 2 ]
+      if [ $elapsed -ge 30 ]
       then
+         log_debug "$$ failed to acquire \"${lockdir}\"" 
          return 2
       fi
    done
@@ -463,6 +469,7 @@ env::unlock_existing_directory()
 
    [ -d "${lockdir}" ] || log_warning "Directory \"${lockdir}\" should exist"
 
+   log_debug "$$ removed \"${lockdir}\"" 
    exekutor rmdir "${lockdir}"
 }
 
@@ -736,6 +743,8 @@ env::setup_if_needed()
    local bindir
    local libexecdir
 
+   [ -z "${vardir}" ] && _internal_fail "vardir not defined"
+
    bindir="${vardir}/bin"
    libexecdir="${vardir}/libexec"
 
@@ -795,6 +804,21 @@ check your tool list.
    local rval
    local callback
 
+   [ -z "${MULLE_ENV_VAR_DIR}" ] && _internal_fail "MULLE_ENV_VAR_DIR not defined"
+
+   exekutor mkdir -p "${vardir}"
+   env::lock_existing_directory "${vardir}"
+   case $? in
+      0|2|3)
+      ;;
+
+      1)
+         # if we a locked after a timeout, assume another process set it
+         # up already, so don't do it again
+         return
+      ;;
+   esac
+
    exekutor mkdir -p "${MULLE_ENV_VAR_DIR}"
 
    env::lock_existing_directory "${MULLE_ENV_VAR_DIR}"
@@ -805,6 +829,7 @@ check your tool list.
       1)
          # if we a locked after a timeout, assume another process set it
          # up already, so don't do it again
+         env::unlock_existing_directory "${vardir}"
          return
       ;;
    esac
@@ -850,9 +875,13 @@ check your tool list.
    then
       exit $rval
    fi
+
+   env::unlock_existing_directory "${vardir}"
+   if [ "$rval" -ne 0 ]
+   then
+      exit $rval
+   fi
 }
-
-
 
 
 #
