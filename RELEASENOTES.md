@@ -1,3 +1,7 @@
+### 5.3.4
+
+* defeat: giving up on having the mulle plugin in the proper project mulle-sde, for install reasons
+
 ### 5.3.3
 
 * cleverer use of IFS avoids some semgrep warning
