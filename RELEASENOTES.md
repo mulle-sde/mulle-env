@@ -1,3 +1,7 @@
+### 5.3.3
+
+* cleverer use of IFS avoids some semgrep warning
+
 ### 5.3.2
 
 * forgot to lock `MULLE_ENV_HOST_VAR_DIR` during setup, which lead to problems when multiple concurrent mulle-sde processes accessed the same project

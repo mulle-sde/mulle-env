@@ -328,7 +328,6 @@ env::environment::key_values_to_sed()
 
       printf "%s\n" "-e 's/${escaped_key}/${escaped_value}/g'"
    done
-   IFS="${DEFAULT_IFS}"
 }
 
 
