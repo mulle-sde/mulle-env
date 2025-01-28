@@ -156,7 +156,7 @@ emit_initfile()
 
    if [ "${TRACE}" = 'YES' ]
    then
-      echo "set -x"
+      printf "set -x\n"
    fi
 
    r_get_envfile "ENVFILENAME"
@@ -164,9 +164,9 @@ emit_initfile()
 
    if [ "${TRACE}" = 'YES' ]
    then
-     echo "TRACE=\"${TRACE}\" && . \"${envfile}\""
+     printf "TRACE=\"${TRACE}\" && . \"${envfile}\"\n"
    else
-     echo ". \"${envfile}\""
+     printf ". \"${envfile}\"\n"
    fi
 
    # optional additional file
@@ -174,15 +174,15 @@ emit_initfile()
    then
       if [ "${TRACE}" = 'YES' ]
       then
-        echo "TRACE=\"${TRACE}\" && . \"${RVAL}\""
+        printf "TRACE=\"${TRACE}\" && . \"${RVAL}\"\n"
       else
-        echo ". \"${RVAL}\""
+        printf ". \"${RVAL}\"\n"
       fi
    fi
 
    if [ ! -z "${CUSTOM_ENVIRONMENT}" ]
    then
-      echo "${CUSTOM_ENVIRONMENT}"
+      printf "%s\n" "${CUSTOM_ENVIRONMENT}"
    fi
 }
 
@@ -195,21 +195,21 @@ emit_interactive_initfile()
 {
    emit_initfile "$@"
 
-   echo 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
+   printf "%s %s\n" 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
 
    if [ "${OPTION_KEEP_TMP}" = 'NO' ]
    then
       #
       # run in envelope subshell to squelch job control message
       #
-      echo "(( PATH='/bin:/usr/bin'; sleep 1 ; rm \"${initfile}\" 2> /dev/null ) &)"
+      printf "(( PATH='/bin:/usr/bin'; sleep 1 ; rm \"${initfile}\" 2> /dev/null ) &)\n"
    fi
 
    if [ "${TRACE}" = 'YES' ]
    then
-      echo "set +x"
+      printf "set +x\n"
    fi
-   echo "unset TRACE"
+   printf "unset TRACE\n"
 }
 
 
@@ -222,7 +222,7 @@ emit_script_initfile()
       #
       # run in envelope subshell to squelch job control message
       #
-      echo "(( PATH='/bin:/usr/bin'; sleep 1 ; rm \"${initfile}\" 2> /dev/null ) &)"
+      printf "(( PATH='/bin:/usr/bin'; sleep 1 ; rm \"${initfile}\" 2> /dev/null ) &)\n"
    fi
 }
 
@@ -359,6 +359,21 @@ run_interactive_shell()
 }
 
 
+_api_fail()
+{
+   local arg
+   local i
+
+   i=1
+   for arg in "$@"
+   do
+      printf "%d: \"%q\"\n" "$i" "$arg"
+      i=$((i + 1))
+   done
+   _fail "API mismatch: $# received, 14 or 15 expected"
+}
+
+
 main()
 {
    local OPTION_MAKE_FLAGS='NO'
@@ -387,7 +402,7 @@ main()
       shift
    done
 
-   [ $# -lt 14 -o $# -gt 15 ] && _fail "API mismatch ($# args: $*)"
+   [ $# -lt 14 -o $# -gt 15 ] && _api_fail "$@"
 
    local MULLE_UNAME
 

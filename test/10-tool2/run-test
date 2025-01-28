@@ -89,7 +89,7 @@ main()
    result="`cat "${vardir}/tool" | LC_ALL=C sort`"
    expect="`LC_ALL=C sort <<EOF
 awk
-bash
+bash;optional
 cat;required
 chgrp;required
 chmod;required
@@ -114,8 +114,8 @@ mv;required
 ps
 pwd;required
 readlink;required
-rmdir;required
 rm;required
+rmdir;required
 sed;required
 sh;required
 stty
@@ -125,7 +125,7 @@ true;required
 tty
 umount
 uname;required
-zsh
+zsh;optional
 EOF
 `"
    [ "${expect}" != "${result}" ] \

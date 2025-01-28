@@ -1,3 +1,7 @@
+### 5.3.5
+
+* fix for spaces in environment variables (argh)
+
 ### 5.3.4
 
 * defeat: giving up on having the mulle plugin in the proper project mulle-sde, for install reasons

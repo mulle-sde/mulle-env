@@ -60,6 +60,7 @@ global
 os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
 user-${MULLE_USERNAME}
+user-${MULLE_USERNAME}-os-${MULLE_UNAME}
 post-global"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"
@@ -87,6 +88,7 @@ global
 os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
 user-${MULLE_USERNAME}
+user-${MULLE_USERNAME}-os-${MULLE_UNAME}
 post-global
 bar"
    result="`run_mulle_env scope list --all`" || exit 1
@@ -119,6 +121,7 @@ global
 os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
 user-${MULLE_USERNAME}
+user-${MULLE_USERNAME}-os-${MULLE_UNAME}
 post-global"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"

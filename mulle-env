@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.3.4"
+MULLE_EXECUTABLE_VERSION="5.3.5"
 
 
 #
@@ -374,8 +374,9 @@ env::default_setup_environment()
 
 #
 # MEMO: if you see errors like .mulle-env-.env.lock" should exist
-#       consider that .env is actually the correct directory we want to lock
-#       the filename is correct.
+#       consider that .env is actually the correct directory we want to lock.
+#       So the filename looks bad but is correct.
+#
 env::r_lock_dir()
 {
    log_entry "env::r_lock_dir" "$@"
@@ -392,6 +393,29 @@ env::r_lock_dir()
 
    RVAL="${RVAL}/.mulle-env-${name}.lock"
 }
+
+
+function env::exekutor_no_stderr()
+{
+   if [ "${MULLE_FLAG_LOG_EXEKUTOR:-}" = 'YES' ]
+   then
+      _exekutor_trace "exekutor_print" "$@"
+   fi
+
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN:-}" = 'YES' ]
+   then
+      return
+   fi
+
+   "$@" 2> /dev/null
+
+   MULLE_EXEKUTOR_RVAL=$?
+
+   [ "${MULLE_EXEKUTOR_RVAL}" = "${MULLE_EXEKUTOR_STRACKTRACE_RVAL:-127}" ] && stacktrace
+
+   return ${MULLE_EXEKUTOR_RVAL}
+}
+
 
 #
 # returns 0 : locked successfully
@@ -412,11 +436,13 @@ env::lock_existing_directory()
    env::r_lock_dir "${directory}"
    lockdir="${RVAL}"
 
-   if exekutor mkdir "${lockdir}"
+   if env::exekutor_no_stderr mkdir "${lockdir}"
    then
       log_debug "$$ created \"${lockdir}\" immediately" 
       return 0
    fi
+
+   log_verbose "$$ waiting for other process to release \"${lockdir}\""
 
    local start_time
    local current_time
@@ -431,17 +457,17 @@ env::lock_existing_directory()
    elapsed=$((start_time - creation_time))
    if [ $elapsed -ge 60 ]
    then
-      log_debug "$$ found stale \"${lockdir}\"" 
+      log_verbose "$$ found stale \"${lockdir}\""
       return 3
    fi
 
    while :
    do
-      sleep 0.01
+      sleep 0.025
 
-      if exekutor mkdir "${lockdir}" 2>/dev/null
+      if env::exekutor_no_stderr mkdir "${lockdir}"
       then
-         log_debug "$$ created \"${lockdir}\"" 
+         log_verbose "$$ created \"${lockdir}\""
          return 1
       fi
 
@@ -449,7 +475,7 @@ env::lock_existing_directory()
       elapsed=$((current_time - start_time))
       if [ $elapsed -ge 30 ]
       then
-         log_debug "$$ failed to acquire \"${lockdir}\"" 
+         log_warning "$$ failed to acquire \"${lockdir}\""
          return 2
       fi
    done
@@ -469,8 +495,8 @@ env::unlock_existing_directory()
 
    [ -d "${lockdir}" ] || log_warning "Directory \"${lockdir}\" should exist"
 
-   log_debug "$$ removed \"${lockdir}\"" 
-   exekutor rmdir "${lockdir}"
+   exekutor rmdir "${lockdir}" || log_error "Could not remove \"${lockdir}\" not good"
+   log_debug "$$ removed \"${lockdir}\""
 }
 
 
@@ -1154,6 +1180,11 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
 #      ;;
 #   esac
 
+   local escaped_custom_post_environment
+
+   r_escaped_singlequotes "${CUSTOM_POST_ENVIRONMENT}"
+   escaped_custom_post_environment="${RVAL}"
+
    eval_exekutor env \
       "${CUSTOM_PRE_ENVIRONMENT}" \
       "'${script}'" \
@@ -1170,7 +1201,7 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
         "'${ENVFILENAME}'" \
         "'${AUXENVFILENAME}'" \
         "'${NO_MOTD}'" \
-        "'${CUSTOM_AFTER_ENVIRONMENT}'" \
+        "'${escaped_custom_post_environment}'" \
         "${OPTION_SHELL_COMMAND}"  # already escaped!
 }
 
@@ -1473,11 +1504,15 @@ undefined (old mulle-bashfunctions)"
 
    redirect_exekutor "${vardir}/old-environment.$$" env
 
-   log_fluff "Saving --defines to into ${vardir}/custom-post-environment.$$"
-   redirect_exekutor "${vardir}/custom-post-environment.$$" printf "%s" "${CUSTOM_POST_ENVIRONMENT}"
+   log_fluff "Saving --defines into ${vardir}/custom-post-environment.$$"
+   redirect_exekutor "${vardir}/custom-post-environment.$$" printf "%s\n" "${CUSTOM_POST_ENVIRONMENT}"
 
-   local rval
+   local escaped_custom_post_environment
 
+   r_escaped_singlequotes "${CUSTOM_POST_ENVIRONMENT}"
+   escaped_custom_post_environment="${RVAL}"
+
+   # MEMO: don't single quote CUSTOM_POST_ENVIRONMENT to "fix" an obvious bug
    env::invoke_shell "${_style#*/}" \
                      "${custom_pre_environment}" \
                      "'${script}'" \
@@ -1494,7 +1529,7 @@ undefined (old mulle-bashfunctions)"
                      "'${ENVFILENAME}'" \
                      "'${AUXENVFILENAME}'" \
                      "'${NO_MOTD:-}'" \
-                     "'${CUSTOM_POST_ENVIRONMENT}'" \
+                     "'${escaped_custom_post_environment}'" \
                      "${OPTION_SHELL_COMMAND}"
    rval=$?
 

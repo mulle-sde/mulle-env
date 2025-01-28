@@ -1,0 +1,84 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+run_mudo()
+{
+   log_fluff "####################################"
+   log_fluff ${MUDO} ${MUDO_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MUDO} ${MUDO_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local vardir
+
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style developer/tight
+   run_mulle_env -s tool link
+
+   local result
+   local expect
+
+   result="`run_mulle_env -DXXX_A_B='a b' -DXXX_C='c' -c 'env | grep -E "^XXX_" | sort' `" || exit 1
+   expect='XXX_A_B=a b
+XXX_C=c'
+
+   if [ "${result}" != "${expect}" ]
+   then
+      fail "#1: Unexpected \"${result}\", expected \"${expect}\""
+   fi
+
+
+   log_verbose "----- #2 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+   MUDO="${MUDO:-${PWD}/../../mudo}"
+}
+
+
+
+init "$@"
+main "$@"
+
