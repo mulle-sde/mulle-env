@@ -621,7 +621,7 @@ env::scope::r_get_existing_scope_files()
    local OPTION_INFERIORS='NO'
    local OPTION_REVERSE='NO'
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          --with-inferiors)
@@ -742,7 +742,7 @@ env::scope::list_main()
 
    local MULLE_ENV_CONTENT_SORT=cat
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -925,7 +925,7 @@ env::scope::get_main()
    local OPTION_QUIET='NO'
    local OPTION_PREFIX='NO'
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1040,7 +1040,7 @@ env::scope::add_main()
    local protect='NO'
    local filename="${MULLE_ENV_ETC_DIR}/auxscope"
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1181,7 +1181,7 @@ env::scope::file_main()
 
    local OPTION_IS_EXISTS='NO'
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1293,7 +1293,7 @@ env::scope::remove_main()
    local OPTION_IS_EXISTS='NO'
    local OPTION_REMOVE_FILE='YES'
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1368,7 +1368,7 @@ env::scope::main()
    #
    # handle options
    #
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)

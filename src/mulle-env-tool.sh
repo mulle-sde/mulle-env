@@ -466,7 +466,7 @@ env::tool::add()
    local OPTION_IF_MISSING='NO'
    local OPTION_SCRIPT='NO'
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
@@ -735,7 +735,7 @@ env::tool::compile()
 
    extension=".${MULLE_UNAME}"
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
@@ -880,7 +880,7 @@ env::tool::get()
 
    local OPTION_CSV='NO'
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
@@ -1164,7 +1164,7 @@ env::tool::link()
       compile='YES'
    fi
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
@@ -1443,7 +1443,7 @@ env::tool::list()
 
    local os="$1" ; shift
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
@@ -1552,7 +1552,7 @@ env::tool::main()
    local OPTION_SCOPE="DEFAULT"
    local OPTION_OS="${MULLE_UNAME}"
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)

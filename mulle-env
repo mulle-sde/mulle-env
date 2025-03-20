@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.3.5"
+MULLE_EXECUTABLE_VERSION="5.4.0"
 
 
 #
@@ -457,7 +457,7 @@ env::lock_existing_directory()
    elapsed=$((start_time - creation_time))
    if [ $elapsed -ge 60 ]
    then
-      log_verbose "$$ found stale \"${lockdir}\""
+      log_verbose "$$ found stale \"${lockdir}\" `ls -la $(dirname -- "${lockdir}")`"
       return 3
    fi
 
@@ -475,7 +475,7 @@ env::lock_existing_directory()
       elapsed=$((current_time - start_time))
       if [ $elapsed -ge 30 ]
       then
-         log_warning "$$ failed to acquire \"${lockdir}\""
+         log_warning "$$ failed to acquire \"${lockdir}\" `ls -la $(dirname -- "${lockdir}")`"
          return 2
       fi
    done

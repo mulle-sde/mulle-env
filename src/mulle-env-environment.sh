@@ -841,7 +841,7 @@ env::environment::set_main()
    # shellcheck source=src/mulle-env-scope.sh
    include "env::scope"
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1304,7 +1304,7 @@ env::environment::get_main()
 
    getter="env::environment::_get"
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1468,7 +1468,7 @@ env::environment::clobber_main()
 
    local scopename="$1"; shift
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -*)
@@ -1514,7 +1514,7 @@ env::environment::remove_main()
 
    local OPTION_REMOVE_FILE='DEFAULT'
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1807,7 +1807,7 @@ env::environment::list_main()
 
    lister="env::environment::_list"
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)
@@ -1955,7 +1955,7 @@ env::environment::main()
    #
    # handle options
    #
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h|--help|help)

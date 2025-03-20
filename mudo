@@ -46,7 +46,7 @@ then
    shift
 fi
 
-if [ "$1" != "-e" ]
+if [ "$1" != "-e" -a "$1" != '-E' ]
 then
    #
    # does not work with builtins like `command -v ps`
@@ -60,7 +60,100 @@ then
    exit $?
 fi
 
-# remove -e
+
+_mudo_environment()
+{
+   # get mulle-env paths into this shell script environment like f.i.:
+   #
+   #    MULLE_ENV_VAR_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/var/walitza/env'
+   #    MULLE_ENV_ETC_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/etc/env'
+   #    MULLE_ENV_SHARE_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/share/env'
+   #
+   # If this doesn't work we are in a "none" environment, presumably
+   if ! MULLE_ENV="${MULLE_ENV:-"`command -v mulle-env`"}"
+   then
+      echo "error: mulle-env not in PATH ($PATH)
+   Tip: mudo can not be used from a \"none\" environment." >&2
+      exit 1
+   fi
+
+   eval "`"${MULLE_ENV}" --search-as-is mulle-tool-env env`"
+
+   if [ -z "${MULLE_ENV_VAR_DIR}" ]
+   then
+      echo "error: mulle-env failed to provide MULLE_ENV_VAR_DIR" >&2
+      exit 1
+   fi
+
+   local filename
+
+   # TODO: should probably be in MULLE_ENV_TMP_DIR if that existed
+   filename="${MULLE_ENV_VAR_DIR}/old-environment.${MULLE_ENV_PID}"
+   _environment="`cat "${filename}" 2> /dev/null`"
+   if [ -z "${_environment}" ]
+   then
+      echo "error: mudo did not find a previous environment (${filename})" >&2
+      exit 1
+   fi
+
+   if [ "$1" = '-e' ]
+   then
+      return
+   fi
+
+   local current_env_file
+
+   # ah the beauty of /bin/sh
+   # Store current environment variables in a temporary file
+   current_env_file=$(mktemp)
+   env > "${current_env_file}"
+#   env | sed \
+#        -e 's/\([^'\''A-Za-z0-9_.:/=+-]\)/\\\1/g' \
+#        -e "s/'/'\\\\''/g" \
+#        -e 's/ /\\ /g' > "$current_env_file"
+
+   local merged_environment
+
+   merged_environment="`cat "${current_env_file}"`"
+
+   local line
+   local var_name
+
+   # Read the new environment line by line
+   while IFS= read -r line
+   do
+       # Extract the variable name
+       var_name=$(echo "$line" | cut -d'=' -f1)
+
+       # Check if the variable is already in the current environment
+       if ! grep -q "^$var_name=" "${current_env_file}"
+       then
+         # If not, append it to the merged environment string
+         if [ -z "${merged_environment}" ]
+         then
+            merged_environment="$line"
+         else
+            merged_environment="$merged_environment
+$line"
+         fi
+      fi
+   done < "${filename}"
+
+   # Clean up the temporary file
+   if [ "${MUDO_TRACE}" = 'YES' ]
+   then
+      echo "::mudo:: ${filename}" >&2
+   else
+      rm -f "$current_env_file"
+   fi
+
+   _environment="${merged_environment}"
+}
+
+
+_mudo_environment "$1" "$@"
+
+# remove -e or -E
 shift
 
 # we are in a virtual env, so if -f is given, remove it (do it one more time)
@@ -69,49 +162,26 @@ then
    shift
 fi
 
-
-# get mulle-env paths into this shell script environment like f.i.:
-#
-#    MULLE_ENV_VAR_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/var/walitza/env'
-#    MULLE_ENV_ETC_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/etc/env'
-#    MULLE_ENV_SHARE_DIR='/Volumes/Source/srcM/mulle-cpp/.mulle/share/env'
-#
-# If this doesn't work we are in a "none" environment, presumably
-if ! MULLE_ENV="${MULLE_ENV:-"`command -v mulle-env`"}"
-then
-   echo "error: mulle-env not in PATH ($PATH)
-Tip: mudo can not be used from a \"none\" environment." >&2
-   exit 1
-fi
-
-eval "`"${MULLE_ENV}" --search-as-is mulle-tool-env env`"
-
-if [ -z "${MULLE_ENV_VAR_DIR}" ]
-then
-   echo "error: mulle-env failed to provide MULLE_ENV_VAR_DIR" >&2
-   exit 1
-fi
-
-# TODO: should probably be in MULLE_ENV_TMP_DIR if that existed
-filename="${MULLE_ENV_VAR_DIR}/old-environment.${MULLE_ENV_PID}"
-environment="`cat "${filename}" 2> /dev/null`"
-if [ -z "${environment}" ]
-then
-   echo "error: mudo did not find a previous environment (${filename})" >&2
-   exit 1
-fi
-
 #
 # does not work with builtins like `command -v ps`
 #
 OLDIFS="${IFS}"
 IFS="
 "
-for line in ${environment}
+for line in ${_environment}
 do
-   set -- "${line}" "$@"
+   case "${line}" in
+      MULLE_OLDPATH=*|_=*)
+      ;;
+
+      *)
+         set -- "${line}" "$@"
+      ;;
+   esac
 done
 IFS="${OLDIFS}"
+
+: "$@"
 
 if [ -z "${MULLE_OLDPATH}" ]
 then

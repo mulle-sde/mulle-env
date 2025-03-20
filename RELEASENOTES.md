@@ -1,3 +1,8 @@
+## 5.4.0
+
+* the mudo command can now take the -E option to merge the old environment and the new
+
+
 ### 5.3.5
 
 * fix for spaces in environment variables (argh)
