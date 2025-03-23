@@ -536,9 +536,23 @@ env::tool::add()
    [ -z "${MULLE_ENV_ETC_DIR}" ]   && _internal_fail "MULLE_ENV_ETC_DIR not defined"
    [ -z "${MULLE_ENV_SHARE_DIR}" ] && _internal_fail "MULLE_ENV_SHARE_DIR not defined"
 
-   mkdir_if_missing "${MULLE_ENV_SHARE_DIR}"
+   local lockingdir
+   local protecingdir
 
-   env::lock_existing_directory "${MULLE_ENV_SHARE_DIR}"
+   case "${scope}" in
+      plugin|extension)
+         lockingdir="${MULLE_ENV_SHARE_DIR}"
+         protectingdir="${MULLE_ENV_SHARE_DIR}"
+      ;;
+
+      *)
+         lockingdir="${MULLE_ENV_ETC_DIR}"
+         protectingdir=""
+      ;;
+   esac
+
+   mkdir_if_missing "${lockingdir}"
+   env::lock_existing_directory "${lockingdir}"
    case $? in
       0|2)
       ;;
@@ -548,11 +562,15 @@ env::tool::add()
       ;;
 
       1)
-         fail "Unable to lock \"${MULLE_ENV_HOST_VAR_DIR}\", competing process is stuck ?"
+         fail "Unable to lock \"${lockingdir}\", competing process is stuck ?"
       ;;
    esac
 
-   env::unprotect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
+   if [ ! -z "${protectingdir}" ]
+   then
+      env::unprotect_dir_if_exists "${protectingdir}"
+   fi
+
 
    # zsh no like in loop locals
    local extension
@@ -681,8 +699,12 @@ Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platfo
       done
    )
    rval=$?
-   env::protect_dir_if_exists "${MULLE_ENV_SHARE_DIR}"
-   env::unlock_existing_directory "${MULLE_ENV_SHARE_DIR}"
+
+   if [ ! -z "${protectingdir}" ]
+   then
+      env::protect_dir_if_exists "${protectingdir}"
+   fi
+   env::unlock_existing_directory "${lockingdir}"
 
    if [ $rval -ne 0 ]
    then

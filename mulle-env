@@ -549,6 +549,8 @@ env::unprotect_dir_if_exists()
                ;;
             esac
          fi
+      else
+         log_debug "\"${directory}\" does not exist"
       fi
    fi
 }
