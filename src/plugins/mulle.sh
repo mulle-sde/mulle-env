@@ -268,6 +268,7 @@ mulle-column
 column
 curl
 make
+meson
 ninja
 wget
 shasum
@@ -280,6 +281,11 @@ xcodebuild
 autoconf
 autoreconf"
    printf "%s\n" "${MULLE_SDE_BINARIES}"
+
+# On MacOS these are needed to run autoconf, but glibtoolize seems to
+# depend on every single package that exists (including x11 and ghostscript)
+# aclocal
+# glibtoolize
 
 }
 

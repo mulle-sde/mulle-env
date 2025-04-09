@@ -1,3 +1,7 @@
+### 5.4.1
+
+* put meson in the default list of tools
+
 ## 5.4.0
 
 * the mudo command can now take the -E option to merge the old environment and the new
