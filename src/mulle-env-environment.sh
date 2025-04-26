@@ -2085,9 +2085,10 @@ env::environment::main()
    fi
 
    case "${cmd}" in
-      'clobber'|'mset'|'remove'|'set')
+      'clobber'|'mset'|'remove'|'set'|'rm')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
+         cmd="${cmd//rm/remove}"
          if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a "${OPTION_PROTECT}" = 'YES' ]
          then
             env::scope::env_validate_scope_write "${OPTION_SCOPE}" "$@"
