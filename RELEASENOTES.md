@@ -1,3 +1,7 @@
+### 5.4.2
+
+* added mulle-sde env rm shortcut
+
 ### 5.4.1
 
 * put meson in the default list of tools
