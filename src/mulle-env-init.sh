@@ -155,7 +155,7 @@ env::init::main()
       shift
    done
 
-   [ "$#" -eq 0 ] || fail "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || fail "Superfluous arguments \"$*\""
 
    #
    # command line parameters added via -D will just be exported here

@@ -151,7 +151,7 @@ env::style::set_main()
    [ $# -eq 0 ]  && env::style::set_usage "Missing style argument"
    OPTION_STYLE="${1:-}"
    shift
-   [ $# -ne 0 ]  && env::style::set_usage "Superflous arguments \"$*\""
+   [ $# -ne 0 ]  && env::style::set_usage "Superfluous arguments \"$*\""
 
    OPTION_SHELL_COMMAND=":" env::run_subshell ""
 }
@@ -172,7 +172,7 @@ env::style::get_main()
       ;;
 
       *)
-         env::style::get_usage "Superflous arguments \"$*\""
+         env::style::get_usage "Superfluous arguments \"$*\""
       ;;
    esac
 
@@ -241,7 +241,7 @@ env::style::show_main()
       ;;
 
       *)
-         env::style::show_usage "Superflous arguments \"$*\""
+         env::style::show_usage "Superfluous arguments \"$*\""
       ;;
    esac
 

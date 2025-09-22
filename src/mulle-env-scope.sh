@@ -832,7 +832,7 @@ env::scope::list_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || env::scope::list_usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || env::scope::list_usage "Superfluous arguments \"$*\""
 
    [ -z "${MULLE_ENV_SHARE_DIR}" ]   && _internal_fail "MULLE_ENV_SHARE_DIR is empty"
    [ ! -d "${MULLE_ENV_SHARE_DIR}" ] && fail "mulle-env init hasn't run in $PWD yet (\"$MULLE_ENV_SHARE_DIR\" not found)"
@@ -962,7 +962,7 @@ env::scope::get_main()
    search_scopeid="$1"
    shift
 
-   [ "$#" -eq 0 ] || env::scope::get_usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || env::scope::get_usage "Superfluous arguments \"$*\""
 
    local scopes
    local scope
@@ -1099,7 +1099,7 @@ env::scope::add_main()
    scopeid="$1"
    shift
 
-   [ "$#" -eq 0 ] || env::scope::add_usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || env::scope::add_usage "Superfluous arguments \"$*\""
 
    if env::scope::get_main -q "${scopeid}"
    then
@@ -1211,7 +1211,7 @@ env::scope::file_main()
    scopeid="$1"
    shift
 
-   [ "$#" -eq 0 ] || env::scope::remove_usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || env::scope::remove_usage "Superfluous arguments \"$*\""
 
    local scopes
    local scope
@@ -1331,7 +1331,7 @@ env::scope::remove_main()
    scopeid="$1"
    shift
 
-   [ "$#" -eq 0 ] || env::scope::remove_usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || env::scope::remove_usage "Superfluous arguments \"$*\""
 
    local scopes
    local scope

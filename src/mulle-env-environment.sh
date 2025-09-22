@@ -45,6 +45,7 @@ Options:
    --this-host    ${space}: narrow scope to this host ($MULLE_HOSTNAME)
    --this-os      ${space}: narrow scope to this operating system ($MULLE_UNAME)
    --this-user    ${space}: user with name ($MULLE_USERNAME)
+   --this-os-user ${space}: user and os ($MULLE_USERNAME-$MULLE_UNAME)
    --[a-z]*       ${space}: shortcut for --scope <name> (e.g. --global)
    --cat          ${space}: unsorted output
 EOF
@@ -1483,7 +1484,7 @@ env::environment::clobber_main()
       shift
    done
 
-   [ $# -ne 0 ] && fail "Superflous arguments \"$*\""
+   [ $# -ne 0 ] && fail "Superfluous arguments \"$*\""
 
    # shellcheck source=src/mulle-env-scope.sh
    [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
@@ -1909,9 +1910,11 @@ env::environment::list_main()
                'h:'*)
                   log_info "${C_RESET_BOLD}${i:2}"
                   printf "${C_FAINT}"
-                  echo "MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\""
-                  echo "MULLE_UNAME=\"${MULLE_UNAME}\""
-                  echo "MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\""
+                  printf "MULLE_HOSTNAME=\"${MULLE_HOSTNAME}\"\n"
+                  printf "MULLE_USERNAME=\"${MULLE_USERNAME}\"\n"
+                  printf "MULLE_UNAME=\"${MULLE_UNAME}\"\n"
+                  printf "MULLE_VIRTUAL_ROOT=\"${MULLE_VIRTUAL_ROOT}\"\n"
+                  printf "MULLE_VIRTUAL_ROOT_ID=\"${MULLE_VIRTUAL_ROOT_ID}\"\n"
                ;;
 
                *)
@@ -1998,6 +2001,14 @@ env::environment::main()
             [ -z "${MULLE_USERNAME}" ] && fail "MULLE_USERNAME environment variable not set"
 
             OPTION_SCOPE="user-${MULLE_USERNAME}"
+         ;;
+
+         --this-user-os|--this-os-user)
+            env::environment::assert_default_scope
+
+            [ -z "${MULLE_USERNAME}" ] && fail "MULLE_USERNAME environment variable not set"
+
+            OPTION_SCOPE="user-${MULLE_USERNAME}-os-${MULLE_UNAME}"
          ;;
 
          --os-this|--this-os)

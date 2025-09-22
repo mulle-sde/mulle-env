@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.4.2"
+MULLE_EXECUTABLE_VERSION="5.5.0"
 
 
 #
@@ -88,7 +88,8 @@ EOF
 #
 # relax has this problem, that on linux cmake is installed in /bin
 # and everything works fine and then you go to darwin where its in
-# /usr/local/bin and things fail
+# /usr/local/bin and things fail. The temptation is high to allow
+# /usr/local/bin as well..
 #
 env::usage()
 {
@@ -271,7 +272,7 @@ env::setup_environment()
    local directory="$1"
    local setroot="$2"
 
-   [ -z "${MULLE_UNAME}" ]   && _internal_fail "MULLE_UNAME not set"
+   [ -z "${MULLE_UNAME}" ]    && _internal_fail "MULLE_UNAME not set"
    [ -z "${MULLE_HOSTNAME}" ] && _internal_fail "MULLE_HOSTNAME not set"
 
    local physicaldir
@@ -286,6 +287,17 @@ env::setup_environment()
    then
       MULLE_VIRTUAL_ROOT="${physicaldir}"
       log_fluff "mulle-env sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
+   fi
+
+   if [ -z "${MULLE_VIRTUAL_ROOT_ID}" ]
+   then
+      #
+      # create an identifier that changes with the location, the project is in
+      # usefule for related directories, that are placed outside of the
+      # project like maybe KITCHEN_DIR
+      #
+      MULLE_VIRTUAL_ROOT_ID="$(shasum -a 256 <<< "${MULLE_VIRTUAL_ROOT}")"
+      MULLE_VIRTUAL_ROOT_ID="${MULLE_VIRTUAL_ROOT_ID:1:12}"
    fi
 
    #
@@ -1107,13 +1119,21 @@ env::r_censored_path()
 
    [ -z "${RESTRICTED_PATH}" ] && _internal_fail "RESTRICTED_PATH must not be empty"
 
+   # MEMO: keep full_path order, but avoid ugly duplicates
    .foreachpath i in ${full_path}
    .do
       .foreachpath j in ${RESTRICTED_PATH}
       .do
          if [ "$i" = "$j" ]
          then
-            r_colon_concat "${RVAL}" "${i}"
+            case ":${RVAL}:" in
+               *":${i}:"*)
+               ;;
+
+               *)
+                  r_colon_concat "${RVAL}" "${i}"
+               ;;
+            esac
          fi
       .done
    .done
@@ -1404,9 +1424,15 @@ env::run_subshell()
 #      fail "sed not installed, can't run subshell"
 #   fi
 
+   log_setting "PATH:         ${PATH}"
+   log_setting "_style:       ${_style}"
+   log_setting "inherit_path: ${inherit_path}"
+
    local custom_pre_environment
 
    custom_pre_environment="${CUSTOM_PRE_ENVIRONMENT}"
+   log_setting "CUSTOM_PRE_ENVIRONMENT: ${CUSTOM_PRE_ENVIRONMENT}"
+
    case "${_style}" in
       */restrict|*/tight|*/relax)
 
@@ -1431,6 +1457,8 @@ undefined (old mulle-bashfunctions)"
          custom_pre_environment="${RVAL}"
       ;;
    esac
+
+   log_setting "runpath: ${runpath}"
 
    #
    # Have /usr and /usr/bin in the back
@@ -1548,6 +1576,7 @@ MULLE_UNAME \
 MULLE_HOSTNAME \
 MULLE_USERNAME \
 MULLE_VIRTUAL_ROOT \
+MULLE_VIRTUAL_ROOT_ID \
 MULLE_ENV_HOST_VAR_DIR \
 MULLE_BASHFUNCTIONS_LIBEXEC_DIR \
 TRACE \
@@ -1872,7 +1901,7 @@ env::main()
       ;;
 
       *)
-         RESTRICTED_PATH="/usr/bin:/bin"
+         RESTRICTED_PATH="/usr/local/bin:/usr/bin:/bin"
       ;;
    esac
 
@@ -2260,7 +2289,7 @@ version"
       # move this to mulle-bashfunctions or ?
       'mulle-tool-env')
          [ $# -eq 0 ] && env::usage "Missing argument to \"${arg}\""
-         [ $# -ne 1 ] && env::usage "Superflous arguments to \"${arg}\""
+         [ $# -ne 1 ] && env::usage "Superfluous arguments to \"${arg}\""
 
          # should possibly create output like ssh-agent
          # so tools get MULLE_MATCH_ETC_DIR
@@ -2299,7 +2328,7 @@ version"
       ;;
 
       'project-dir')
-         env::r_find_best_environment "${PWD}" "${OPTION_SEARCHMODE}"
+         env::r_find_best_environment "${1:-PWD}" "${OPTION_SEARCHMODE}"
          if [ -z "${RVAL}" ]
          then
             return 1
@@ -2355,7 +2384,7 @@ version"
          fi
 
          [ $# -eq 0 ] && env::usage "Missing argument to \"${arg}\""
-         [ $# -ne 1 ] && env::usage "Superflous arguments to \"${arg}\""
+         [ $# -ne 1 ] && env::usage "Superfluous arguments to \"${arg}\""
 
          env::run_subenv "$1"
          return $?
@@ -2442,7 +2471,7 @@ version"
 
       *)
          OPTION_DIRECTORY="${cmd}"
-         [ $# -eq 0 ] || env::usage "Superflous argument \"${arg}\""
+         [ $# -eq 0 ] || env::usage "Superfluous argument \"${arg}\""
       ;;
    esac
 
