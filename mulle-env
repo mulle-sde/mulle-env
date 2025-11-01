@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="5.5.0"
+MULLE_EXECUTABLE_VERSION="6.0.0"
 
 
 #
@@ -1204,6 +1204,7 @@ ${C_RESET_BOLD}${MULLE_VIRTUAL_ROOT#${PWD}/}${C_INFO}."
 
    local escaped_custom_post_environment
 
+   # escape again for eval inside ''
    r_escaped_singlequotes "${CUSTOM_POST_ENVIRONMENT}"
    escaped_custom_post_environment="${RVAL}"
 
@@ -1279,7 +1280,7 @@ env::run_subshell()
    local directory
 
    case "${OPTION_DIRECTORY}" in
-      PWD)
+      'PWD')
          directory="${PWD}"
       ;;
 
@@ -1786,8 +1787,10 @@ env::define_custom_environment()
       *[Rr]*)
       ;;
 
+      # post environment will expand variables like '${PROJECT_NAME}'
       *)
-         r_concat "${CUSTOM_POST_ENVIRONMENT}" "${key}='${value}'"
+         r_escaped_doublequotes "${value}"
+         r_concat "${CUSTOM_POST_ENVIRONMENT}" "${key}=\"${RVAL}\""
          CUSTOM_POST_ENVIRONMENT="${RVAL}"
       ;;
    esac
@@ -2138,7 +2141,8 @@ env::main()
    done
 
    options_setup_trace "${MULLE_TRACE:-}" && set -x
-   export MULLE_TRACE
+
+   # export MULLE_TRACE
 
    local url
 
@@ -2328,7 +2332,7 @@ version"
       ;;
 
       'project-dir')
-         env::r_find_best_environment "${1:-PWD}" "${OPTION_SEARCHMODE}"
+         env::r_find_best_environment "${1:-${PWD}}" "${OPTION_SEARCHMODE}"
          if [ -z "${RVAL}" ]
          then
             return 1

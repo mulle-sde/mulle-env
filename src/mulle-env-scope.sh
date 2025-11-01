@@ -36,7 +36,7 @@ MULLE_ENV_SCOPE_SH='included'
 #
 # scope        : scopeprefix ':' scopeid
 # scopename    : keyword | scopeid
-# keyword      : "DEFAULT" | "include" | "merged" | "custom"
+# keyword      : 'DEFAULT' | "include" | "merged" | "custom"
 # scopeprefix  : 'e' | 's'
 # scopeid      : [A-Za-z_-][A-Za-z0-9_-]*
 #
@@ -663,7 +663,7 @@ env::scope::r_get_existing_scope_files()
    .do
       scopeid="${scope:2}"
       if [ "${skipcheck}" = 'NO' ] && \
-         [ "${search_scopename}" != "DEFAULT" -a "${scopeid}" != "${search_scopename}" ]
+         [ "${search_scopename}" != 'DEFAULT' -a "${scopeid}" != "${search_scopename}" ]
       then
          log_debug "\"${search_scopename}\" and  \"${scopeid}\" don't match"
          .continue

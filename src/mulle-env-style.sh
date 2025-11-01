@@ -36,7 +36,7 @@ MULLE_ENV_STYLE_SH='included'
 #
 # style        : styleprefix ':' styleid
 # stylename    : keyword | styleid
-# keyword      : "DEFAULT" | "include" | "merged" | "custom"
+# keyword      : 'DEFAULT' | "include" | "merged" | "custom"
 # styleprefix  : 'e' | 's'
 # styleid      : [A-Za-z_-][A-Za-z0-9_-]*
 #

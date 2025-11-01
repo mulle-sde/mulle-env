@@ -91,8 +91,8 @@ env::init::main()
    log_entry "env::init::main" "$@"
 
    local OPTION_OTHER_TOOLS=
-   local OPTION_BLURB="DEFAULT"
-   local OPTION_STYLE="DEFAULT"
+   local OPTION_BLURB='DEFAULT'
+   local OPTION_STYLE='DEFAULT'
    local OPTION_REINIT
 
    local directory

@@ -384,7 +384,7 @@ env::tool::r_oslist()
       name="${filename##*tool.}"
       if [ "${filename}" = "${name}" ]
       then
-         name="DEFAULT"
+         name='DEFAULT'
       fi
 
       r_add_unique_line "${filenames}" "${name}"
@@ -405,7 +405,7 @@ env::tool::r_scoped_get()
 
    local extension
 
-   if [ -z "${os}" -o "${os}" = "DEFAULT" ]
+   if [ -z "${os}" -o "${os}" = 'DEFAULT' ]
    then
       extension=""
    else
@@ -621,7 +621,7 @@ env::tool::add()
             mark="${RVAL}"
          fi
 
-         if [ "${os}" = "DEFAULT" ]
+         if [ "${os}" = 'DEFAULT' ]
          then
             extension=""
          else
@@ -1571,7 +1571,7 @@ env::tool::main()
    #
    # handle options
    #
-   local OPTION_SCOPE="DEFAULT"
+   local OPTION_SCOPE='DEFAULT'
    local OPTION_OS="${MULLE_UNAME}"
 
    while [ $# -ne 0 ]
@@ -1586,7 +1586,7 @@ env::tool::main()
          ;;
 
          --global|--common)
-            OPTION_OS="DEFAULT"
+            OPTION_OS='DEFAULT'
          ;;
 
          --current)

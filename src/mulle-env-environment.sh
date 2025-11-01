@@ -74,7 +74,7 @@ Usage:
    platform (os). See \`${MULLE_USAGE_NAME} environment scope help\` for more
    information about scopes.
 
-   Specifying no scope invokes the "DEFAULT" scope, which has special semantics
+   Specifying no scope invokes the 'DEFAULT' scope, which has special semantics
    depending on the command used. See each commands usage info for specifics.
 
 Example:
@@ -111,7 +111,7 @@ Usage:
    Get the value of an environment variable. You can check the return value
    to determine if a key exists and is empty (0), or absence of the key (1).
 
-   The "DEFAULT" scope will check the user and host scopes first before
+   The 'DEFAULT' scope will check the user and host scopes first before
    looking into the global scope and then the other scopes. Use the
    \`environment\` --scope option, to change the scope:
 
@@ -152,7 +152,7 @@ Usage:
    Use the alias \`mulle-env-reload\` to update your interactive shell
    after edits.
 
-   When you use the "DEFAULT" scopes, the variable is set in the global scope
+   When you use the 'DEFAULT' scopes, the variable is set in the global scope
    and all values of the same key are deleted from user and host scopes.
 
 Example:
@@ -191,7 +191,7 @@ Usage:
    Use the alias \`mulle-env-reload\` to update your interactive shell
    after edits.
 
-   When you use the "DEFAULT" scopes, the variable is deleted from the global
+   When you use the 'DEFAULT' scopes, the variable is deleted from the global
    scope and all user and host scopes.
 
 Example:
@@ -1492,7 +1492,7 @@ env::environment::clobber_main()
    local filename
    local filenames
 
-   if [ "${scopename}" = "DEFAULT" ]
+   if [ "${scopename}" = 'DEFAULT' ]
    then
       fail "won't clobber default scope"
    fi
@@ -1550,7 +1550,7 @@ env::environment::remove_main()
    local filename
    local filenames
 
-   if [ "${scopename}" = "DEFAULT" ]
+   if [ "${scopename}" = 'DEFAULT' ]
    then
       env::scope::r_get_existing_scope_files "--with-inferiors" "global"
    else
@@ -1664,7 +1664,7 @@ env::environment::_combined_list_main()
    local filename
    local filenames
 
-   env::scope::r_get_existing_scope_files "DEFAULT"
+   env::scope::r_get_existing_scope_files 'DEFAULT'
    filenames="${RVAL}"
 
    .foreachline filename in ${filenames}
@@ -1817,7 +1817,7 @@ env::environment::list_main()
 
          --output-eval)
             lister="env::environment::_eval_list"
-            if [ "${scopename}" = "DEFAULT" ]
+            if [ "${scopename}" = 'DEFAULT' ]
             then
                scopename="include"
             fi
@@ -1825,7 +1825,7 @@ env::environment::list_main()
 
          --output-sed)
             lister="env::environment::_sed_list"
-            if [ "${scopename}" = "DEFAULT" ]
+            if [ "${scopename}" = 'DEFAULT' ]
             then
                scopename="include"
             fi
@@ -1833,7 +1833,7 @@ env::environment::list_main()
 
          --output-command)
             lister="env::environment::_command_list"
-            if [ "${scopename}" = "DEFAULT" ]
+            if [ "${scopename}" = 'DEFAULT' ]
             then
                scopename="include"
             fi
@@ -1896,7 +1896,7 @@ env::environment::list_main()
          .foreachline i in ${scopes}
          .do
             i_name="${i:2}"
-            if [ "${scopename}" != "DEFAULT" -a "${i_name}" != "${scopename}" ]
+            if [ "${scopename}" != 'DEFAULT' -a "${i_name}" != "${scopename}" ]
             then
                .continue
             fi
@@ -1930,7 +1930,7 @@ env::environment::list_main()
 
 env::environment::assert_default_scope()
 {
-   [ "${OPTION_SCOPE}" = "DEFAULT" ] || \
+   [ "${OPTION_SCOPE}" = 'DEFAULT' ] || \
       fail "scope has already been specified as \"${OPTION_SCOPE}\""
 }
 
@@ -1942,7 +1942,7 @@ env::environment::main()
 {
    log_entry "env::environment::main" "$@"
 
-   local OPTION_SCOPE="DEFAULT"
+   local OPTION_SCOPE='DEFAULT'
    # local OPTION_SCOPE_SUBDIRS (already set in "main")
    local infix="_"
    local OPTION_SED_KEY_PREFIX
@@ -2110,7 +2110,7 @@ env::environment::main()
       'list')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
-         if [ "${OPTION_SCOPE}" != "DEFAULT" ]
+         if [ "${OPTION_SCOPE}" != 'DEFAULT' ]
          then
             env::scope::is_known_scopeid "${OPTION_SCOPE}" || fail "Scope \"${OPTION_SCOPE}\" is unknown"
          fi
@@ -2120,7 +2120,7 @@ env::environment::main()
       'get')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
-         if [ "${OPTION_SCOPE}" != "DEFAULT" ]
+         if [ "${OPTION_SCOPE}" != 'DEFAULT' ]
          then
             env::scope::is_known_scopeid "${OPTION_SCOPE}" || fail "Scope \"${OPTION_SCOPE}\" is unknown"
          fi
