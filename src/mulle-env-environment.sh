@@ -59,6 +59,7 @@ env::environment::usage()
 SHOWN_COMMANDS="\
    list              : list environment variables
    set               : set an environment variable
+   editor            : run mulle-environment-editor (needs node.js)
    get               : get value of an environment variable
    remove            : remove an environment variable
    scope             : add remove and list scopes
@@ -175,6 +176,7 @@ Cmd Options:
 EOF
    exit 1
 }
+
 
 
 env::environment::remove_usage()
@@ -1579,6 +1581,7 @@ env::environment::remove_main()
 }
 
 
+
 #
 # List
 #
@@ -2100,11 +2103,16 @@ env::environment::main()
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
          cmd="${cmd//rm/remove}"
+         cmd="${cmd//mv/move}"
          if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a "${OPTION_PROTECT}" = 'YES' ]
          then
             env::scope::env_validate_scope_write "${OPTION_SCOPE}" "$@"
          fi
          env::environment::${cmd}_main "${OPTION_SCOPE}" "$@"
+      ;;
+
+      'editor')
+         exekutor npx mulle-sde/mulle-environment-editor "$@"
       ;;
 
       'list')
@@ -2125,6 +2133,28 @@ env::environment::main()
             env::scope::is_known_scopeid "${OPTION_SCOPE}" || fail "Scope \"${OPTION_SCOPE}\" is unknown"
          fi
          env::environment::get_main "${OPTION_SCOPE}" "$@"
+      ;;
+
+      # experimental doesnt really work because remove does too much
+      'rename')
+         [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
+
+         if [ "${OPTION_SCOPE}" != 'DEFAULT' ]
+         then
+            env::scope::is_known_scopeid "${OPTION_SCOPE}" || fail "Scope \"${OPTION_SCOPE}\" is unknown"
+         fi
+
+         local value 
+
+         if ! value=$(env::environment::get_main "${OPTION_SCOPE}" "$1")
+         then
+            fail "Key \"$1\" not found"
+         fi
+         if ! env::environment::remove_main "${OPTION_SCOPE}" "$1" 
+         then
+            fail "Could not remove key \"$1\" not found"
+         fi
+         env::environment::set_main "${OPTION_SCOPE}" "$2" "${value}"
       ;;
 
       'scope'|'scopes')

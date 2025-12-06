@@ -59,6 +59,7 @@ Commands:
    add        : add tools
    compile    : compile tool lists into .mulle/var
    doctor     : check links of linked tools
+   editor     : run mulle-tool-editor (needs node.js)
    get        : check for tool existence
    link       : use compiled tool list to link commands into environment
    list       : list tools, files and specified OSs (default)
@@ -1629,7 +1630,7 @@ env::tool::main()
    libexecdir="${MULLE_ENV_HOST_VAR_DIR}/libexec"
 
    case "${cmd:-list}" in
-      add)
+      'add')
          mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
          env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          case $? in
@@ -1661,29 +1662,33 @@ env::tool::main()
          return $rval
       ;;
 
-      bin-dir)
+      'bin-dir')
          printf "%s\n" "${bindir}"
       ;;
 
-      libexec-dir)
+      'libexec-dir')
          printf "%s\n" "${libexecdir}"
       ;;
 
-      doctor)
-         env::tool::doctor "${bindir}" "${MULLE_ENV_HOST_VAR_DIR}/tool"
-      ;;
-
-      compile)
+      'compile')
          env::tool::compile "$@"
       ;;
 
-      get)
+      'doctor')
+         env::tool::doctor "${bindir}" "${MULLE_ENV_HOST_VAR_DIR}/tool"
+      ;;
+
+      'editor')
+         exekutor npx mulle-sde/mulle-definition-editor "$@"
+      ;;
+
+      'get')
          env::tool::get "${OPTION_SCOPE}" \
                        "${OPTION_OS}" \
                        "$@"
       ;;
 
-      link)
+      'link')
          mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
          env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          case $? in
@@ -1714,12 +1719,12 @@ env::tool::main()
          return $rval
       ;;
 
-      list)
+      'list')
          env::tool::list "${OPTION_OS}" \
                          "$@"
       ;;
 
-      remove)
+      'remove')
          mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
          env::lock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
          case $? in
@@ -1753,7 +1758,7 @@ env::tool::main()
          return $rval
       ;;
 
-      status)
+      'status')
          env::tool::status "$@"
       ;;
 

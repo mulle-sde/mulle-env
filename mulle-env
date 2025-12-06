@@ -56,7 +56,7 @@ fi
 #
 # The default for first time mulle-env
 #
-MULLE_ENV_DEFAULT_STYLE="developer/relax"
+MULLE_ENV_DEFAULT_STYLE="developer/frugal"
 ENVFILENAME="environment.sh"
 AUXENVFILENAME=
 
@@ -757,7 +757,7 @@ ${C_RESET_BOLD}   cd \"${MULLE_VIRTUAL_ROOT}\"
 ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} upgrade"
       ;;
 
-      [345]\.*)
+      [3456]\.*)
       ;;
 
       *)
@@ -956,6 +956,7 @@ style information."
    fi
 }
 
+
 # local _style
 # local _flavor
 env::__get_saved_style_flavor()
@@ -1080,7 +1081,7 @@ env::apply_style_to_directory()
    fi
 
    # memorize new style
-   # since this always changes on user reques its in etc
+   # since this always changes on user request its in var
    mkdir_if_missing "${MULLE_ENV_HOST_VAR_DIR}"
    env::write_cachedir_tag "${MULLE_ENV_VAR_DIR}"
    redirect_exekutor "${MULLE_ENV_HOST_VAR_DIR}/style.${LOGNAME:-all}" printf "%s\n" "${style}"
@@ -1111,18 +1112,18 @@ env::r_censored_path()
    log_entry "env::r_censored_path" "$@"
 
    local full_path="$1"
-
+   local restricted_path="$2"
    local i
    local j
 
    RVAL=""
 
-   [ -z "${RESTRICTED_PATH}" ] && _internal_fail "RESTRICTED_PATH must not be empty"
+   [ -z "${restricted_path}" ] && _internal_fail "restricted_path must not be empty"
 
    # MEMO: keep full_path order, but avoid ugly duplicates
    .foreachpath i in ${full_path}
    .do
-      .foreachpath j in ${RESTRICTED_PATH}
+      .foreachpath j in ${restricted_path}
       .do
          if [ "$i" = "$j" ]
          then
@@ -1406,8 +1407,13 @@ env::run_subshell()
          inherit_path="${PATH}"
       ;;
 
+      */frugal)
+         env::r_censored_path "${PATH}" "${FRUGAL_PATH}"
+         inherit_path="${RVAL}"
+      ;;
+
       */relax)
-         env::r_censored_path "${PATH}"
+         env::r_censored_path "${PATH}" "${RELAX_PATH}"
          inherit_path="${RVAL}"
       ;;
 
@@ -1435,7 +1441,7 @@ env::run_subshell()
    log_setting "CUSTOM_PRE_ENVIRONMENT: ${CUSTOM_PRE_ENVIRONMENT}"
 
    case "${_style}" in
-      */restrict|*/tight|*/relax)
+      */restrict|*/tight|*/relax|*/frugal)
 
          [ -z "${MULLE_HOSTNAME}" ] && _internal_fail "MULLE_HOSTNAME \
 undefined (old mulle-bashfunctions)"
@@ -1685,7 +1691,7 @@ env::invoke_shell()
          [ ! -z "${LOGNAME}" ] && s="LOGNAME='${LOGNAME}'"
       ;;
 
-      relax|restrict|inherit)
+      frugal|relax|restrict|inherit)
          env::r_environment_string "${MULLE_ENVIRONMENT_RELAX_KEYS}"
          s="${RVAL}"
       ;;
@@ -1699,7 +1705,7 @@ env::invoke_shell()
    case "${MULLE_UNAME}" in
       android)
          case "${envstyle}" in
-            tight|relax|restrict|inherit)
+            tight|frugal|relax|restrict|inherit)
             [ ${PREFIX+x} ]     && r_concat "${s}" "PREFIX='${PREFIX}'" && s="${RVAL}"
             [ ${LD_PRELOAD+x} ] && r_concat "${s}" "LD_PRELOAD='${LD_PRELOAD}'" && s="${RVAL}"
          ;;
@@ -1890,7 +1896,8 @@ env::main()
    local CUSTOM_PRE_ENVIRONMENT=""
    local CUSTOM_POST_ENVIRONMENT=""
    local FLAG_OUTSIDE_ENV='NO'
-   local RESTRICTED_PATH=""
+   local RELAX_PATH=""
+   local FRUGAL_PATH="/bin"
 
    # mingw needs different values here
 
@@ -1900,11 +1907,11 @@ env::main()
       ;;
 
       android)
-         RESTRICTED_PATH="/data/data/com.termux/files/usr/bin:/bin"
+         RELAX_PATH="/data/data/com.termux/files/usr/bin:/bin"
       ;;
 
       *)
-         RESTRICTED_PATH="/usr/local/bin:/usr/bin:/bin"
+         RELAX_PATH="/usr/bin:/bin"
       ;;
    esac
 
@@ -2435,7 +2442,7 @@ version"
       ;;
 
       'username')
-         printf "%s\n" "${MULLE_USERAME}"
+         printf "%s\n" "${MULLE_USERNAME}"
          return 0
       ;;
 

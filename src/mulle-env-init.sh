@@ -291,7 +291,6 @@ env::init::main()
       # unprotect sharedir if already present and protected
       exekutor chmod -R +wX "${sharedir}" || exit 1
 
-
       log_verbose "Creating \"${envfile}\""
 
       local text

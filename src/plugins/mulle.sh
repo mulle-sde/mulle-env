@@ -76,7 +76,7 @@ case "\${MULLE_SHELL_MODE}" in
          alias C="mulle-sde clean; mulle-sde craft"
          alias c="mulle-sde craft"
          alias CC="mulle-sde clean all; mulle-sde craft"
-         alias l="mulle-sde list --files"
+         alias l="mulle-sde files"
          alias r="mulle-sde reflect"
          alias T="mulle-sde test craft ; mulle-sde test"
          alias t="mulle-sde test rerun --serial"
@@ -343,7 +343,8 @@ env::plugin::mulle::setup_tools()
       env::tool::link_mulle_tool "mulle-semver"     "${bindir}" "${libexecdir}" &&
       env::tool::link_mulle_tool "mulle-sourcetree" "${bindir}" "${libexecdir}" &&
       env::tool::link_mulle_tool "mulle-template"   "${bindir}" "${libexecdir}" &&
-      env::tool::link_mulle_tool "mulle-test"       "${bindir}" "${libexecdir}" "tool" "optional"
+      env::tool::link_mulle_tool "mulle-test"       "${bindir}" "${libexecdir}" "tool" "optional" &&
+      env::tool::link_mulle_tool "mulle-todo"       "${bindir}" "" "tool" "optional" # have no libexec
    ) || return 1
 }
 

@@ -60,9 +60,11 @@ Usage:
    available or set a different style.
 
    Print the style currently used by the mulle-env environment. The style
-   is a pair of tool-style/env-style.
+   is a pair of tool-style/env-style. The tool style is set during
+   \`mulle-env init\` and must be changed there. You can switch to a different
+   env-style on a per call basis with \`mulle-env --style <env-style>\`
 
-Tool-style: (built-in only, see all with \`mulle-sde style --toolstyles\`)
+Tool-style: (built-in only, see all with \`show\`)
    none          : a fairly empty virtual environment, fairly unusable
    minimal       : a minimal set of tools (like mudo, cd, ls)
    developer     : a common set of tools (like mudo, cd, awk, sort) (default)
@@ -70,7 +72,8 @@ Tool-style: (built-in only, see all with \`mulle-sde style --toolstyles\`)
 Env-style:
    tight         : all environment variables must be user defined
    restrict      : inherit some environment (e.g. SSH_TTY) (default)
-   relax         : restrict plus all /bin and /usr/bin tools.
+   frugal        : restrict plust all /bin tools
+   relax         : frugal plus all /usr/bin tools
    inherit       : relax plus all tools in PATH
    wild          : no restrictions
 
@@ -79,8 +82,7 @@ Options:
 
 Commands:
    get           : list current style
-   set           : set a style
-   show          : show avaiable styles
+   show          : show available styles
 EOF
 
    exit 1
@@ -136,26 +138,6 @@ EOF
 }
 
 
-env::style::set_main()
-{
-   log_entry "env::style::set_main" "$@"
-
-   local _style
-
-   case "$1" in
-      -h|--help|help)
-         env::style::set_usage
-      ;;
-   esac
-
-   [ $# -eq 0 ]  && env::style::set_usage "Missing style argument"
-   OPTION_STYLE="${1:-}"
-   shift
-   [ $# -ne 0 ]  && env::style::set_usage "Superfluous arguments \"$*\""
-
-   OPTION_SHELL_COMMAND=":" env::run_subshell ""
-}
-
 
 env::style::get_main()
 {
@@ -201,6 +183,7 @@ env::style::show_envstyles()
 
    echo "inherit
 relax
+frugal
 restrict
 tight
 wild"
@@ -293,7 +276,7 @@ env::style::main()
    [ $# -ne 0 ] && shift
 
    case "${cmd}" in
-      get|list|set)
+      get|list)
          if ! env::is_help_request_commandline "$@"
          then
             env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}" 'NO'
