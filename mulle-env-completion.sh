@@ -42,7 +42,7 @@ _mulle_env__unique_compreply() {
 _mulle_env__global_flags() {
   printf "%s\n" \
     -h --help help \
-    -C -c -d -D -ef -aef \
+    -C -c -d -D -ef -aef -p \
     --defines --pre-defines --post-defines \
     --search-here --search-none --search-nearest -N --search-parent -P --search-superior -S --search-default --search-as-is \
     --style \
@@ -81,7 +81,7 @@ _mulle_env__top_commands() {
 
 # Environment (env) subcommands
 _mulle_env__environment_subcommands() {
-  printf "%s\n" list set get remove scope scopes clobber mset
+  printf "%s\n" list set get remove scope scopes clobber mset editor rename
 }
 
 # Environment global options (before env subcommand)
@@ -176,7 +176,7 @@ _mulle_env__scope_file_opts() {
 
 # Style subcommands
 _mulle_env__style_subcommands() {
-  printf "%s\n" get set show list
+  printf "%s\n" get show list
 }
 
 # Style show options
@@ -186,7 +186,7 @@ _mulle_env__style_show_opts() {
 
 # Tool subcommands
 _mulle_env__tool_subcommands() {
-  printf "%s\n" add compile doctor get link list remove status bin-dir libexec-dir
+  printf "%s\n" add compile doctor editor get link list remove status bin-dir libexec-dir
 }
 
 # Tool global options (before tool subcommand)
@@ -289,7 +289,7 @@ _mulle_env__style_values() {
 # Determine if $1 is an option that takes a value at global level
 _mulle_env__global_opt_requires_value() {
   case "$1" in
-    -C|-c|-d|-ef|-aef|--style|--scope-subdir|--defines|--pre-defines|--post-defines) return 0 ;;
+    -C|-c|-d|-ef|-aef|-p|--style|--scope-subdir|--defines|--pre-defines|--post-defines) return 0 ;;
   esac
   return 1
 }
@@ -366,6 +366,10 @@ _mulle_env_complete() {
       ;;
       -ef|--environment-file|-aef|--aux-environment-file)
         _mulle_env__complete_files "$cur"
+        return
+      ;;
+      -p)
+        _mulle_env__complete_dirs "$cur"
         return
       ;;
       --style)
@@ -509,6 +513,9 @@ _mulle_env_complete() {
             COMPREPLY=()
           fi
         ;;
+        editor|rename|clobber|mset)
+          COMPREPLY=()
+        ;;
         scope|scopes)
           # Next token after 'scope' subcommand
           local j=$((i+1))
@@ -592,13 +599,6 @@ _mulle_env_complete() {
       case "$ssub" in
         get|list)
           COMPREPLY=()
-        ;;
-        set)
-          if [[ "$cur" == -* ]]; then
-            COMPREPLY=()
-          else
-            COMPREPLY=( $(compgen -W "$(_mulle_env__style_values)" -- "$cur") )
-          fi
         ;;
         show)
           if [[ "$cur" == -* ]]; then

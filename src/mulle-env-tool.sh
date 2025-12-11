@@ -1005,8 +1005,8 @@ env::tool::link_tool()
       log_debug "MULLE_OLDPATH is empty (searching for \"$toolname\")"
    fi
 
-   log_setting "MULLE_OLDPATH : ${searchpath}"
-   log_setting "PATH          : ${searchpath}"
+#   log_setting "MULLE_OLDPATH : ${searchpath}"
+#   log_setting "PATH          : ${searchpath}"
 
    filename="`PATH="${searchpath}" command -v "${toolname}" `"
 
