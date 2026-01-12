@@ -1,3 +1,27 @@
+# 6.0.0
+
+
+
+
+* Add 'frugal' env-style between 'restrict' and 'relax':
+  - restrict: inherits minimal environment (e.g. `SSH_TTY)`
+  - frugal: restrict + all /bin tools (NEW)
+  - relax: frugal + all /usr/bin tools
+  - inherit: relax + all tools in PATH
+* Change default style from 'developer/relax' to 'developer/frugal'
+* Remove 'style set' command (style is set during init)
+* Add 'environment editor' command (requires node.js)
+* Add experimental 'environment rename' command
+* Add mulle-todo tool linking
+* Fix alias: 'mulle-sde list --files' -> 'mulle-sde files'
+* Improve style documentation and help text
+
+* small but possibly breaking change: -Dvariables are now expanded in post. This means mulle-env -DFOO='123' will have the value '123' if not previously defined by the environment files and not '123' as in version 5
+
+* added `MULLE_VIRTUAL_ROOT_ID` that is tracking if the location has changed
+* added a completion file
+
+
 ### 5.4.2
 
 * added mulle-sde env rm shortcut

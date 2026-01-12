@@ -28,7 +28,7 @@ history.
 
 | Release Version                                       | Release Notes
 |-------------------------------------------------------|--------------
-| ![Mulle kybernetiK tag](https://img.shields.io/github/tag/mulle-sde/mulle-env.svg?branch=release)  | [RELEASENOTES](RELEASENOTES.md) |
+| ![Mulle kybernetiK tag](https://img.shields.io/github/tag/mulle-sde/mulle-env.svg)  | [RELEASENOTES](RELEASENOTES.md) |
 
 | Executable          | Description
 |---------------------|--------------------------------
