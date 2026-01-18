@@ -1250,7 +1250,12 @@ env::environment::_eval_get()
    env::r_environment_string
    environment="${RVAL}"
 
-   value="`eval_rexekutor env -i "${environment}" '${BASH}' -c "'${cmd}'" `"
+   if [ ${ZSH_VERSION+x} ]
+   then
+      value="`eval_rexekutor env -i ${environment} '${ZSH:-zsh}' -c "'${cmd}'" `"
+   else
+      value="`eval_rexekutor env -i "${environment}" '${BASH:-bash}' -c "'${cmd}'" `"
+   fi
    if [ ! -z "${value}" ]
    then
       printf "%s\n" "$value"
