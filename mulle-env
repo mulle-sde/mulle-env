@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="6.0.1"
+MULLE_EXECUTABLE_VERSION="6.0.2"
 
 
 #
@@ -464,17 +464,17 @@ env::lock_existing_directory()
 
    local creation_time
 
-   creation_time="`modification_timestamp "${lockdir}" `"
-
-   elapsed=$((start_time - creation_time))
-   if [ $elapsed -ge 60 ]
-   then
-      log_verbose "$$ found stale \"${lockdir}\" `ls -la $(dirname -- "${lockdir}")`"
-      return 3
-   fi
-
    while :
    do
+      creation_time="`modification_timestamp "${lockdir}" `"
+
+      elapsed=$((start_time - creation_time))
+      if [ $elapsed -ge 60 ]
+      then
+         log_verbose "$$ found stale \"${lockdir}\" `ls -la $(dirname -- "${lockdir}")`"
+         return 3
+      fi
+
       sleep 0.025
 
       if env::exekutor_no_stderr mkdir "${lockdir}"
@@ -507,7 +507,7 @@ env::unlock_existing_directory()
 
    [ -d "${lockdir}" ] || log_warning "Directory \"${lockdir}\" should exist"
 
-   exekutor rmdir "${lockdir}" || log_error "Could not remove \"${lockdir}\" not good"
+   env::exekutor_no_stderr rmdir "${lockdir}" || log_error "Could not remove \"${lockdir}\" not good"
    log_debug "$$ removed \"${lockdir}\""
 }
 
@@ -823,6 +823,7 @@ check your tool list.
    ${C_RESET_BOLD} mulle-env tool list"
    fi
 
+
    if [ "${needs_bin_update}" = 'DEFAULT' ]
    then
       if env::get_tool_status && env::get_symlink_status
@@ -832,6 +833,10 @@ check your tool list.
          needs_bin_update='YES'
       fi
    fi
+
+   log_setting "needs_flavor_update = ${needs_flavor_update}"
+   log_setting "needs_bin_update    = ${needs_bin_update}"
+   log_setting "needs_rmdir         =  ${needs_rmdir}"
 
    if [ "${needs_bin_update}" != 'YES' ]
    then
