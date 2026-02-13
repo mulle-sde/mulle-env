@@ -343,7 +343,7 @@ env::environment::execute_with_unprotected_files_in_dir()
    [ -z "${directory}" ] && _internal_fail "directory is empty"
 
    local protect
-   local rval
+   local rc
 
    # unprotect files
    if [ "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' -o "${OPTION_PROTECT}" != 'NO' ] \
@@ -356,13 +356,13 @@ env::environment::execute_with_unprotected_files_in_dir()
    (
       "$@"
    )
-   rval=$?
+   rc=$?
       # protect files only, chmoding the share directory is bad for git
    if [ "${protect}" = 'YES' ]
    then
       exekutor find "${directory}" -type f -exec chmod a-w {} \;
    fi
-   return $rval
+   return $rc
 }
 
 
@@ -428,12 +428,12 @@ env::environment::safe_create_file()
 
    local protectfile
    local protectdirs
-   local rval
+   local rc
 
    env::environment::r_mkdir_if_missing_or_unprotect "${directory}"
    protectdirs="${RVAL}"
 
-   rval=0
+   rc=0
    protectfile='YES'
    if [ -f "${filename}" ]
    then
@@ -442,23 +442,23 @@ env::environment::safe_create_file()
          protectfile='NO'
       else
          exekutor chmod ug+w "${filename}"
-         rval=$?
+         rc=$?
       fi
    fi
 
-   if [ $rval -eq 0 ]
+   if [ $rc -eq 0 ]
    then
       (
          exekutor "$@"
       )
-      rval=$?
+      rc=$?
    fi
 
    if [ "${protectfile}" = 'YES' ]
    then
       if ! exekutor chmod a-w "${filename}"
       then
-         rval=1
+         rc=1
       fi
    fi
 
@@ -466,11 +466,11 @@ env::environment::safe_create_file()
    .do
       if ! exekutor chmod a-w "${directory}"
       then
-         rval=1
+         rc=1
       fi
    .done
 
-   return ${rval}
+   return ${rc}
 }
 
 
@@ -489,7 +489,7 @@ env::environment::safe_write_file()
    fi
 
    local protect
-   local rval
+   local rc
 
    if [ ! -w "${filename}" ]
    then
@@ -505,16 +505,16 @@ env::environment::safe_write_file()
    (
       exekutor "$@"
    )
-   rval=$?
+   rc=$?
 
    if [ "${protect}" = 'YES' ]
    then
       if ! exekutor chmod a-w "${filename}"
       then
-         rval=1
+         rc=1
       fi
    fi
-   return ${rval}
+   return ${rc}
 }
 
 
@@ -552,7 +552,7 @@ env::environment::safe_modify_file()
 
    local protect
    local dir_protect
-   local rval
+   local rc
    local dir
 
    r_dirname "${filename}"
@@ -567,29 +567,29 @@ env::environment::safe_modify_file()
       fi
    fi
 
-   rval=0
+   rc=0
    if [ ! -w "${filename}" ]
    then
       [ -e "${filename}" ] || _internal_fail "File must exist for write"
 
       protect='YES'
       exekutor chmod ug+w "${filename}"
-      rval=$?
+      rc=$?
    fi
 
-   if [ $rval -eq 0 ]
+   if [ $rc -eq 0 ]
    then
       (
          exekutor "$@"
       )
-      rval=$?
+      rc=$?
    fi
 
    if [ "${protect}" = 'YES' ]
    then
       if ! exekutor chmod a-w "${filename}"
       then
-         rval=1
+         rc=1
       fi
    fi
 
@@ -597,10 +597,10 @@ env::environment::safe_modify_file()
    then
       if ! exekutor chmod a-w "${dir}"
       then
-         rval=1
+         rc=1
       fi
    fi
-   return ${rval}
+   return ${rc}
 }
 
 
@@ -617,7 +617,7 @@ env::environment::safe_remove_file_if_present()
    fi
 
    local dir_protect
-   local rval
+   local rc
    local dir
 
    r_dirname "${filename}"
@@ -633,17 +633,17 @@ env::environment::safe_remove_file_if_present()
    fi
 
    remove_file_if_present "${filename}"
-   rval=$?
+   rc=$?
 
    if [ "${dir_protect}" = 'YES' ]
    then
       if ! exekutor chmod a-w "${dir}"
       then
-         rval=1
+         rc=1
       fi
    fi
 
-   return ${rval}
+   return ${rc}
 }
 
 #
@@ -1022,7 +1022,7 @@ ${C_INFO}Tip: use multiple addition statements."
    fi
 
    local scopeprefix
-   local rval
+   local rc
 
    if ! env::scope::r_filename_for_scopeid "${scopename}"
    then
@@ -1042,7 +1042,7 @@ ${C_INFO}Tip: use multiple addition statements."
    esac
 
    env::environment::_set "${filename}" "${key}" "${value}" "${comment}" "${safe}"
-   rval=$?
+   rc=$?
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -1050,9 +1050,9 @@ ${C_INFO}Tip: use multiple addition statements."
       cat "${filename}" >&2
    fi
 
-   [ $rval -eq 1 ] && exit 1
+   [ $rc -eq 1 ] && exit 1
 
-   return $rval
+   return $rc
 }
 
 
@@ -1071,7 +1071,7 @@ env::environment::mset_main()
    local comment
    local option
    local protect
-   local rval
+   local rc
 
    while [ $# -ne 0 ]
    do
@@ -1197,19 +1197,19 @@ env::environment::_file_defines_key()
    local filename="$1"
    local key="$2"
 
-   local rval
+   local rc
 
    r_escaped_grep_pattern "${key}"
    rexekutor grep -E -q -s "^ *export *${RVAL}=" "${filename}"
-   rval=$?
+   rc=$?
 
-   if [ $rval -eq 0 ]
+   if [ $rc -eq 0 ]
    then
       log_debug "${key} exists in \"${filename#"${MULLE_USER_PWD}/"}\""
    else
       log_debug "${key} does not exist in \"${filename#"${MULLE_USER_PWD}/"}\""
    fi
-   return $rval
+   return $rc
 }
 
 
@@ -1388,17 +1388,17 @@ env::environment::get_main()
    env::scope::r_get_existing_scope_files ${reverse} "${scopename}"
    filenames="${RVAL}"
 
-   local rval
+   local rc
    local value
    local prevfiles
 
-   rval="${OPTION_NOT_FOUND_RC:-4}"
+   rc="${OPTION_NOT_FOUND_RC:-4}"
 
    .foreachline filename in ${filenames}
    .do
       if value="`eval ${getter} "'${filename}'" "'${key}'" "${prevfiles}"`"
       then
-         rval=0
+         rc=0
          if [ ! -z "${reverse}" ]
          then
             r_unescaped_doublequotes "${value}"
@@ -1411,13 +1411,13 @@ env::environment::get_main()
       prevfiles="${RVAL}"
    .done
 
-   if [ "${rval}" -eq 0 ]
+   if [ "${rc}" -eq 0 ]
    then
       r_unescaped_doublequotes "${value}"
       printf "%s\n" "${RVAL}"
    fi
 
-   return $rval
+   return $rc
 }
 
 
@@ -1567,22 +1567,22 @@ env::environment::remove_main()
    r_reverse_lines "${RVAL}"
    filenames="${RVAL}"
 
-   local rval
+   local rc
 
-   rval=1
+   rc=1
    .foreachline filename in ${filenames}
    .do
       if env::environment::_file_defines_key "${filename}" "${key}"
       then
          if env::environment::_remove "${filename}" "${key}"
          then
-            rval=0
+            rc=0
             .break
          fi
       fi
    .done
 
-   return $rval
+   return $rc
 }
 
 

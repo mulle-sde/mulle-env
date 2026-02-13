@@ -665,9 +665,9 @@ env::get_symlink_status()
 {
    log_entry "env::get_symlink_status" "$@"
 
-   local rval
+   local rc
 
-   rval=0
+   rc=0
 
    local filename
    local resolved
@@ -684,14 +684,14 @@ env::get_symlink_status()
          if [ ! -e "${resolved}" ]
          then
             log_fluff "Symlink is \"${filename}\" to \"${resolved}\" is broken"
-            rval=1
+            rc=1
          fi
       fi
       break # first file decides
    done
    shell_disable_nullglob
 
-   return $rval
+   return $rc
 }
 
 
@@ -846,7 +846,7 @@ check your tool list.
    [ -z "${MULLE_ENV_TOOL_SH}" ] && \
       . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh"
 
-   local rval
+   local rc
    local callback
 
    [ -z "${MULLE_ENV_VAR_DIR}" ] && _internal_fail "MULLE_ENV_VAR_DIR not defined"
@@ -908,7 +908,7 @@ check your tool list.
 	         exit 1
 	      fi
 	   )
-	   rval=$?
+	   rc=$?
 
       env::unprotect_dir_if_exists "${toolslibexecdir}"
       env::unprotect_dir_if_exists "${toolsbindir}"
@@ -916,15 +916,15 @@ check your tool list.
       env::protect_dir_if_exists "${bindir}"
 
    env::unlock_existing_directory "${MULLE_ENV_VAR_DIR}"
-   if [ "$rval" -ne 0 ]
+   if [ "$rc" -ne 0 ]
    then
-      exit $rval
+      exit $rc
    fi
 
    env::unlock_existing_directory "${vardir}"
-   if [ "$rval" -ne 0 ]
+   if [ "$rc" -ne 0 ]
    then
-      exit $rval
+      exit $rc
    fi
 }
 
@@ -1314,7 +1314,12 @@ env::run_subshell()
          ;;
 
          *)
-            env::usage "Unknown command \"${directory}\"" # sic
+            if [ ! -z "${OPTION_DIRECTORY}" ]
+            then
+               env::usage "Unknown directory \"${directory}\""
+            else
+               env::usage "Unknown command \"${directory}\"" # sic
+            fi
          ;;
       esac
 
@@ -1573,14 +1578,14 @@ undefined (old mulle-bashfunctions)"
                      "'${NO_MOTD:-}'" \
                      "'${escaped_custom_post_environment}'" \
                      "${OPTION_SHELL_COMMAND}"
-   rval=$?
+   rc=$?
 
-   log_debug "Subshell exited with $rval"
+   log_debug "Subshell exited with $rc"
 
    remove_file_if_present "${vardir}/old-environment.$$"
    remove_file_if_present "${vardir}/custom-post-environment.$$"
 
-   return $rval
+   return $rc
 }
 
 MULLE_ENVIRONMENT_KEYS="\
@@ -1720,10 +1725,11 @@ env::invoke_shell()
    # need this for mudo
    r_concat "${s}" "MULLE_ENV_PID=$$" && s="${RVAL}"
 
-   eval_exekutor env ${env_flag} \
-                     "${s}" \
-                     "${custom_pre_environment}" \
-                     "$@"
+
+   "${OPTION_EVAL_EXEKUTOR}" env ${env_flag} \
+                            "${s}" \
+                            "${custom_pre_environment}" \
+                            "$@"
 }
 
 
@@ -1896,7 +1902,7 @@ env::main()
    local OPTION_SEARCHMODE="DEFAULT"
    local OPTION_PROTECT="YES"
    local OPTION_SCOPE_SUBDIRS=
-
+   local OPTION_EVAL_EXEKUTOR='eval_exekutor'
    local OPTION_COPY_MULLE_TOOL='NO'
    local CUSTOM_PRE_ENVIRONMENT=""
    local CUSTOM_POST_ENVIRONMENT=""
@@ -2053,6 +2059,19 @@ env::main()
             fi
          ;;
 
+         -E|--environment-transition)
+            #
+            # this should be enough to force us into a new environment
+            # we can not restore the "old" environment that the caller had
+            # so this will not perform satisfactory for users 
+            # expecting to move from os -> env1 -> env2. env2 will get 
+            # residue and shielding from env1 (except PATH)
+            #
+            PATH="${MULLE_OLDPATH:-${PATH}}"
+            MULLE_VIRTUAL_ROOT=
+            MULLE_VIRTUAL_ROOT_ID=
+         ;;
+
          -ef|--environment-file)
             [ $# -eq 1 ] && env::usage "Missing argument to $1"
             shift
@@ -2135,6 +2154,10 @@ env::main()
             OPTION_IDENTIFIERCASE='UPPERCASE_ONLY'
          ;;
 
+         --rexekutor)
+            OPTION_EVAL_EXEKUTOR='eval_rexekutor'
+         ;;
+
          --)
             break
          ;;
@@ -2156,7 +2179,8 @@ env::main()
 
    # export MULLE_TRACE
 
-   local url
+
+   local arg
 
    arg="${1:-}"
    [ $# -ne 0 ] && shift
@@ -2169,6 +2193,8 @@ env::main()
       exekutor cd "${OPTION_DIRECTORY}" || exit 1
       OPTION_DIRECTORY="PWD"
    fi
+
+   local url
 
    case "${arg}" in
       '--')
@@ -2242,6 +2268,22 @@ version"
 
          env::environment::main --protect-flag "${OPTION_PROTECT}" "$@"
          return $?
+      ;;
+
+      'exec')
+         [ $# -eq 0 ] && env::usage "Missing argument to $1"
+
+         local i
+
+         for i in "$@"
+         do
+            printf -v arg "%q" "$i"
+            r_concat "${OPTION_SHELL_COMMAND}" "${arg}"
+            OPTION_SHELL_COMMAND="${RVAL}"
+         done
+
+         printf -v OPTION_SHELL_COMMAND "%q" "${OPTION_SHELL_COMMAND}"
+         arg="" # fall thru
       ;;
 
       # shortcuts for environment

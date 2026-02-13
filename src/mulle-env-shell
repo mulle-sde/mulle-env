@@ -330,7 +330,7 @@ run_interactive_shell()
       ;;
    esac
 
-   local rval
+   local rc
 
    eval "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
         "MULLE_BASHFUNCTIONS_LIBEXEC_DIR='${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
@@ -346,7 +346,7 @@ run_interactive_shell()
             "'${BASH}'" \
                "${cmd_options}"
 
-   rval=$?
+   rc=$?
 
    if [ "${OPTION_KEEP_TMP}" = 'NO' ]
    then
@@ -355,7 +355,7 @@ run_interactive_shell()
 
    printf '\033]0;%s\007' ""  # try to reset colors
 
-   return ${rval}
+   return ${rc}
 }
 
 

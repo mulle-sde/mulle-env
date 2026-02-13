@@ -64,6 +64,9 @@ Usage:
    \`mulle-env init\` and must be changed there. You can switch to a different
    env-style on a per call basis with \`mulle-env --style <env-style>\`
 
+   The tool-style ceases to be useful for env-styles 'inherit' or 'wild'.
+   For other styles this gives you more tools to work with.
+
 Tool-style: (built-in only, see all with \`show\`)
    none          : a fairly empty virtual environment, fairly unusable
    minimal       : a minimal set of tools (like mudo, cd, ls)
@@ -72,7 +75,7 @@ Tool-style: (built-in only, see all with \`show\`)
 Env-style:
    tight         : all environment variables must be user defined
    restrict      : inherit some environment (e.g. SSH_TTY) (default)
-   frugal        : restrict plust all /bin tools
+   frugal        : restrict plus all /bin tools
    relax         : frugal plus all /usr/bin tools
    inherit       : relax plus all tools in PATH
    wild          : no restrictions

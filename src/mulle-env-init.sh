@@ -400,7 +400,7 @@ EOF
 
       rmdir_safer "${sharedir}.old"
    )
-   rval=$?
+   rc=$?
 
    # chmoding the share directory is bad for git
    if [ "${OPTION_PROTECT}" != 'NO' ] && [ -d "${sharedir}" ]
@@ -408,7 +408,7 @@ EOF
       exekutor find "${sharedir}" -type f -exec chmod a-w {} \;
    fi
 
-   [ $rval -ne 0 ] && exit $rval
+   [ $rc -ne 0 ] && exit $rc
 
    if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_REINIT}" != 'YES' -a "${OPTION_BLURB}" != 'NO' ]
    then

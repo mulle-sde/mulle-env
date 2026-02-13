@@ -57,7 +57,7 @@ main()
 
    if ! run_mulle_env environment --me remove BAR
    then
-      fail "Negative rval for remove"
+      fail "Negative return code for remove"
    fi
 
    value="`run_mulle_env environment --me get BAR`"

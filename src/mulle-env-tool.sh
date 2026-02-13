@@ -577,7 +577,7 @@ env::tool::add()
    local extension
    local doesexist
    local mark
-   local rval
+   local rc
 
    # run in subshell to protect cleanly afterwards
    (
@@ -661,24 +661,24 @@ env::tool::add()
             tool="${tool};${mark}"
          fi
 
-         rval=0
+         rc=0
 
          case "${scope}" in
             plugin|extension)
                tool_filename="${MULLE_ENV_SHARE_DIR}/tool-${scope}${extension}"
                redirect_append_exekutor "${tool_filename}" printf "%s\n" "${tool}"
-               rval=$?
+               rc=$?
             ;;
 
             *)
                mkdir_if_missing "${MULLE_ENV_ETC_DIR}"
                tool_filename="${MULLE_ENV_ETC_DIR}/tool${extension}"
                redirect_append_exekutor "${tool_filename}" printf "%s\n" "${tool}"
-               rval=$?
+               rc=$?
             ;;
          esac
 
-         if [ $rval -ne 0 ]
+         if [ $rc -ne 0 ]
          then
             exit 1
          fi
@@ -699,7 +699,7 @@ Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platfo
          fi
       done
    )
-   rval=$?
+   rc=$?
 
    if [ ! -z "${protectingdir}" ]
    then
@@ -707,7 +707,7 @@ Use ${C_RESET_BOLD}--global add${C_VERBOSE} to make tool available on all platfo
    fi
    env::unlock_existing_directory "${lockingdir}"
 
-   if [ $rval -ne 0 ]
+   if [ $rc -ne 0 ]
    then
       exit 1
    fi
@@ -1267,7 +1267,7 @@ env::tool::doctor()
    local toolfile="$2"
 
    local symlink
-   local rval
+   local rc
    local found 
    local any
    local cmd
@@ -1290,7 +1290,7 @@ ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
       fi
    .done
 
-   rval=0
+   rc=0
    any='NO'
 
    .foreachfile symlink in "${bindir}"/*
@@ -1299,7 +1299,7 @@ ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
       #https://stackoverflow.com/questions/8049132/how-can-i-detect-whether-a-symlink-is-broken-in-bash
       if [ ! -e "${symlink}" ]
       then
-         rval=1
+         rc=1
 
          r_basename "${symlink}"
 
@@ -1315,7 +1315,7 @@ ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
       fi
    .done
 
-   if [ ${rval} -eq 0 ]
+   if [ ${rc} -eq 0 ]
    then
       if [ "${any}" = 'NO' ]
       then
@@ -1325,7 +1325,7 @@ ${C_RESET_BOLD}   ${MULLE_USAGE_NAME} tool link"
       fi
    fi
 
-   return $rval
+   return $rc
 }
 
 
@@ -1542,9 +1542,9 @@ env::tool::status()
    local logger="${1:-_log_info}"
 
    env::get_tool_status "$@"
-   rval=$?
+   rc=$?
 
-   case $rval in
+   case $rc in
       0)
          ${logger} "OK"
       ;;
@@ -1556,7 +1556,7 @@ env::tool::status()
       ;;
    esac
 
-   return $rval
+   return $rc
 }
 
 
@@ -1620,7 +1620,7 @@ env::tool::main()
    fi
 
 
-   local rval
+   local rc
    local bindir
    local libexecdir
 
@@ -1655,11 +1655,11 @@ env::tool::main()
                            "${OPTION_OS}" \
                            "$@"
          )
-         rval=$?
+         rc=$?
          env::protect_dir_if_exists "${bindir}"
          env::protect_dir_if_exists "${libexecdir}"
          env::unlock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
-         return $rval
+         return $rc
       ;;
 
       'bin-dir')
@@ -1712,11 +1712,11 @@ env::tool::main()
          (
             env::tool::link "$@"
          )
-         rval=$?
+         rc=$?
          env::protect_dir_if_exists "${bindir}"
          env::protect_dir_if_exists "${libexecdir}"
          env::unlock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
-         return $rval
+         return $rc
       ;;
 
       'list')
@@ -1751,11 +1751,11 @@ env::tool::main()
                           --remove \
                           "$@"
          )
-         rval=$?
+         rc=$?
          env::protect_dir_if_exists "${bindir}"
          env::protect_dir_if_exists "${libexecdir}"
          env::unlock_existing_directory "${MULLE_ENV_HOST_VAR_DIR}"
-         return $rval
+         return $rc
       ;;
 
       'status')
