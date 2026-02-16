@@ -169,8 +169,10 @@ Cmd Options:
    --append          : add value to existing values (using separator ':')
    --concat          : add value to existing value with space
    --concat0         : add value to existing value without separator
+   --if-exists       : only set if key already exists in the same scope
    --prepend         : prepent value to existing values (using separator ':')
    --remove          : remove value from existing values (using separator ':')
+   --same-scope      : set in the scope where key is currently defined
    --separator <sep> : sepecify custom separator for --append
 
 EOF
@@ -827,6 +829,41 @@ env::environment::remove_from_global_subscopes()
 }
 
 
+env::environment::r_find_scopeid_for_key()
+{
+   log_entry "env::environment::r_find_scopeid_for_key" "$@"
+
+   local key="$1"
+
+   [ -z "${MULLE_ENV_SCOPE_SH}" ] && . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-scope.sh"
+
+   local filenames
+   local filename
+   local scope
+   local scopeid
+
+   env::scope::r_get_existing_scope_files "DEFAULT"
+   filenames="${RVAL}"
+
+   .foreachline filename in ${filenames}
+   .do
+      if env::environment::_file_defines_key "${filename}" "${key}"
+      then
+         case "${filename}" in
+            */environment-*.sh)
+               scopeid="${filename##*/environment-}"
+               scopeid="${scopeid%.sh}"
+               RVAL="${scopeid}"
+               return 0
+            ;;
+         esac
+      fi
+   .done
+
+   return 1
+}
+
+
 # todo: set is still too hacky
 #       and doesn't respect env::scope::r_get_scopes information
 
@@ -839,6 +876,9 @@ env::environment::set_main()
    local OPTION_COMMENT_OUT_EMPTY='NO'
    local OPTION_ADD_EMPTY='YES'
    local OPTION_ADD='NO'
+   local OPTION_IF_EXISTS='NO'
+   # OPTION_SAME_SCOPE can come from parent main() or be set here
+   [ -z "${OPTION_SAME_SCOPE}" ] && local OPTION_SAME_SCOPE='NO'
    local OPTION_SEPARATOR=":"  # convenient for PATH like behaviour
 
    # shellcheck source=src/mulle-env-scope.sh
@@ -871,12 +911,20 @@ env::environment::set_main()
             OPTION_ADD='CONCAT0'
          ;;
 
+         --if-exists)
+            OPTION_IF_EXISTS='YES'
+         ;;
+
          -p|--prepend)
             OPTION_ADD='PREPEND'
          ;;
 
          --remove)
             OPTION_ADD='REMOVE'
+         ;;
+
+         --same-scope)
+            OPTION_SAME_SCOPE='YES'
          ;;
 
          -s|--separator|--seperator)
@@ -923,6 +971,18 @@ env::environment::set_main()
    [ -z "${key}" ] && env::environment::set_usage "empty key for set"
 
    env::assert_valid_environment_key "${key}"
+
+   if [ "${OPTION_SAME_SCOPE}" = 'YES' ]
+   then
+      if env::environment::r_find_scopeid_for_key "${key}"
+      then
+         scopename="${RVAL}"
+         log_verbose "Found key \"${key}\" in scope \"${scopename}\""
+      else
+         log_warning "Key \"${key}\" not found in any active scope, skipping set"
+         return 0
+      fi
+   fi
 
    if [ "${OPTION_ADD}" != 'NO' ]
    then
@@ -1016,6 +1076,14 @@ ${C_INFO}Tip: use multiple addition statements."
    if [ "${scopename}" = 'DEFAULT' ]
    then
       filename="${MULLE_ENV_ETC_DIR}/environment-global.sh"
+      if [ "${OPTION_IF_EXISTS}" = 'YES' ]
+      then
+         if ! env::environment::_file_defines_key "${filename}" "${key}"
+         then
+            log_verbose "Key \"${key}\" does not exist in scope, skipping set"
+            return 0
+         fi
+      fi
       env::environment::_set "${filename}" "${key}" "${value}" "${comment}" 'NO' &&
       env::environment::remove_from_global_subscopes "${key}"
       return $?
@@ -1033,6 +1101,15 @@ ${C_INFO}Tip: use multiple addition statements."
       fail "Unknown scope \"${scopename}\""
    fi
    filename="${RVAL}"
+
+   if [ "${OPTION_IF_EXISTS}" = 'YES' ]
+   then
+      if ! env::environment::_file_defines_key "${filename}" "${key}"
+      then
+         log_verbose "Key \"${key}\" does not exist in scope, skipping set"
+         return 0
+      fi
+   fi
 
    safe='YES'
    case "${filename}" in
@@ -1951,6 +2028,7 @@ env::environment::main()
    log_entry "env::environment::main" "$@"
 
    local OPTION_SCOPE='DEFAULT'
+   local OPTION_SAME_SCOPE='NO'
    # local OPTION_SCOPE_SUBDIRS (already set in "main")
    local infix="_"
    local OPTION_SED_KEY_PREFIX
@@ -2023,6 +2101,12 @@ env::environment::main()
             env::environment::assert_default_scope
 
             OPTION_SCOPE="os-${MULLE_UNAME}"
+         ;;
+
+         --same-scope)
+            env::environment::assert_default_scope
+
+            OPTION_SAME_SCOPE='YES'
          ;;
 
          --protect-flag)

@@ -1,0 +1,155 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   #
+   # Test --if-exists: should not set if key doesn't exist
+   #
+   log_info "Test 1: --if-exists should skip when key doesn't exist"
+   run_mulle_env environment --global set --if-exists NONEXISTENT "value"
+   value="`run_mulle_env environment --global get NONEXISTENT 2>/dev/null`"
+   if [ ! -z "${value}" ]
+   then
+      fail "--if-exists set a value for non-existent key"
+   fi
+   log_verbose "----- Test 1 PASSED -----"
+
+   #
+   # Test --if-exists: should set if key exists
+   #
+   log_info "Test 2: --if-exists should set when key exists"
+   run_mulle_env environment --global set EXISTING "initial"
+   run_mulle_env environment --global set --if-exists EXISTING "updated"
+   value="`run_mulle_env environment --global get EXISTING`"
+   if [ "${value}" != "updated" ]
+   then
+      fail "--if-exists did not update existing key, got: ${value}"
+   fi
+   log_verbose "----- Test 2 PASSED -----"
+
+   #
+   # Test --same-scope: should fail when key doesn't exist
+   #
+   log_info "Test 3: --same-scope should skip when key doesn't exist (after set)"
+   run_mulle_env environment set --same-scope NOTHERE "value" 2>/dev/null
+   value="`run_mulle_env environment --global get NOTHERE 2>/dev/null`"
+   if [ ! -z "${value}" ]
+   then
+      fail "--same-scope set a value for non-existent key"
+   fi
+   log_verbose "----- Test 3 PASSED -----"
+
+   #
+   # Test --same-scope before set
+   #
+   log_info "Test 3b: --same-scope should skip when key doesn't exist (before set)"
+   run_mulle_env environment --same-scope set NOTHERE2 "value" 2>/dev/null
+   value="`run_mulle_env environment --global get NOTHERE2 2>/dev/null`"
+   if [ ! -z "${value}" ]
+   then
+      fail "--same-scope (before set) set a value for non-existent key"
+   fi
+   log_verbose "----- Test 3b PASSED -----"
+
+   #
+   # Test --same-scope: should update in global scope
+   #
+   log_info "Test 4: --same-scope should update in correct scope (global)"
+   run_mulle_env environment --global set GLOBALVAR "global-value"
+   run_mulle_env environment set --same-scope GLOBALVAR "global-updated"
+   value="`run_mulle_env environment --global get GLOBALVAR`"
+   if [ "${value}" != "global-updated" ]
+   then
+      fail "--same-scope did not update in global scope, got: ${value}"
+   fi
+   log_verbose "----- Test 4 PASSED -----"
+
+   #
+   # Test --same-scope before set
+   #
+   log_info "Test 4b: --same-scope before set should update in correct scope (global)"
+   run_mulle_env environment --global set GLOBALVAR2 "global-value"
+   run_mulle_env environment --same-scope set GLOBALVAR2 "global-updated"
+   value="`run_mulle_env environment --global get GLOBALVAR2`"
+   if [ "${value}" != "global-updated" ]
+   then
+      fail "--same-scope (before set) did not update in global scope, got: ${value}"
+   fi
+   log_verbose "----- Test 4b PASSED -----"
+
+   #
+   # Test --same-scope: should update in user scope
+   #
+   log_info "Test 5: --same-scope should update in correct scope (user)"
+   run_mulle_env environment --this-user set USERVAR "user-value"
+   run_mulle_env environment set --same-scope USERVAR "user-updated"
+   value="`run_mulle_env environment --this-user get USERVAR`"
+   if [ "${value}" != "user-updated" ]
+   then
+      fail "--same-scope did not update in user scope, got: ${value}"
+   fi
+   log_verbose "----- Test 5 PASSED -----"
+
+   #
+   # Test --same-scope: should find lowest priority scope
+   #
+   log_info "Test 6: --same-scope should find lowest priority scope"
+   run_mulle_env environment --global set MULTIVAR "global"
+   run_mulle_env environment --this-user set MULTIVAR "user"
+   run_mulle_env environment set --same-scope MULTIVAR "updated"
+   value="`run_mulle_env environment --global get MULTIVAR`"
+   if [ "${value}" != "updated" ]
+   then
+      fail "--same-scope did not update lowest priority scope, got: ${value}"
+   fi
+   log_verbose "----- Test 6 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd ..
+
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+init "$@"
+main "$@"
