@@ -266,6 +266,7 @@ env::plugin::mulle::print_tools()
    MULLE_SDE_BINARIES="\
 mulle-column
 column
+cs
 curl
 make
 meson

@@ -320,14 +320,14 @@ env::tool::link_mulle_tool()
    #
    if [ "${OPTION_COPY_MULLE_TOOL}" = 'YES' ]
    then
-      log_debug "Copying \"${dstexefile}\""
+      # log_debug "Copying \"${dstexefile}\""
 
       exekutor cp "${exefile}" "${dstexefile}" &&
       exekutor chmod 755 "${dstexefile}"
 
       if [ ! -z "${dstlibexecdir}" ]
       then
-         log_debug "Copying \"${dstlibdir}\""
+         # log_debug "Copying \"${dstlibdir}\""
 
          mkdir_if_missing "${dstlibdir}"
 
@@ -347,7 +347,7 @@ env::tool::link_mulle_tool()
    then
       r_mkdir_parent_if_missing "${dstlibdir}"
 
-      log_debug "Creating symlink \"${dstlibdir}\""
+      # log_debug "Creating symlink \"${dstlibdir}\""
       exekutor ln -s -f "${srclibexecdir}/src" "${dstlibdir}" || exit 1
    fi
 }
@@ -1002,7 +1002,7 @@ env::tool::link_tool()
    if [ -z "${searchpath}" ]
    then
       searchpath="${PATH}"
-      log_debug "MULLE_OLDPATH is empty (searching for \"$toolname\")"
+      # log_debug "MULLE_OLDPATH is empty (searching for \"$toolname\")"
    fi
 
 #   log_setting "MULLE_OLDPATH : ${searchpath}"
