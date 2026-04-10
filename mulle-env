@@ -286,20 +286,16 @@ env::setup_environment()
    if [ "${setroot}" = 'YES' ]
    then
       MULLE_VIRTUAL_ROOT="${physicaldir}"
-      log_fluff "mulle-env sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
-   fi
-
-   if [ -z "${MULLE_VIRTUAL_ROOT_ID}" ]
-   then
       #
       # create an identifier that changes with the location, the project is in
       # usefule for related directories, that are placed outside of the
       # project like maybe KITCHEN_DIR
       #
-      MULLE_VIRTUAL_ROOT_ID="$(shasum -a 256 <<< "${MULLE_VIRTUAL_ROOT}")"
+      MULLE_VIRTUAL_ROOT_ID="$(PATH='/bin:/usr/bin:/usr/local/bin' shasum -a 256 <<< "${MULLE_VIRTUAL_ROOT}")"
       MULLE_VIRTUAL_ROOT_ID="${MULLE_VIRTUAL_ROOT_ID:1:12}"
-   fi
 
+      log_fluff "mulle-env sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\" ($MULLE_VIRTUAL_ROOT_ID)"
+   fi
    #
    # MULLE_ENV_VAR_DIR is for mulle-sde tools (bash scripts)
    # MULLE_ENV_HOST_VAR_DIR for all the rest
@@ -2178,9 +2174,6 @@ env::main()
    options_setup_trace "${MULLE_TRACE:-}" && set -x
 
    # export MULLE_TRACE
-
-
-   local arg
 
    arg="${1:-}"
    [ $# -ne 0 ] && shift

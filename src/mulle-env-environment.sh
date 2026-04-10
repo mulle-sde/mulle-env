@@ -867,6 +867,66 @@ env::environment::r_find_scopeid_for_key()
 # todo: set is still too hacky
 #       and doesn't respect env::scope::r_get_scopes information
 
+
+# Check if writing key to target_scopeid would either be hidden by a higher-
+# priority scope (warning) or override a lower-priority scope (info).
+env::environment::_check_scope_priority_conflicts()
+{
+   log_entry "env::environment::_check_scope_priority_conflicts" "$@"
+
+   local target_scopeid="$1"
+   local key="$2"
+
+   local target_priority
+
+   if ! env::scope::r_priority_for_scopeid "${target_scopeid}"
+   then
+      return  # unknown priority, skip check
+   fi
+   target_priority="${RVAL}"
+
+   local filenames
+   local filename
+   local scopeid
+   local other_priority
+
+   env::scope::r_get_existing_scope_files "DEFAULT"
+   filenames="${RVAL}"
+
+   .foreachline filename in ${filenames}
+   .do
+      env::environment::_file_defines_key "${filename}" "${key}" || .continue
+
+      case "${filename}" in
+         */environment-*.sh)
+            scopeid="${filename##*/environment-}"
+            scopeid="${scopeid%.sh}"
+         ;;
+
+         *)
+            .continue
+         ;;
+      esac
+
+      [ "${scopeid}" = "${target_scopeid}" ] && .continue
+
+      if ! env::scope::r_priority_for_scopeid "${scopeid}"
+      then
+         .continue
+      fi
+      other_priority="${RVAL}"
+
+      if [ "${other_priority}" -gt "${target_priority}" ]
+      then
+         _log_warning "warning: The new value for \"${key}\" in scope \"${target_scopeid}\" will have no effect as \
+it is already defined in higher-priority scope \"${scopeid}\""
+      else
+         log_info "Overriding \"${key}\" previously defined in lower-priority scope \"${scopeid}\""
+      fi
+   .done
+}
+
+
 env::environment::set_main()
 {
    log_entry "env::environment::set_main" "$@"
@@ -1084,6 +1144,7 @@ ${C_INFO}Tip: use multiple addition statements."
             return 0
          fi
       fi
+      env::environment::_check_scope_priority_conflicts "global" "${key}"
       env::environment::_set "${filename}" "${key}" "${value}" "${comment}" 'NO' &&
       env::environment::remove_from_global_subscopes "${key}"
       return $?
@@ -1118,6 +1179,7 @@ ${C_INFO}Tip: use multiple addition statements."
       ;;
    esac
 
+   env::environment::_check_scope_priority_conflicts "${scopename}" "${key}"
    env::environment::_set "${filename}" "${key}" "${value}" "${comment}" "${safe}"
    rc=$?
 

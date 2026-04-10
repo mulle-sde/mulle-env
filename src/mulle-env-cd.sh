@@ -181,13 +181,13 @@ is a \"${nextstyle}\" environment. Can't switch to wild ones safely."
 
    printf "${C_RED}${C_BOLD}%b${C_RESET}\n" "Switching environment to \"${directory}\""
 
-   echo MULLE_VIRTUAL_ROOT="" exec mulle-env "${directory}" >&2
+   echo MULLE_VIRTUAL_ROOT="" MULLE_VIRTUAL_ROOT_ID="" exec mulle-env "${directory}" >&2
 
    # restore old path if possible
    if [ ! -z "${MULLE_OLDPATH}" ]
    then
       PATH="${MULLE_OLDPATH}"
    fi
-   MULLE_VIRTUAL_ROOT="" exec mulle-env "${directory}"
+   MULLE_VIRTUAL_ROOT="" MULLE_VIRTUAL_ROOT_ID="" exec mulle-env "${directory}"
 }
 

@@ -271,6 +271,8 @@ curl
 make
 meson
 ninja
+roam
+mulle-roam
 wget
 shasum
 sysctl
