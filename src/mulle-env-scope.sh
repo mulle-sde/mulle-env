@@ -435,6 +435,7 @@ e:os-${MULLE_UNAME};60
 e:host-${MULLE_HOSTNAME};80
 e:user-${MULLE_USERNAME};100
 e:user-${MULLE_USERNAME}-os-${MULLE_UNAME};120
+e:user-${MULLE_USERNAME}-host-${MULLE_HOSTNAME};140
 e:post-global;1000"
    fi
 

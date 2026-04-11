@@ -61,6 +61,7 @@ os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
 user-${MULLE_USERNAME}
 user-${MULLE_USERNAME}-os-${MULLE_UNAME}
+user-${MULLE_USERNAME}-host-${MULLE_HOSTNAME}
 post-global"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"
@@ -89,6 +90,7 @@ os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
 user-${MULLE_USERNAME}
 user-${MULLE_USERNAME}-os-${MULLE_UNAME}
+user-${MULLE_USERNAME}-host-${MULLE_HOSTNAME}
 post-global
 bar"
    result="`run_mulle_env scope list --all`" || exit 1
@@ -122,11 +124,35 @@ os-${MULLE_UNAME}
 host-${MULLE_HOSTNAME}
 user-${MULLE_USERNAME}
 user-${MULLE_USERNAME}-os-${MULLE_UNAME}
+user-${MULLE_USERNAME}-host-${MULLE_HOSTNAME}
 post-global"
    result="`run_mulle_env scope list --all`" || exit 1
    fail_if_not_equal "${result}" "${expect}"
 
    log_verbose "----- #4 PASSED -----"
+
+   #
+   # Test --this-user-host: set and get back
+   #
+   log_info "Test 5: --this-user-host set and get"
+   run_mulle_env environment --this-user-host set UHVAR "user-host-value" || exit 1
+   result="`run_mulle_env environment --this-user-host get UHVAR`"
+   if [ "${result}" != "user-host-value" ]
+   then
+      fail "--this-user-host get returned: ${result}"
+   fi
+   log_verbose "----- #5 PASSED -----"
+
+   #
+   # Test that user-host scope is read in DEFAULT get
+   #
+   log_info "Test 6: user-host scope is read in DEFAULT get"
+   result="`run_mulle_env environment get UHVAR`"
+   if [ "${result}" != "user-host-value" ]
+   then
+      fail "DEFAULT get did not find user-host value, got: ${result}"
+   fi
+   log_verbose "----- #6 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 

@@ -2159,6 +2159,15 @@ env::environment::main()
             OPTION_SCOPE="user-${MULLE_USERNAME}-os-${MULLE_UNAME}"
          ;;
 
+         --this-user-host|--this-host-user)
+            env::environment::assert_default_scope
+
+            [ -z "${MULLE_USERNAME}" ] && fail "MULLE_USERNAME environment variable not set"
+            [ -z "${MULLE_HOSTNAME}" ] && fail "MULLE_HOSTNAME environment variable not set"
+
+            OPTION_SCOPE="user-${MULLE_USERNAME}-host-${MULLE_HOSTNAME}"
+         ;;
+
          --os-this|--this-os)
             env::environment::assert_default_scope
 
