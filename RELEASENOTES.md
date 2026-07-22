@@ -1,3 +1,8 @@
+## 6.1.0
+
+Various small improvements
+
+
 ### 6.0.1
 
 Various small improvements
