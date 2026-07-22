@@ -55,13 +55,38 @@ fi
 if [ -z "\${MULLE_VIRTUAL_ROOT_ID}" ]
 then
    #
-   # create an identifier that changes with the location, the project is in
+   # create an identifier that changes with the location. This is
    # useful for related directories, that are placed outside of the
    # project like maybe KITCHEN_DIR
    #
-   MULLE_VIRTUAL_ROOT_ID="\$(PATH='/bin:/usr/bin:/usr/local/bin' shasum -a 256 <<< "\${MULLE_VIRTUAL_ROOT}")"
-   MULLE_VIRTUAL_ROOT_ID="\${MULLE_VIRTUAL_ROOT_ID:1:12}"
+   function __tmp_r_fnv1a_32()
+   {
+      local i
+      local len
+
+      i=0
+      len="\${#1}"
+
+      local hash
+      local value
+
+      hash=2166136261
+      while [ \$i -lt \$len ]
+      do
+         printf -v value "%u" "'\${1:\$i:1}"
+         hash=\$(( ((hash ^ (value & 0xFF)) * 16777619) & 0xFFFFFFFF ))
+         i=\$(( i + 1 ))
+      done
+
+      RVAL=\${hash}
+   }
+
+   __tmp_r_fnv1a_32 "\${MULLE_VIRTUAL_ROOT}"
+   printf -v MULLE_VIRTUAL_ROOT_ID "%08x" "\${RVAL}"
    export MULLE_VIRTUAL_ROOT_ID
+
+   unset -f __tmp_r_fnv1a_32
+   unset RVAL
 fi
 
 if [ -z "\${MULLE_UNAME}" ]

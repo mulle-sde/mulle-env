@@ -46,6 +46,7 @@ Options:
    --this-os      ${space}: narrow scope to this operating system ($MULLE_UNAME)
    --this-user    ${space}: user with name ($MULLE_USERNAME)
    --this-os-user ${space}: user and os ($MULLE_USERNAME-$MULLE_UNAME)
+   --same-scope   ${space}: set in the scope where key is currently defined
    --[a-z]*       ${space}: shortcut for --scope <name> (e.g. --global)
    --cat          ${space}: unsorted output
 EOF
@@ -58,7 +59,8 @@ env::environment::usage()
 
 SHOWN_COMMANDS="\
    list              : list environment variables
-   set               : set an environment variable
+   set               : set an environment variablem usually in global scope
+   change            : change active scope environment variable
    editor            : run mulle-environment-editor (needs node.js)
    get               : get value of an environment variable
    remove            : remove an environment variable
@@ -148,13 +150,10 @@ Usage:
    ${MULLE_USAGE_NAME} env [options] set [cmd-options] <key> [value] [comment]
 
    Set the value of an environment variable. By default it will save into
-   the user scope. Set the desired scope with 'environment' options.
+   the global scope. Set the desired scope with 'environment' options.
 
    Use the alias \`mulle-env-reload\` to update your interactive shell
    after edits.
-
-   When you use the 'DEFAULT' scopes, the variable is set in the global scope
-   and all values of the same key are deleted from user and host scopes.
 
 Example:
    ${MULLE_USAGE_NAME} environment --global set FOO "A value"
@@ -172,10 +171,31 @@ Cmd Options:
    --if-exists       : only set if key already exists in the same scope
    --prepend         : prepent value to existing values (using separator ':')
    --remove          : remove value from existing values (using separator ':')
-   --same-scope      : set in the scope where key is currently defined
    --separator <sep> : sepecify custom separator for --append
 
 EOF
+   exit 1
+}
+
+
+env::environment::change_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} env [options] change [cmd-options] <key> <value>
+
+   Change the value of an existing environment variable. The commands
+   determines the currently active scope and changes the value there.
+
+   See the \`set\` command for more info.
+
+Example:
+   ${MULLE_USAGE_NAME} environment change FOO "A value"
+
+EOF
+
    exit 1
 }
 
@@ -841,9 +861,12 @@ env::environment::r_find_scopeid_for_key()
    local filename
    local scope
    local scopeid
+   local found
 
    env::scope::r_get_existing_scope_files "DEFAULT"
    filenames="${RVAL}"
+
+   found=""
 
    .foreachline filename in ${filenames}
    .do
@@ -853,12 +876,17 @@ env::environment::r_find_scopeid_for_key()
             */environment-*.sh)
                scopeid="${filename##*/environment-}"
                scopeid="${scopeid%.sh}"
-               RVAL="${scopeid}"
-               return 0
+               found="${scopeid}"
             ;;
          esac
       fi
    .done
+
+   if [ ! -z "${found}" ]
+   then
+      RVAL="${found}"
+      return 0
+   fi
 
    return 1
 }
@@ -876,6 +904,7 @@ env::environment::_check_scope_priority_conflicts()
 
    local target_scopeid="$1"
    local key="$2"
+   local value="$3"
 
    local target_priority
 
@@ -889,6 +918,7 @@ env::environment::_check_scope_priority_conflicts()
    local filename
    local scopeid
    local other_priority
+   local used
 
    env::scope::r_get_existing_scope_files "DEFAULT"
    filenames="${RVAL}"
@@ -916,21 +946,32 @@ env::environment::_check_scope_priority_conflicts()
       fi
       other_priority="${RVAL}"
 
+
       if [ "${other_priority}" -gt "${target_priority}" ]
       then
-         _log_warning "warning: The new value for \"${key}\" in scope \"${target_scopeid}\" will have no effect as \
-it is already defined in higher-priority scope \"${scopeid}\""
+         _log_warning "warning: The new value for \"${key}\" in scope \"${target_scopeid}\" may have no effect as \
+it is also defined in higher-priority scope \"${scopeid}\""
       else
-         log_info "Overriding \"${key}\" previously defined in lower-priority scope \"${scopeid}\""
+         # check if value is used, then the warning is pointless
+         case "${value}" in
+            *\$${key}*|*\$\{${key}\}*)
+            ;;
+
+            *)
+               log_info "Overriding \"${key}\" previously defined in lower-priority scope \"${scopeid}\""
+            ;;
+         esac
       fi
    .done
 }
 
 
-env::environment::set_main()
-{
-   log_entry "env::environment::set_main" "$@"
 
+env::environment::_set_main()
+{
+   log_entry "env::environment::_set_main" "$@"
+
+   local usage="$1"; shift
    local scopename="$1"; shift
 
    local OPTION_COMMENT_OUT_EMPTY='NO'
@@ -948,7 +989,7 @@ env::environment::set_main()
    do
       case "$1" in
          -h|--help|help)
-            env::environment::set_usage
+            ${usage}
          ;;
 
          --no-add-empty)
@@ -988,14 +1029,14 @@ env::environment::set_main()
          ;;
 
          -s|--separator|--seperator)
-            [ "$#" -eq 1 ] && env::environment::set_usage "Missing argument to \"$1\""
+            [ "$#" -eq 1 ] && ${usage} "Missing argument to \"$1\""
             shift
 
             OPTION_SEPARATOR="$1"
          ;;
 
          -*)
-            env::environment::set_usage "Unknown option \"$1\""
+            ${usage} "Unknown option \"$1\""
          ;;
 
          *)
@@ -1019,16 +1060,16 @@ env::environment::set_main()
          key="${key%%=*}"
          comment="$2"
 
-         [ $# -lt 1 -o $# -gt 2 ] && env::environment::set_usage
+         [ $# -lt 1 -o $# -gt 2 ] && ${usage}
       ;;
 
       *)
-         [ $# -lt 2 -o $# -gt 3 ] && env::environment::set_usage
+         [ $# -lt 2 -o $# -gt 3 ] && ${usage}
       ;;
    esac
 
 
-   [ -z "${key}" ] && env::environment::set_usage "empty key for set"
+   [ -z "${key}" ] && ${usage} "empty key for set"
 
    env::assert_valid_environment_key "${key}"
 
@@ -1144,7 +1185,7 @@ ${C_INFO}Tip: use multiple addition statements."
             return 0
          fi
       fi
-      env::environment::_check_scope_priority_conflicts "global" "${key}"
+      env::environment::_check_scope_priority_conflicts "global" "${key}" "${value}"
       env::environment::_set "${filename}" "${key}" "${value}" "${comment}" 'NO' &&
       env::environment::remove_from_global_subscopes "${key}"
       return $?
@@ -1179,7 +1220,7 @@ ${C_INFO}Tip: use multiple addition statements."
       ;;
    esac
 
-   env::environment::_check_scope_priority_conflicts "${scopename}" "${key}"
+   env::environment::_check_scope_priority_conflicts "${scopename}" "${key}" "${value}"
    env::environment::_set "${filename}" "${key}" "${value}" "${comment}" "${safe}"
    rc=$?
 
@@ -1192,6 +1233,30 @@ ${C_INFO}Tip: use multiple addition statements."
    [ $rc -eq 1 ] && exit 1
 
    return $rc
+}
+
+
+env::environment::change_main()
+{
+   log_entry "env::environment::change_main" "$@"
+
+   local scopename="$1"
+   shift
+
+   env::environment::_set_main "env::environment::change_usage" \
+                               "${scopename}" \
+                               --same-scope \
+                               --no-add-empty \
+                               "$@"
+}
+
+
+env::environment::set_main()
+{
+   log_entry "env::environment::set_main" "$@"
+
+   env::environment::_set_main "env::environment::set_usage" \
+                               "$@"
 }
 
 
@@ -2259,7 +2324,7 @@ env::environment::main()
    fi
 
    case "${cmd}" in
-      'clobber'|'mset'|'remove'|'set'|'rm')
+      'clobber'|'change'|'mset'|'remove'|'set'|'rm')
          [ -z "${OPTION_SCOPE}" ] && env::environment::usage "Empty scope is invalid"
 
          cmd="${cmd//rm/remove}"

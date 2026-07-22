@@ -124,16 +124,21 @@ main()
    log_verbose "----- Test 5 PASSED -----"
 
    #
-   # Test --same-scope: should find lowest priority scope
+   # Test --same-scope: should find highest priority scope
    #
-   log_info "Test 6: --same-scope should find lowest priority scope"
+   log_info "Test 6: --same-scope should find highest priority scope"
    run_mulle_env environment --global set MULTIVAR "global"
    run_mulle_env environment --this-user set MULTIVAR "user"
    run_mulle_env environment set --same-scope MULTIVAR "updated"
-   value="`run_mulle_env environment --global get MULTIVAR`"
+   value="`run_mulle_env environment --this-user get MULTIVAR`"
    if [ "${value}" != "updated" ]
    then
-      fail "--same-scope did not update lowest priority scope, got: ${value}"
+      fail "--same-scope did not update highest priority scope, got: ${value}"
+   fi
+   value="`run_mulle_env environment --global get MULTIVAR`"
+   if [ "${value}" != "global" ]
+   then
+      fail "--same-scope should not have changed lower priority scope, got: ${value}"
    fi
    log_verbose "----- Test 6 PASSED -----"
 

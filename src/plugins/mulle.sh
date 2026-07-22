@@ -340,6 +340,7 @@ env::plugin::mulle::setup_tools()
       env::tool::link_mulle_tool "mulle-make"       "${bindir}" "${libexecdir}" &&
       env::tool::link_mulle_tool "mulle-match"      "${bindir}" "${libexecdir}" &&
       env::tool::link_mulle_tool "mulle-menu"       "${bindir}"                 &&
+      env::tool::link_mulle_tool "mulle-option"     "${bindir}"                 &&
       env::tool::link_mulle_tool "mulle-monitor"    "${bindir}" "${libexecdir}" &&
       env::tool::link_mulle_tool "mulle-platform"   "${bindir}" "${libexecdir}" &&
       env::tool::link_mulle_tool "mulle-sde"        "${bindir}" "${libexecdir}" &&

@@ -122,11 +122,18 @@ _mudo_environment()
    # Read the new environment line by line
    while IFS= read -r line
    do
-       # Extract the variable name
-       var_name=$(echo "$line" | cut -d'=' -f1)
+       # Extract the variable name (skip continuation lines of multi-line values)
+       case "${line}" in
+          [A-Za-z_]*)
+             var_name="${line%%=*}"
+          ;;
+          *)
+             continue
+          ;;
+       esac
 
        # Check if the variable is already in the current environment
-       if ! grep -q "^$var_name=" "${current_env_file}"
+       if ! grep -q -F "${var_name}=" "${current_env_file}"
        then
          # If not, append it to the merged environment string
          if [ -z "${merged_environment}" ]
@@ -174,8 +181,12 @@ do
       MULLE_OLDPATH=*|_=*)
       ;;
 
-      *)
+      [A-Za-z_]*=*)
          set -- "${line}" "$@"
+      ;;
+
+      *)
+         # skip continuation lines of multi-line values
       ;;
    esac
 done
