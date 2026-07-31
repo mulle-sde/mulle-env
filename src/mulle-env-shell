@@ -193,6 +193,9 @@ emit_initfile()
 #
 emit_interactive_initfile()
 {
+   local initfile="$1"
+   shift
+
    emit_initfile "$@"
 
    printf "%s %s\n" 'printf "\033]0;%s\007"' "'mulle-env ${cmd_string}'"
@@ -213,8 +216,20 @@ emit_interactive_initfile()
 }
 
 
+create_interactive_initfile()
+{
+   local initfile="$1"
+   shift
+
+   emit_interactive_initfile "${initfile}" "$@" > "${initfile}"
+}
+
+
 emit_script_initfile()
 {
+   local initfile="$1"
+   shift
+
    emit_initfile "$@"
 
    if [ "${OPTION_KEEP_TMP}" = 'NO' ]
@@ -227,7 +242,16 @@ emit_script_initfile()
 }
 
 
-r_create_init_file()
+create_script_initfile()
+{
+   local initfile="$1"
+   shift
+
+   emit_script_initfile "${initfile}" "$@" > "${initfile}"
+}
+
+
+r_make_tmp_initfile()
 {
    local tmpdir
 
@@ -242,7 +266,6 @@ r_create_init_file()
 }
 
 
-
 run_script_shell()
 {
    local args
@@ -255,10 +278,10 @@ run_script_shell()
    then
       local initfile
 
-      r_create_init_file
+      r_make_tmp_initfile
       initfile="${RVAL}"
 
-      if ! emit_script_initfile > "${initfile}"
+      if ! create_script_initfile "${initfile}"
       then
          _fail "Could not write \"${initfile}\""
       fi
@@ -297,10 +320,10 @@ run_interactive_shell()
    #
    local initfile
 
-   r_create_init_file
+   r_make_tmp_initfile
    initfile="${RVAL}"
 
-   if ! emit_interactive_initfile > "${initfile}"
+   if ! create_interactive_initfile "${initfile}"
    then
       _fail "Could not write \"${initfile}\""
    fi
