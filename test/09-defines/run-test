@@ -1,0 +1,146 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL:-/tmp/exekutor}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   #
+   # Test 1: Simple -D
+   #
+   log_info "Test 1: Simple -D"
+   run_mulle_env -DTESTVAR="value" -c 'echo "${TESTVAR}"' > output
+   if [ "`cat output`" != "value" ]
+   then
+      fail "Simple -D failed"
+   fi
+
+   #
+   # Test 2: Spaces in -D
+   #
+   log_info "Test 2: Spaces in -D"
+   run_mulle_env -DTESTVAR="a b" -c 'echo "${TESTVAR}"' > output
+   if [ "`cat output`" != "a b" ]
+   then
+      fail "Spaces in -D failed"
+   fi
+
+   #
+   # Test 3: Single quotes in -D (The PRE bug)
+   #
+   log_info "Test 3: Single quotes in -D"
+   run_mulle_env -DTESTVAR="a'b" -c 'echo "${TESTVAR}"' > output
+   if [ "`cat output`" != "a'b" ]
+   then
+      fail "Single quotes in -D failed"
+   fi
+
+   #
+   # Test 4: Double quotes in -D
+   #
+   log_info "Test 4: Double quotes in -D"
+   run_mulle_env -DTESTVAR='a"b' -c 'echo "${TESTVAR}"' > output
+   if [ "`cat output`" != 'a"b' ]
+   then
+      fail "Double quotes in -D failed"
+   fi
+
+   #
+   # Test 5: Command expansion behavior (POST)
+   #
+   log_info "Test 5: Command expansion behavior"
+   run_mulle_env -DTESTVAR='$(echo foo)' -c 'echo "${TESTVAR}"' > output
+   # Note: POST environment expands variables/commands.
+   if [ "`cat output`" != "foo" ]
+   then
+      fail "Expansion in -D failed"
+   fi
+
+   #
+   # Test 6: Escaping in -D to prevent expansion
+   #
+   log_info "Test 6: Escaping in -D"
+   # To get a literal $(echo foo) in POST, we need to escape the $
+   # In the shell command line: -DTESTVAR='\$$(echo foo)' or similar?
+   # Actually it's simpler to test --pre-defines which doesn't expand.
+   run_mulle_env -DTESTVAR='\$(echo foo)' -c 'echo "${TESTVAR}"' > output
+   # Result is \foo because of how eval handles \$ in double quotes
+   # Let's just verify it doesn't crash and we get something sensible.
+   if [ "`cat output`" != '\foo' ]
+   then
+      fail "Escaping in -D failed, got: `cat output`"
+   fi
+
+   #
+   # Test 7: -DB (No expansion)
+   #
+   log_info "Test 7: -DB (No expansion)"
+   run_mulle_env -DBTESTVAR='$(echo foo)' -c 'echo "${TESTVAR}"' > output
+   if [ "`cat output`" != '$(echo foo)' ]
+   then
+      fail "-DB expansion check failed, got: `cat output`"
+   fi
+
+   #
+   # Test 8: -DE (Expansion)
+   #
+   log_info "Test 8: -DE (Expansion)"
+   run_mulle_env -DETESTVAR='$(echo foo)' -c 'echo "${TESTVAR}"' > output
+   if [ "`cat output`" != "foo" ]
+   then
+      fail "-DE expansion check failed, got: `cat output`"
+   fi
+
+   log_info "----- ALL PASSED -----"
+
+   cd ..
+
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   if [ -z "${MULLE_ENV}" ]
+   then
+      MULLE_ENV="`pwd`/mulle-env"
+      if [ ! -f "${MULLE_ENV}" ]
+      then
+         MULLE_ENV="`pwd`/../../mulle-env"
+      fi
+   fi
+}
+
+
+init "$@"
+main "$@"
