@@ -268,43 +268,79 @@ r_make_tmp_initfile()
 
 run_script_shell()
 {
-   local args
+   #
+   # Optimized: Source environment and eval directly to avoid 
+   # a second bash fork and disk I/O for temporary init files.
+   #
+   export MULLE_ENV_LIBEXEC_DIR="${MULLE_ENV_LIBEXEC_DIR}"
+   export MULLE_BASHFUNCTIONS_LIBEXEC_DIR="${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"
+   export MULLE_HOSTNAME="${MULLE_HOSTNAME}"
+   export MULLE_SHELL_MODE="${MODE}"
+   export MULLE_UNAME="${MULLE_UNAME}"
+   export MULLE_USERNAME="${MULLE_USERNAME}"
+   export MULLE_VIRTUAL_ROOT="${MULLE_VIRTUAL_ROOT}"
+   export NO_MOTD='YES'
+   export PATH="${RUNPATH}"
+   export TRACE="${TRACE}"
+
+   [ "${TRACE}" = 'YES' ] && set -x
+
    local envfile
 
+   # Source primary environment
    r_get_envfile "ENVFILENAME"
-   envfile="${RVAL}"
+   . "${RVAL}" || exit 1
 
-   if [ ! -z "${AUXENVFILENAME}" -o ! -z "${CUSTOM_ENVIRONMENT}" ]
+   # Source auxiliary environment if present
+   if [ ! -z "${AUXENVFILENAME}" ]
    then
-      local initfile
-
-      r_make_tmp_initfile
-      initfile="${RVAL}"
-
-      if ! create_script_initfile "${initfile}"
+      r_get_envfile "AUXENVFILENAME" "YES"
+      if [ ! -z "${RVAL}" ]
       then
-         _fail "Could not write \"${initfile}\""
+         . "${RVAL}" || exit 1
       fi
-      envfile="${initfile}"
+   fi
+
+   # Apply custom definitions (-D)
+   if [ ! -z "${CUSTOM_ENVIRONMENT}" ]
+   then
+      eval "${CUSTOM_ENVIRONMENT}" || exit 1
    fi
 
    #
-   # For script this is somewhat easy. We emit
-   # . ${envfile} || exit 1 ; ${command}
+   # Clean up mulle-env-shell internal functions and variables
+   # to avoid cluttering the environment of the command.
    #
-   printf -v args "%q" ". \"${envfile}\" || exit 1 ; $1"
+   unset -f _api_fail \
+            _fail \
+            create_interactive_initfile \
+            create_script_initfile \
+            emit_initfile \
+            emit_interactive_initfile \
+            emit_script_initfile \
+            main \
+            r_get_envfile \
+            r_make_tmp_in_dir \
+            r_make_tmp_initfile \
+            r_uuidgen \
+            run_interactive_shell \
+            run_script_shell
 
-   eval "MULLE_ENV_LIBEXEC_DIR='${MULLE_ENV_LIBEXEC_DIR}'" \
-        "MULLE_BASHFUNCTIONS_LIBEXEC_DIR='${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
-        "MULLE_HOSTNAME='${MULLE_HOSTNAME}'" \
-        "MULLE_SHELL_MODE='${MODE}'" \
-        "MULLE_UNAME='${MULLE_UNAME}'" \
-        "MULLE_USERNAME='${MULLE_USERNAME}'" \
-	     "MULLE_VIRTUAL_ROOT='${MULLE_VIRTUAL_ROOT}'" \
-        "NO_MOTD='YES'" \
-        "PATH='${RUNPATH}'" \
-        "TRACE='${TRACE}'" \
-            "'${BASH}'" -c "${args}"
+   unset AUXENVFILENAME \
+         CUSTOM_ENVIRONMENT \
+         ENVFILENAME \
+         MODE \
+         MULLE_ENV_HOST_VAR_DIR \
+         OPTION_INHERIT \
+         OPTION_KEEP_TMP \
+         OPTION_MAKE_FLAGS \
+         STYLE \
+         envfile
+
+   # Execute the command
+   local cmd="$1"
+   shift
+   eval "${cmd}"
 }
 
 
@@ -523,7 +559,7 @@ main()
    #
    local MULLE_ENV_LIBEXEC_DIR
 
-   MULLE_ENV_LIBEXEC_DIR="`dirname -- "$0"`"
+   MULLE_ENV_LIBEXEC_DIR="${0%/*}"
 
    #
    # Clean some environment variables set by

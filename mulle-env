@@ -1574,39 +1574,62 @@ undefined (old mulle-bashfunctions)"
 
    redirect_exekutor "${vardir}/old-environment.$$" env
 
-   log_fluff "Saving --defines into ${vardir}/custom-post-environment.$$"
-   redirect_exekutor "${vardir}/custom-post-environment.$$" printf "%s\n" "${CUSTOM_POST_ENVIRONMENT}"
-
    local escaped_custom_post_environment
+   local escaped_script
+   local escaped_uname
+   local escaped_hostname
+   local escaped_username
+   local escaped_virtual_root
+   local escaped_host_var_dir
+   local escaped_bashfunctions_dir
+   local escaped_runpath
+   local escaped_mode
+   local escaped_style
+   local escaped_trace
+   local escaped_envfilename
+   local escaped_auxenvfilename
+   local escaped_no_motd
 
-   r_escaped_singlequotes "${CUSTOM_POST_ENVIRONMENT}"
-   escaped_custom_post_environment="${RVAL}"
+   printf -v escaped_custom_post_environment "%q" "${CUSTOM_POST_ENVIRONMENT}"
+   printf -v escaped_script "%q" "${script}"
+   printf -v escaped_uname "%q" "${MULLE_UNAME}"
+   printf -v escaped_hostname "%q" "${MULLE_HOSTNAME}"
+   printf -v escaped_username "%q" "${MULLE_USERNAME}"
+   printf -v escaped_virtual_root "%q" "${MULLE_VIRTUAL_ROOT}"
+   printf -v escaped_host_var_dir "%q" "${MULLE_ENV_HOST_VAR_DIR}"
+   printf -v escaped_bashfunctions_dir "%q" "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"
+   printf -v escaped_runpath "%q" "${runpath}"
+   printf -v escaped_mode "%q" "${mode}"
+   printf -v escaped_style "%q" "${_style}"
+   printf -v escaped_trace "%q" "${TRACE:-}"
+   printf -v escaped_envfilename "%q" "${ENVFILENAME}"
+   printf -v escaped_auxenvfilename "%q" "${AUXENVFILENAME}"
+   printf -v escaped_no_motd "%q" "${NO_MOTD:-}"
 
    # MEMO: don't single quote CUSTOM_POST_ENVIRONMENT to "fix" an obvious bug
    env::invoke_shell "${_style#*/}" \
                      "${custom_pre_environment}" \
-                     "'${script}'" \
-                     "'${MULLE_UNAME}'" \
-                     "'${MULLE_HOSTNAME}'" \
-                     "'${MULLE_USERNAME}'" \
-                     "'${MULLE_VIRTUAL_ROOT}'" \
-                     "'${MULLE_ENV_HOST_VAR_DIR}'" \
-                     "'${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}'" \
-                     "'${runpath}'" \
-                     "'${mode}'" \
-                     "'${_style}'" \
-                     "'${TRACE:-}'" \
-                     "'${ENVFILENAME}'" \
-                     "'${AUXENVFILENAME}'" \
-                     "'${NO_MOTD:-}'" \
-                     "'${escaped_custom_post_environment}'" \
+                     "${escaped_script}" \
+                     "${escaped_uname}" \
+                     "${escaped_hostname}" \
+                     "${escaped_username}" \
+                     "${escaped_virtual_root}" \
+                     "${escaped_host_var_dir}" \
+                     "${escaped_bashfunctions_dir}" \
+                     "${escaped_runpath}" \
+                     "${escaped_mode}" \
+                     "${escaped_style}" \
+                     "${escaped_trace}" \
+                     "${escaped_envfilename}" \
+                     "${escaped_auxenvfilename}" \
+                     "${escaped_no_motd}" \
+                     "${escaped_custom_post_environment}" \
                      "${OPTION_SHELL_COMMAND}"
    rc=$?
 
    log_debug "Subshell exited with $rc"
 
    remove_file_if_present "${vardir}/old-environment.$$"
-   remove_file_if_present "${vardir}/custom-post-environment.$$"
 
    return $rc
 }
@@ -1819,7 +1842,8 @@ env::define_custom_environment()
       ;;
 
       *)
-         r_concat "${CUSTOM_PRE_ENVIRONMENT}" "${key}='${value}'"
+         r_escaped_singlequotes "${value}"
+         r_concat "${CUSTOM_PRE_ENVIRONMENT}" "${key}='${RVAL}'"
          CUSTOM_PRE_ENVIRONMENT="${RVAL}"
       ;;
    esac
@@ -2056,17 +2080,8 @@ env::main()
             done <<< "$1"
          ;;
 
-         -D*)
-            arg="${1#-D}"
-            arg="${arg## }"
-            if ! env::define_custom_environment "${arg}"
-            then
-               exit 1
-            fi
-         ;;
-
          -DB*)
-            arg="${1#-DD}"
+            arg="${1#-DB}"
             arg="${arg## }"
             if ! env::define_custom_environment "${arg}" "pre"
             then
@@ -2078,6 +2093,15 @@ env::main()
             arg="${1#-DE}"
             arg="${arg## }"
             if ! env::define_custom_environment "${arg}" "pos"
+            then
+               exit 1
+            fi
+         ;;
+
+         -D*)
+            arg="${1#-D}"
+            arg="${arg## }"
+            if ! env::define_custom_environment "${arg}"
             then
                exit 1
             fi
