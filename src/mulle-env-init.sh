@@ -327,13 +327,13 @@ env::init::main()
       fi
 
       # add more os flavors later
+      local pluginosfile
+
       for os in darwin freebsd openbsd netbsd linux mingw msys windows sunos dragonfly
       do
          callback="env::plugin::${_flavor}::print_environment_os_${os}"
          if shell_is_function "${callback}"
          then
-            local pluginosfile
-
             pluginosfile="${sharedir}/environment-plugin-os-${os}.sh"
             log_verbose "Creating \"${pluginosfile}\""
             if ! text="`${callback} "${_style}" `"

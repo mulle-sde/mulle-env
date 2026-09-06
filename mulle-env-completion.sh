@@ -297,8 +297,9 @@ _mulle_env__global_opt_requires_value() {
 # Determine index of first non-option top-level token (the command), considering options that take values
 _mulle_env__find_command_index() {
   local i=1
+  local w
   while (( i < COMP_CWORD )); do
-    local w="${COMP_WORDS[i]}"
+    w="${COMP_WORDS[i]}"
     case "$w" in
       --)
         echo $((i+1))
@@ -352,6 +353,9 @@ _mulle_env__complete_tweaks() {
 
 _mulle_env_complete() {
   local cur prev words cword
+  local i
+  local ssub
+  local w
   words=("${COMP_WORDS[@]}")
   cword=$COMP_CWORD
   cur="${COMP_WORDS[COMP_CWORD]}"
@@ -439,10 +443,10 @@ _mulle_env_complete() {
     # environment / env / get / set / list
     environment)
       # Find env subcommand position (first non-option after 'environment')
-      local i=$((cmd_index+1))
+      i=$((cmd_index+1))
       local sub=""
       while (( i < cword )); do
-        local w="${COMP_WORDS[i]}"
+        w="${COMP_WORDS[i]}"
         case "$w" in
           -*)
             # env options that take values
@@ -519,9 +523,9 @@ _mulle_env_complete() {
         scope|scopes)
           # Next token after 'scope' subcommand
           local j=$((i+1))
-          local ssub=""
+          ssub=""
           while (( j < cword )); do
-            local w="${COMP_WORDS[j]}"
+            w="${COMP_WORDS[j]}"
             if [[ "$w" != -* ]]; then ssub="$w"; break; fi
             j=$((j+1))
           done
@@ -583,10 +587,10 @@ _mulle_env_complete() {
 
     style)
       # Find style subcommand
-      local i=$((cmd_index+1))
-      local ssub=""
+      i=$((cmd_index+1))
+      ssub=""
       while (( i < cword )); do
-        local w="${COMP_WORDS[i]}"
+        w="${COMP_WORDS[i]}"
         if [[ "$w" != -* ]]; then ssub="$w"; break; fi
         i=$((i+1))
       done
@@ -616,8 +620,7 @@ _mulle_env_complete() {
 
     tool)
       # Global tool options before subcommand
-      local i=$((cmd_index+1))
-      local w
+      i=$((cmd_index+1))
       while (( i < cword )); do
         w="${COMP_WORDS[i]}"
         case "$w" in
@@ -753,10 +756,10 @@ _mulle_env_complete() {
 
     scope)
       # Find scope subcommand
-      local i=$((cmd_index+1))
-      local ssub=""
+      i=$((cmd_index+1))
+      ssub=""
       while (( i < cword )); do
-        local w="${COMP_WORDS[i]}"
+        w="${COMP_WORDS[i]}"
         if [[ "$w" != -* ]]; then ssub="$w"; break; fi
         i=$((i+1))
       done

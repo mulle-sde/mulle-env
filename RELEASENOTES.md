@@ -1,3 +1,6 @@
 ## 6.1.0
 
-Various small improvements
+
+* small speedup for -c
+
+* fix in -D handling
