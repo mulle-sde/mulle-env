@@ -1068,19 +1068,6 @@ env::environment::_set_main()
        ;;
     esac
 
-    # redirect platform cross-compilation settings to user-host scope
-    if [ "${scopename}" = 'DEFAULT' -o "${scopename}" = 'global' ] && \
-       ( [ "${key}" = "MULLE_CRAFT_PLATFORMS" ] || \
-         [ "${key}" = "MULLE_SOURCETREE_PLATFORMS" ] || \
-         [ "${key#MULLE_EMULATOR__}" != "${key}" ] || \
-         [ "${key#MULLE_CRAFT_CROSS_COMPILER_ROOT__}" != "${key}" ] || \
-         [ "${key#MULLE_CRAFT_TOOLCHAIN__}" != "${key}" ] )
-    then
-       scopename="user-${MULLE_USERNAME}-host-${MULLE_HOSTNAME}"
-    fi
-
-
-
    [ -z "${key}" ] && ${usage} "empty key for set"
 
    env::assert_valid_environment_key "${key}"
@@ -1930,13 +1917,7 @@ env::environment::_list()
             ;;
          esac
 
-          if [ "${s}" = "global" ]
-          then
-              env::environment::merge_environment_file "$1" | grep -v -E "^(MULLE_CRAFT_PLATFORMS|MULLE_SOURCETREE_PLATFORMS|MULLE_EMULATOR__|MULLE_CRAFT_CROSS_COMPILER_ROOT__|MULLE_CRAFT_TOOLCHAIN__)"
-
-          else
-             env::environment::merge_environment_file "$1"
-          fi
+         env::environment::merge_environment_file "$1"
 
       else
          log_fluff "\"$1\" does not exist"
