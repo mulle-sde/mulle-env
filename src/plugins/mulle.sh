@@ -282,13 +282,20 @@ uptime
 xcrun
 xcodebuild
 autoconf
-autoreconf"
+autoreconf
+aclocal
+automake
+autoheader
+autom4te
+glibtoolize"
    printf "%s\n" "${MULLE_SDE_BINARIES}"
 
-# On MacOS these are needed to run autoconf, but glibtoolize seems to
-# depend on every single package that exists (including x11 and ghostscript)
-# aclocal
-# glibtoolize
+# aclocal/automake/autoheader/autom4te/glibtoolize are needed by `autoreconf`
+# on MacOS: autoreconf execs them by name and, inside the restricted mulle-env
+# PATH, they must have their own tool entry or it fails with e.g.
+# "failed to run aclocal: No such file or directory" or, for Libtool-using
+# packages, "failed to run glibtoolize: No such file or directory".
+# (glibtoolize is the Homebrew name for libtoolize on MacOS.)
 
 }
 
