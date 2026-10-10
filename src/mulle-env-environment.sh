@@ -1167,7 +1167,7 @@ ${C_INFO}Tip: use multiple addition statements."
 
    local filename
 
-   #   log_verbose "Use \`mulle-env-reload\` to get the actual value in your shell"
+   log_verbose "Use \`mulle-env -c 'echo \${${key}}'\` to get the full final value"
 
    log_debug "Environment scope \"${scopename}\" set $key=\"${value}\""
 
@@ -1414,6 +1414,33 @@ env::environment::_file_defines_key()
 }
 
 
+#
+# The eval getters/listers run the scope files in a clean environment. A
+# variable that is only inherited from the local environment (PATH, HOME,
+# TERM, ...) is represented symbolically as e.g. "$HOME", because its actual
+# value is only fixed when entering the environment. Otherwise bash would
+# substitute its own default (e.g. for PATH) or stale local values. The
+# structural MULLE_* keys are kept real, as the sourced files need them.
+#
+env::environment::r_eval_environment()
+{
+   log_entry "env::environment::r_eval_environment" "$@"
+
+   local environment
+   local key
+
+   env::r_environment_string "${MULLE_ENVIRONMENT_KEYS}"
+   environment="${RVAL}"
+
+   .for key in PATH ${MULLE_ENVIRONMENT_RELAX_KEYS}
+   .do
+      environment="${environment} ${key}='\$${key}'"
+   .done
+
+   RVAL="${environment}"
+}
+
+
 env::environment::_eval_get()
 {
    log_entry "env::environment::_eval_get" "$@"
@@ -1448,7 +1475,7 @@ env::environment::_eval_get()
 
    local environment
 
-   env::r_environment_string
+   env::environment::r_eval_environment
    environment="${RVAL}"
 
    if [ ${ZSH_VERSION+x} ]
@@ -1943,8 +1970,18 @@ env::environment::_eval_list()
 
    local environment
 
-   env::r_environment_string
+   env::environment::r_eval_environment
    environment="${RVAL}"
+
+   # PATH is seeded with a placeholder by r_eval_environment, so the tools
+   # used to dump the environment have to be referenced by absolute path.
+   local env_bin
+   local sort_bin
+
+   env_bin="`command -v env`"
+   env_bin="${env_bin:-env}"
+   sort_bin="`command -v "${MULLE_ENV_CONTENT_SORT:-sort}"`"
+   sort_bin="${sort_bin:-${MULLE_ENV_CONTENT_SORT:-sort}}"
 
    cmdline="env -i ${environment} \"${BASH}\" -c '"
 
@@ -1974,7 +2011,7 @@ env::environment::_eval_list()
 
    r_concat "${cmdline}" "${files}"
    cmdline="${RVAL}"
-   r_concat "${cmdline}" "env | LC_ALL=C ${MULLE_ENV_CONTENT_SORT} '"
+   r_concat "${cmdline}" "${env_bin} | LC_ALL=C ${sort_bin} '"
    cmdline="${RVAL}"
 
    #

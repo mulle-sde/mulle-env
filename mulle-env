@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="6.1.1"
+MULLE_EXECUTABLE_VERSION="6.2.0"
 
 
 #
@@ -69,12 +69,14 @@ env::emit_options()
    -DKEY=VALUE   : define one-time environment variable
    -ef <file>    : use a different environment file (${ENVFILENAME})
    -aef <file>   : add another environment file to an interactive subshell
+   --keep-pwd    : run subshell/command in PWD, not in the environment root
    --search-here : search only in PWD, if none present ignore
    --search-none : search only in PWD, if none present fail
    -N            : search for nearest enclosing environment
    -P            : search for parent environment
    -p <path>     : specify an additional plugin search path
    -S            : search for superior environment
+   --sandbox <f> : run subshell/command within sandbox executable "f"
    --style <t/e> : enter and change subshell style (${MULLE_ENV_DEFAULT_STYLE})
 EOF
 
@@ -109,6 +111,14 @@ Usage:
 
    Use the -c or -C options to run commands in the virtual environment
    without entering an interactive subshell.
+
+   Set MULLE_ENV_SANDBOX or use --sandbox <file> to run the subshell or -c
+   command inside a sandbox executable (e.g. a lljail wrapper). Additional
+   arguments can be passed with MULLE_ENV_SANDBOX_FLAGS. It is up to you not
+   to stack sandboxes.
+
+   Set MULLE_ENV_KEEP_PWD or use --keep-pwd to run the subshell or -c command
+   in the current directory instead of the environment root.
 EOF
 
    if [ ! -z "${MULLE_TRACE}" ]
@@ -134,6 +144,7 @@ Commands:
    environment   : manage subshell environment variables
    init          : set up the subshell for the first time
    invoke        : execute a shell command with restricted environment
+   rm            : shortcut for "tool remove"
    style         : manage environment style of directory (PWD)
    subenv        : enter a sub environment
    tool          : manage subshell tools
@@ -1016,14 +1027,112 @@ env::__get_saved_style_flavor()
 }
 
 
+#
+# canonical style information. This is the single source of truth for
+# the list of env-styles, their order, their descriptions and validation.
+# It is used by init, style and the main command.
+#
+env::style::envstyles()
+{
+   printf "%s\n" "inherit" "relax" "frugal" "restrict" "tight" "wild"
+}
+
+
+env::style::is_envstyle()
+{
+   case "$1" in
+      tight|restrict|frugal|relax|inherit|wild)
+         return 0
+      ;;
+   esac
+   return 1
+}
+
+
+#
+# print the env-style help block (for init, style and main usage)
+#
+env::style::print_envstyles()
+{
+   cat <<EOF
+Env-style:
+   tight         : all environment variables must be user defined
+   restrict      : inherit some environment (e.g. SSH_TTY) (default)
+   frugal        : restrict plus all /bin tools
+   relax         : frugal plus all /usr/bin tools
+   inherit       : relax plus all tools in PATH
+   wild          : no restrictions
+EOF
+}
+
+
+#
+# print the tool-style help block (for init, style and main usage)
+#
+env::style::print_toolstyles()
+{
+   cat <<EOF
+Tool-style: (built-in only, see \`${MULLE_USAGE_NAME:-mulle-env} style show --toolstyle\` for all)
+   none          : a fairly empty virtual environment, fairly unusable
+   minimal       : a minimal set of tools (like mudo, cd, ls)
+   developer     : a common set of tools (like mudo, cd, awk, sort) (default)
+EOF
+}
+
+
 # local _style
 # local _flavor
+#
+# Parse a style specification. It can be a tool-style, an env-style or
+# both as "tool-style/env-style". Missing components are filled in with
+# defaultflavor/defaultenvstyle, or the built-in default style.
+# Sets _style (normalized to "tool-style/env-style") and _flavor.
+#
 env::__get_style_flavor()
 {
    log_entry "env::__get_style_flavor" "$@"
 
-   _style="$1"
-   _flavor="${_style%%/*}"
+   local style="$1"
+   local defaultflavor="$2"
+   local defaultenvstyle="$3"
+
+   if [ -z "${defaultflavor}" ]
+   then
+      defaultflavor="${MULLE_ENV_DEFAULT_STYLE%%/*}"
+   fi
+   if [ -z "${defaultenvstyle}" ]
+   then
+      defaultenvstyle="${MULLE_ENV_DEFAULT_STYLE#*/}"
+   fi
+
+   local flavor
+   local envstyle
+
+   case "${style}" in
+      */*)
+         flavor="${style%%/*}"
+         envstyle="${style#*/}"
+      ;;
+
+      *)
+         if env::style::is_envstyle "${style}"
+         then
+            flavor="${defaultflavor}"
+            envstyle="${style}"
+         else
+            flavor="${style}"
+            envstyle="${defaultenvstyle}"
+         fi
+      ;;
+   esac
+
+   if ! env::style::is_envstyle "${envstyle}"
+   then
+      fail "Unknown env-style \"${envstyle}\""
+   fi
+
+   _flavor="${flavor}"
+   _style="${flavor}/${envstyle}"
 }
 
 
@@ -1300,6 +1409,12 @@ env::run_subshell()
 
    local arg="$1"
 
+   # remember where we were before moving to the environment root, so that
+   # --keep-pwd can return here before executing the command
+   local keepdirectory
+
+   keepdirectory="${PWD}"
+
    # callerdirectory is where we are called from
    local callerdirectory
 
@@ -1390,9 +1505,23 @@ env::run_subshell()
    oldstyle="${_style}"
    oldflavor="${_flavor}"
 
+   case "${oldstyle}" in
+      */*)
+      ;;
+
+      *)
+         # ancient style information without a tool-style prefix
+         oldflavor="none"
+         oldstyle="none/${oldstyle}"
+      ;;
+   esac
+
+   _style="${oldstyle}"
+   _flavor="${oldflavor}"
+
    if [ "${OPTION_STYLE}" != "DEFAULT" ]
    then
-      env::__get_style_flavor "${OPTION_STYLE}"
+      env::__get_style_flavor "${OPTION_STYLE}" "${oldflavor}" "${oldstyle#*/}"
    fi
 
    local inherit_path
@@ -1401,14 +1530,7 @@ env::run_subshell()
 
    runpath=""
 
-   case "${_style}" in
-      */*)
-      ;;
-
-      *) # no / like none
-         _style="none/${_style}"
-      ;;
-   esac
+   # env::__get_style_flavor always normalizes to "tool-style/env-style"
 
    if ! env::load_flavor_plugin "${_flavor}"
    then
@@ -1549,7 +1671,13 @@ undefined (old mulle-bashfunctions)"
    fi
 
 
-   if [ "${PWD}" != "${rundirectory}" ]
+   if [ "${OPTION_KEEP_PWD}" = 'YES' ]
+   then
+      if [ "${PWD}" != "${keepdirectory}" ]
+      then
+         exekutor cd "${keepdirectory}" || exit 1
+      fi
+   elif [ "${PWD}" != "${rundirectory}" ]
    then
       exekutor cd "${rundirectory}" || exit 1
    fi
@@ -1772,11 +1900,50 @@ env::invoke_shell()
    # need this for mudo
    r_concat "${s}" "MULLE_ENV_PID=$$" && s="${RVAL}"
 
+   #
+   # Optionally wrap the subshell/command in a sandbox (e.g. lljail).
+   # A sandbox without a path is looked up in PATH, but if a file of that
+   # name exists in the current directory, it is used instead.
+   # It is up to the user to not stack sandboxes.
+   #
+   local sandbox
 
-   "${OPTION_EVAL_EXEKUTOR}" env ${env_flag} \
-                            "${s}" \
-                            "${custom_pre_environment}" \
-                            "$@"
+   if [ ! -z "${MULLE_ENV_SANDBOX}" ]
+   then
+      sandbox="${MULLE_ENV_SANDBOX}"
+
+      case "${sandbox}" in
+         */*)
+         ;;
+
+         *)
+            if [ -f "${sandbox}" ]
+            then
+               sandbox="./${sandbox}"
+            fi
+         ;;
+      esac
+
+      sandbox="${sandbox} ${MULLE_ENV_SANDBOX_FLAGS:-}"
+      log_verbose "Sandboxing with \"${sandbox}\""
+
+      #
+      # The sandbox must be able to read the environment root (files are
+      # sourced from ${MULLE_VIRTUAL_ROOT}/.mulle), which is not necessarily
+      # the current directory, e.g. with --keep-pwd or -d <subdir>. A
+      # cooperating sandbox wrapper reads MULLE_ENV_SANDBOX_SRC_DIR for this.
+      #
+      MULLE_ENV_SANDBOX_SRC_DIR="${MULLE_ENV_SANDBOX_SRC_DIR:-${MULLE_VIRTUAL_ROOT}}" \
+      "${OPTION_EVAL_EXEKUTOR}" ${sandbox} env ${env_flag} \
+                               "${s}" \
+                               "${custom_pre_environment}" \
+                               "$@"
+   else
+      "${OPTION_EVAL_EXEKUTOR}" env ${env_flag} \
+                               "${s}" \
+                               "${custom_pre_environment}" \
+                               "$@"
+   fi
 }
 
 
@@ -1944,8 +2111,9 @@ env::main()
    # todo rename these to FLAG
    local OPTION_DIRECTORY=""
    local OPTION_SHELL_COMMAND=""
-   local OPTION_KEEP_TMP='NO'
-   local MULLE_FLAG_MAGNUM_FORCE="NO"
+    local OPTION_KEEP_TMP='NO'
+    local OPTION_KEEP_PWD="${MULLE_ENV_KEEP_PWD}"
+    local MULLE_FLAG_MAGNUM_FORCE="NO"
    local OPTION_STYLE="DEFAULT"
    local OPTION_SEARCHMODE="DEFAULT"
    local OPTION_PROTECT="YES"
@@ -2134,6 +2302,10 @@ env::main()
             AUXENVFILENAME="$1"
          ;;
 
+         --keep-pwd)
+            OPTION_KEEP_PWD='YES'
+         ;;
+
          --keep-tmp)
             OPTION_KEEP_TMP='YES'
          ;;
@@ -2161,6 +2333,13 @@ env::main()
 
             r_add_line "${OPTION_SCOPE_SUBDIRS}" "$1"
             OPTION_SCOPE_SUBDIRS="${RVAL}"
+         ;;
+
+         --sandbox)
+            [ $# -eq 1 ] && env::usage "Missing argument to $1"
+            shift
+
+            MULLE_ENV_SANDBOX="$1"
          ;;
 
          --style)
@@ -2269,9 +2448,10 @@ invoke
 local
 mulle-tool-env
 project-dir
-reinit
-reset
-scope
+ reinit
+ reset
+ rm
+ scope
 scopes
 searchpath
 style
@@ -2504,6 +2684,23 @@ version"
          . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
 
          env::tool::main "$@"
+         return $?
+      ;;
+
+      # shortcut for "tool remove"
+      'rm')
+         # shellcheck source=src/mulle-env-tool.sh
+         . "${MULLE_ENV_LIBEXEC_DIR}/mulle-env-tool.sh" || exit 1
+
+         if env::is_help_request_commandline "$@"
+         then
+            env::tool::remove_usage
+         fi
+
+         # do not set MULLE_VIRTUAL_ROOT if not already set
+         env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}" 'NO'
+
+         env::tool::main "remove" "$@"
          return $?
       ;;
 

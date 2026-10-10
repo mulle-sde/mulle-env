@@ -998,14 +998,20 @@ env::tool::link_tool()
 
    local searchpath
 
-   searchpath="${MULLE_OLDPATH}"
+   #
+   # Resolve tools against the *current* PATH, never against an inherited
+   # MULLE_OLDPATH. MULLE_OLDPATH is captured on entry and inherited by all
+   # descendant mulle-env/mulle-sde calls, so preferring it makes links point
+   # into whatever tree happened to be on the original caller's PATH, even
+   # when the environment's PATH is correct. MULLE_OLDPATH is only meant for
+   # "mudo -e" and "mulle-env cd" to restore the outer environment.
+   #
+   searchpath="${PATH}"
    if [ -z "${searchpath}" ]
    then
-      searchpath="${PATH}"
-      # log_debug "MULLE_OLDPATH is empty (searching for \"$toolname\")"
+      searchpath="${MULLE_OLDPATH}"
    fi
 
-#   log_setting "MULLE_OLDPATH : ${searchpath}"
 #   log_setting "PATH          : ${searchpath}"
 
    filename="`PATH="${searchpath}" command -v "${toolname}" `"

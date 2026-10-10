@@ -42,26 +42,20 @@ Usage:
 
    Initialize the working directory for mulle-env.
 
+   Re-running init on an initialized directory is refused, unless \`-f\` is
+   given on the command line.
+
 Options:
+   -f                 : force re-initialization, clobbering the current setup
    -d <dir>           : use directory "dir" instead of working directory
    --no-blurb         : don't print helpful info at exit
    --style <tool/env> : specify environment style
 
 EOF
 
-   cat <<EOF >&2
-Tool-style: (built-in only, see \`mulle-env toolstyles\` for all available)
-   none               : no additions
-   minimal            : a minimal set of tools (like cd, ls)
-   developer          : a common set of tools (like cd, ls, awk, man) (default)
-
-Env-style:
-   tight              : all environment variables must be user defined
-   restrict           : inherit some environment (like SSH_TTY) (default)
-   relax              : as relax plus all /bin and /usr/bin tools
-   inherit            : as restrict plus all tools in PATH
-   wild               : no restrictions
-EOF
+   env::style::print_toolstyles >&2
+   echo >&2
+   env::style::print_envstyles >&2
    exit 1
 }
 
@@ -172,7 +166,8 @@ env::init::main()
    sharedir="${MULLE_ENV_SHARE_DIR}"
    envfile="${sharedir}/environment.sh"
 
-   if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_REINIT}" != 'YES' -a -f "${envfile}" ]
+   if [ "${OPTION_UPGRADE}" != 'YES' -a "${OPTION_REINIT}" != 'YES' \
+        -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a -f "${envfile}" ]
    then
       log_warning "\"${envfile}\" already exists"
       return 4
@@ -230,15 +225,6 @@ env::init::main()
    fi
    env::__get_style_flavor "${OPTION_STYLE}"
    env::load_flavor_plugin "${_flavor}"
-
-   case "${_style}" in
-      */inherit|*/relax|*/restrict|*/tight|*/wild)
-      ;;
-
-      *)
-         fail "Unknown style \"${_style}\""
-      ;;
-   esac
 
    log_verbose "Init style is \"${_style}\""
 

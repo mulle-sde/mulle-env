@@ -67,18 +67,13 @@ Usage:
    The tool-style ceases to be useful for env-styles 'inherit' or 'wild'.
    For other styles this gives you more tools to work with.
 
-Tool-style: (built-in only, see all with \`show\`)
-   none          : a fairly empty virtual environment, fairly unusable
-   minimal       : a minimal set of tools (like mudo, cd, ls)
-   developer     : a common set of tools (like mudo, cd, awk, sort) (default)
+EOF
 
-Env-style:
-   tight         : all environment variables must be user defined
-   restrict      : inherit some environment (e.g. SSH_TTY) (default)
-   frugal        : restrict plus all /bin tools
-   relax         : frugal plus all /usr/bin tools
-   inherit       : relax plus all tools in PATH
-   wild          : no restrictions
+   env::style::print_toolstyles >&2
+   echo >&2
+   env::style::print_envstyles >&2
+
+   cat <<EOF >&2
 
 Options:
    -h            : show this usage
@@ -184,12 +179,7 @@ env::style::show_envstyles()
 {
    log_entry "env::style::show_envstyles" "$@"
 
-   echo "inherit
-relax
-frugal
-restrict
-tight
-wild"
+   env::style::envstyles
    return 0
 }
 

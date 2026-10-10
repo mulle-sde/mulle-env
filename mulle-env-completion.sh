@@ -46,10 +46,11 @@ _mulle_env__global_flags() {
     --defines --pre-defines --post-defines \
     --search-here --search-none --search-nearest -N --search-parent -P --search-superior -S --search-default --search-as-is \
     --style \
+    --sandbox \
     -f --force --freeze \
     -e --environment-override \
     --shell --echo-args \
-    --keep-tmp --no-motd \
+    --keep-pwd --keep-tmp --no-motd \
     --protect --no-protect \
     --scope-subdir \
     --uppercase-only \
@@ -61,7 +62,7 @@ _mulle_env__top_commands_fallback() {
   printf "%s\n" \
     clean commands env environment get set list \
     hostname init install-dir invoke local mulle-tool-env \
-    project-dir reinit reset scope scopes searchpath style styles \
+    project-dir reinit reset rm scope scopes searchpath style styles \
     subenv tool tweak uname osname unveil username untweak \
     upgrade libexec-dir mulle-bin-dir mulle-libexec-dir version
 }
@@ -276,7 +277,7 @@ _mulle_env__style_values() {
   if envs="$(mulle-env style show --envstyle 2>/dev/null)"; then
     :
   else
-    envs="inherit relax restrict tight wild"
+    envs="inherit relax frugal restrict tight wild"
   fi
   local t e
   for t in $tools; do
@@ -289,7 +290,7 @@ _mulle_env__style_values() {
 # Determine if $1 is an option that takes a value at global level
 _mulle_env__global_opt_requires_value() {
   case "$1" in
-    -C|-c|-d|-ef|-aef|-p|--style|--scope-subdir|--defines|--pre-defines|--post-defines) return 0 ;;
+    -C|-c|-d|-ef|-aef|-p|--style|--sandbox|--scope-subdir|--defines|--pre-defines|--post-defines) return 0 ;;
   esac
   return 1
 }
@@ -380,6 +381,10 @@ _mulle_env_complete() {
         COMPREPLY=( $(compgen -W "$(_mulle_env__style_values)" -- "$cur") )
         return
       ;;
+      --sandbox)
+        _mulle_env__complete_files "$cur"
+        return
+      ;;
       -C|-c|--defines|--pre-defines|--post-defines)
         COMPREPLY=()
         return
@@ -425,7 +430,7 @@ _mulle_env_complete() {
 
   # Subdispatch based on command
   case "$cmd_norm" in
-    clean|commands|hostname|install-dir|'local'|mulle-bin-dir|mulle-libexec-dir|project-dir|reinit|reset|searchpath|uname|unveil|username|upgrade|libexec-dir|version|invoke|init|subenv|tool|style|scope|environment|tweak|untweak)
+    clean|commands|hostname|install-dir|'local'|mulle-bin-dir|mulle-libexec-dir|project-dir|reinit|reset|rm|searchpath|uname|unveil|username|upgrade|libexec-dir|version|invoke|init|subenv|tool|style|scope|environment|tweak|untweak)
       ;;
     *)
       # Unknown command yet; complete command names
@@ -615,6 +620,15 @@ _mulle_env_complete() {
           COMPREPLY=( $(compgen -W "$(_mulle_env__style_subcommands)" -- "$cur") )
         ;;
       esac
+      return
+    ;;
+
+    rm)
+      if [[ "$cur" == -* ]]; then
+        COMPREPLY=( $(compgen -W "$(_mulle_env__tool_global_opts) $(_mulle_env__tool_add_opts)" -- "$cur") )
+      else
+        _mulle_env__complete_commands "$cur"
+      fi
       return
     ;;
 

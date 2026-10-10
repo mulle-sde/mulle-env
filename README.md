@@ -163,9 +163,23 @@ variables. The tool-style influences the content of the `PATH` variable.
 |-------------------|--------------------------
 | `tight`           | All environment variables must be defined via `mulle-env` (academic needs only)
 | `restrict`        | Inherit some environment environment variables (e.g. SSH_TTY)
-| `relax`           | Like `restrict` plus `PATH` adds all `/bin` and `/usr/bin` tools
+| `frugal`          | Like `restrict` plus `PATH` adds all `/bin` tools
+| `relax`           | Like `frugal` plus `PATH` adds all `/usr/bin` tools
 | `inherit`         | The environment is restricted but tool style is ignored and the original PATH is unchanged.
 | `wild`            | The user environment remains unchanged and the tool style is ignored.
+
+
+### Sandbox
+
+Set `MULLE_ENV_SANDBOX` to an executable (for example a
+[landlock](https://landlock.io) based `lljail` wrapper) to run the subshell
+or `-c` command inside a sandbox. Additional arguments are passed via
+`MULLE_ENV_SANDBOX_FLAGS`. It is up to you not to stack sandboxes:
+
+``` bash
+export MULLE_ENV_SANDBOX="lljail"
+mulle-env -c 'make'
+```
 
 
 

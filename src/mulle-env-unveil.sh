@@ -153,29 +153,26 @@ env::unveil::r_style_path()
 
    local style="$1"
 
+   if ! env::style::is_envstyle "${style#*/}"
+   then
+      fail "Unknown style \"${style}\""
+   fi
+
    case "${style}" in
       */wild|*/inherit)
          RVAL="${PATH}"
       ;;
 
       */relax)
-         case "${MULLE_UNAME}" in
-            linux)
-               RVAL="/bin:/usr/bin"
-            ;;
+         RVAL="/usr/bin:/bin"
+      ;;
 
-            *)
-               RVAL="/bin:/usr/bin"
-            ;;
-         esac
+      */frugal)
+         RVAL="/bin"
       ;;
 
       */tight|*/restrict)
          RVAL=
-      ;;
-
-      *)
-         fail "Unknown style \"${style}\""
       ;;
    esac
 }
