@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches:
+    - master
+    - main
+    - develop
+    - prerelease
+    - release
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.shell }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shell:
+        - bash
+        - zsh
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install shellcheck zsh
+
+    - name: Install mulle-bashfunctions
+      run: |
+        git clone --depth 1 https://github.com/mulle-sde/mulle-bashfunctions.git /tmp/mulle-bashfunctions
+        sudo /tmp/mulle-bashfunctions/bin/installer /usr/local
+
+    - name: Lint
+      run: shellcheck -S error mulle-env mudo src/*.sh src/mulle-env-shell src/plugins/*.sh
+
+    - name: Test
+      run: ./test/run-test --${{ matrix.shell }}

@@ -91,48 +91,6 @@ $ mulle-env -c 'printf "%s\n" "${PATH}"'
 ```
 
 
-## Environment
-
-### In an out
-
-Enter the subshell with `mulle-env` and leave the subshell `exit`.
-Run any command in the subshell (from the outside to the inside) with a
-command like `mulle-env -c env` and escape the subshell (from the inside to
-the outside) with `mudo -e env`.
-
-## Upgrade an environment
-
-To upgrade an environment to a newer mulle-env release use
-
-``` sh
-mulle-env upgrade
-```
-
-
-### Manage variables
-
-List all environment variables defined by the virtual environment
-with `mulle-env environment list`. Set an environment variable
-with `mulle-env environment --scope global set FOO "whatever"`.
-
-You can also get an environment variable with `mulle-env environment get FOO`
-and remove it with `mulle-env environment remove FOO`.
-
-#### Scopes
-
-There are multiple environment variable scopes, that override each other
-in top (weakest) to bottom (strongest) fashion. Non-user values will lose
-changes on mulle-env upgrades, so don't write into those scopes.
-
-
-| Scope         | User Value | Description
-|---------------|------------|----------------------------------
-| `plugin`      | NO         | Values set by a mulle-env plugin
-| `global`      | YES        | Global user values
-| `os-<name>`   | YES        | Operating system specific user values
-| `host-<name>` | YES        | Host specific user values
-| `user-<name>` | YES        | User specific user values
-
 ### Manage tools
 
 Tools are your standard unix tools, executables like `cc`, `ls` or `make`.
@@ -181,7 +139,9 @@ export MULLE_ENV_SANDBOX="lljail"
 mulle-env -c 'make'
 ```
 
-
+The sandbox wrapper is invoked as `sandbox [flags] env <environment> <command>`.
+It can read `MULLE_ENV_SANDBOX_SRC_DIR` to learn the environment root, which is
+not necessarily the current directory (e.g. with `--keep-pwd` or `-d <subdir>`).
 
 
 ## What mulle-env does in a nutshell
@@ -223,6 +183,52 @@ mkdir -p .mulle/etc/env
 echo "FOO=xxx" > .mulle/etc/env/environment-global.sh
 ```
 
+## Repository layout
+
+**mulle-env** is a collection of POSIX shell scripts. The main program is the
+top-level `mulle-env` script. It is hand-maintained and contains the argument
+parser, the command dispatch and the core environment functions (`env::main`,
+`env::run_subshell`, `env::clean`, `env::reset`, `env::reinit`).
+
+The sub-commands are implemented as separate modules in `src/` and are sourced
+at runtime from `MULLE_ENV_LIBEXEC_DIR`. Each module supplies its own usage
+text and an `env::<command>::main` entry point.
+
+| Path                         | Purpose
+|------------------------------|----------------------------------
+| `mulle-env`                  | main program, dispatch and core env functions
+| `mudo`                       | run a command with the unrestricted environment
+| `src/mulle-env-shell`        | helper that sets up the restricted subshell
+| `src/mulle-env-<command>.sh` | one sub-command module each
+| `src/plugins/*.sh`           | tool styles (none/minimal/developer/mulle)
+| `test/*/run-test`            | test suites, driven by `test/run-test`
+| `cola/*.md.bud`              | README fragments, composed by `mulle-readme-cms`
+
+To add a sub-command, implement `env::<command>::main` in a new
+`src/mulle-env-<command>.sh`, source it from the `case` in `mulle-env` and add
+a test directory below `test/`.
+
+### Building and testing
+
+**mulle-env** needs
+[mulle-bashfunctions](https://github.com/mulle-sde/mulle-bashfunctions) at
+runtime. With `mulle-bashfunctions` on the `PATH`, the test suite runs with:
+
+``` sh
+./test/run-test
+```
+
+To run it through CMake, configure the project first and then build the `test`
+target:
+
+``` sh
+cmake -S . -B build
+cmake --build build --target test
+```
+
+See the `AGENTS.md` file in the repository root for the full build, test and
+lint commands.
+
 
 
 ## Environment
@@ -234,12 +240,42 @@ Run any command in the subshell (from the outside to the inside) with a
 command like `mulle-env -c env` and escape the subshell (from the inside to
 the outside) with `mudo -e env`.
 
+#### Nested environments
+
+By default mulle-env refuses to enter an environment while already inside one
+(the inherited `MULLE_VIRTUAL_ROOT` would shadow the new one). When you really
+need to run a mulle-env environment from within another one (for example a
+release workspace that drives many per-repo environments), allow it explicitly:
+
+``` sh
+mulle-env --allow-nested-env -c 'make'
+```
+
+or set `MULLE_ENV_ALLOW_NESTED=YES` in the outer environment. The inherited
+virtual root is then discarded and the nested environment is derived from the
+working directory.
+
 ## Upgrade an environment
 
 To upgrade an environment to a newer mulle-env release use
 
 ``` sh
 mulle-env upgrade
+```
+
+### Reset and reinit
+
+To rebuild the environment in place, keeping the previously saved style, use
+
+``` sh
+mulle-env reinit
+```
+
+To throw away the generated `var` directories and set up the environment
+again from scratch use
+
+``` sh
+mulle-env reset
 ```
 
 

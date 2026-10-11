@@ -7,12 +7,42 @@ Run any command in the subshell (from the outside to the inside) with a
 command like `mulle-env -c env` and escape the subshell (from the inside to
 the outside) with `mudo -e env`.
 
+#### Nested environments
+
+By default mulle-env refuses to enter an environment while already inside one
+(the inherited `MULLE_VIRTUAL_ROOT` would shadow the new one). When you really
+need to run a mulle-env environment from within another one (for example a
+release workspace that drives many per-repo environments), allow it explicitly:
+
+``` sh
+mulle-env --allow-nested-env -c 'make'
+```
+
+or set `MULLE_ENV_ALLOW_NESTED=YES` in the outer environment. The inherited
+virtual root is then discarded and the nested environment is derived from the
+working directory.
+
 ## Upgrade an environment
 
 To upgrade an environment to a newer mulle-env release use
 
 ``` sh
 mulle-env upgrade
+```
+
+### Reset and reinit
+
+To rebuild the environment in place, keeping the previously saved style, use
+
+``` sh
+mulle-env reinit
+```
+
+To throw away the generated `var` directories and set up the environment
+again from scratch use
+
+``` sh
+mulle-env reset
 ```
 
 

@@ -67,3 +67,13 @@ DESTINATION "share/mulle-env/plugins")
 # must be after CPACK_PACKAGE_VERSION
 include( CMakePackage.cmake)
 include( CPack)
+
+
+#
+# `cmake --build <builddir> --target test` runs the shell test suite.
+# It needs `mulle-bashfunctions` on the PATH (see AGENTS.md).
+#
+enable_testing()
+add_test( NAME mulle-env
+          COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/test/run-test"
+          WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

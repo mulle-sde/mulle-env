@@ -37,4 +37,6 @@ mkdir -p .mulle/etc/env
 echo "FOO=xxx" > .mulle/etc/env/environment-global.sh
 ```
 
+{% includes "hacking.md.bud" %}
+
 

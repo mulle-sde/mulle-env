@@ -13,6 +13,8 @@ CMakeCache.txt
 CMakeFiles/
 CPackConfig.cmake
 CPackSourceConfig.cmake
+CTestTestfile.cmake
+Testing/
 Makefile
 cmake_install.cmake
 .mulle-make-build-dir

@@ -1,4 +1,17 @@
 {
+   config =
+   {
+      showButtons = YES;
+      showCodacy = NO;
+   };
+   authors =
+   (
+      {
+         name="Nat!";
+         url="https://mulle-kybernetik.com/weblog";
+         organization="Mulle kybernetiK"
+      }
+   );
    project =
    {
       description="🌳 Virtual environment for C and Objective-C";

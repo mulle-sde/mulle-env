@@ -98,7 +98,8 @@ Usage:
    ${MULLE_USAGE_NAME} tool add [options] <tool> ...
 
    Add a tool or multiple tools to the list of tools available to the subshell.
-   The additions will be available on the next "link".
+   The additions will be available on the next "link". Adding a tool that is
+   already installed is not an error.
 
    You can change the optionality of a tool with options.
 
@@ -647,11 +648,18 @@ env::tool::add()
             *)
                if [ "${doesexist}" = 'YES' ]
                then
-                  if [ "${OPTION_IF_MISSING}" = 'YES' ]
+                  #
+                  # adding an already installed tool is idempotent and
+                  # must not fail. With --if-missing or --force it is quiet,
+                  # otherwise we just warn.
+                  #
+                  if [ "${OPTION_IF_MISSING}" = 'YES' -o "${MULLE_FLAG_MAGNUM_FORCE}" = 'YES' ]
                   then
                      continue
                   fi
-                  fail "\"${tool}\" is already installed"
+
+                  log_warning "\"${tool}\" is already installed"
+                  continue
                fi
             ;;
          esac

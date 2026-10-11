@@ -1,0 +1,106 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local toolfile
+   local tool
+   local result
+   local rc
+   local count
+
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   toolfile="${directory}/.mulle/etc/env/tool"
+   tool="mulle_env_smoketest_tool"
+
+   run_mulle_env -f tool --global add "${tool}" || exit 1
+
+   #
+   # force re-adding an installed tool is silent
+   #
+   result="`run_mulle_env -f tool --global add "${tool}" 2>&1`" || exit 1
+   case "${result}" in
+      *"already installed"*)
+         fail "#1 --force re-add emitted a warning (\"${result}\")"
+      ;;
+   esac
+
+   log_verbose "----- #1 PASSED -----"
+
+   #
+   # a plain re-add warns, but still succeeds
+   #
+   result="`run_mulle_env tool --global add "${tool}" 2>&1`"
+   rc=$?
+   if [ ${rc} -ne 0 ]
+   then
+      fail "#2 plain re-add failed (rc=${rc}, \"${result}\")"
+   fi
+   case "${result}" in
+      *"already installed"*)
+      ;;
+
+      *)
+         fail "#2 plain re-add did not warn (\"${result}\")"
+      ;;
+   esac
+
+   log_verbose "----- #2 PASSED -----"
+
+   #
+   # and the tool is listed exactly once
+   #
+   count="`grep -c "^${tool}\$" "${toolfile}"`"
+   [ "${count}" != '1' ] && fail "#3 tool listed ${count} times (${toolfile})"
+
+   log_verbose "----- #3 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"

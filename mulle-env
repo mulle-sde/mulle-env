@@ -70,6 +70,7 @@ env::emit_options()
    -ef <file>    : use a different environment file (${ENVFILENAME})
    -aef <file>   : add another environment file to an interactive subshell
    --keep-pwd    : run subshell/command in PWD, not in the environment root
+   --allow-nested-env : allow entering an environment from within one
    --search-here : search only in PWD, if none present ignore
    --search-none : search only in PWD, if none present fail
    -N            : search for nearest enclosing environment
@@ -2033,7 +2034,10 @@ env::clean()
 {
    log_entry "env::clean" "$@"
 
-   env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+   if ! env::is_help_request_commandline "$@"
+   then
+      env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
+   fi
 
    include "env::clean"
 
@@ -2041,15 +2045,60 @@ env::clean()
 }
 
 
+env::reset_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} reset
+
+   Clear all mulle-env 'var' directories and set up the environment again.
+   Equivalent to \`${MULLE_USAGE_NAME} clean\` followed by entering the
+   environment.
+
+EOF
+
+   exit 1
+}
+
+
 env::reset()
 {
+   if env::is_help_request_commandline "$@"
+   then
+      env::reset_usage
+   fi
+
    env::clean "$@" && env::default_setup_environment "${PWD}" "${OPTION_SEARCHMODE}"
 }
 
 
 
+env::reinit_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} reinit
+
+   Reinitialize the environment of the current directory, keeping the
+   previously saved style.
+
+EOF
+
+   exit 1
+}
+
+
 env::reinit()
 {
+   if env::is_help_request_commandline "$@"
+   then
+      env::reinit_usage
+   fi
+
    local directory
    local envdirectory
 
@@ -2120,6 +2169,7 @@ env::main()
    local OPTION_SCOPE_SUBDIRS=
    local OPTION_EVAL_EXEKUTOR='eval_exekutor'
    local OPTION_COPY_MULLE_TOOL='NO'
+   local OPTION_ALLOW_NESTED="${MULLE_ENV_ALLOW_NESTED:-NO}"
    local CUSTOM_PRE_ENVIRONMENT=""
    local CUSTOM_POST_ENVIRONMENT=""
    local FLAG_OUTSIDE_ENV='NO'
@@ -2304,6 +2354,10 @@ env::main()
 
          --keep-pwd)
             OPTION_KEEP_PWD='YES'
+         ;;
+
+         --allow-nested-env)
+            OPTION_ALLOW_NESTED='YES'
          ;;
 
          --keep-tmp)
@@ -2782,8 +2836,23 @@ version"
    then
       if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
       then
-         fail "You are already in the virtual \
-environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack. (${PWD#"${MULLE_USER_PWD}/"})"
+         if [ ! -z "${OPTION_ALLOW_NESTED}" -a "${OPTION_ALLOW_NESTED}" != 'NO' ]
+         then
+            #
+            # Nesting is allowed, so forget the inherited virtual root. The
+            # environment to enter is derived from the working directory in
+            # env::run_subshell. Without this the inherited root and its ID
+            # would shadow the nested environment.
+            #
+            log_warning "Allowing nested environment, \
+overriding inherited \"${MULLE_VIRTUAL_ROOT}\""
+            MULLE_VIRTUAL_ROOT=
+            MULLE_VIRTUAL_ROOT_ID=
+         else
+            fail "You are already in the virtual \
+environment \"${MULLE_VIRTUAL_ROOT}\". Environments don't stack. (${PWD#"${MULLE_USER_PWD}/"})
+Use --allow-nested-env or set MULLE_ENV_ALLOW_NESTED=YES to override."
+         fi
       fi
    fi
 

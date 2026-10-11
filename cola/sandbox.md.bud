@@ -1,0 +1,15 @@
+### Sandbox
+
+Set `MULLE_ENV_SANDBOX` to an executable (for example a
+[landlock](https://landlock.io) based `lljail` wrapper) to run the subshell
+or `-c` command inside a sandbox. Additional arguments are passed via
+`MULLE_ENV_SANDBOX_FLAGS`. It is up to you not to stack sandboxes:
+
+``` bash
+export MULLE_ENV_SANDBOX="lljail"
+mulle-env -c 'make'
+```
+
+The sandbox wrapper is invoked as `sandbox [flags] env <environment> <command>`.
+It can read `MULLE_ENV_SANDBOX_SRC_DIR` to learn the environment root, which is
+not necessarily the current directory (e.g. with `--keep-pwd` or `-d <subdir>`).

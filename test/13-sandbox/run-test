@@ -1,0 +1,147 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local sandbox
+   local logfile
+   local result
+
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   sandbox="${directory}/sandbox.sh"
+   logfile="${directory}/sandbox.log"
+
+   cat > "${sandbox}" <<'EOF'
+#! /bin/sh
+{
+   printf "%s\n" "ARGS:$*"
+   printf "%s\n" "SRCDIR:${MULLE_ENV_SANDBOX_SRC_DIR}"
+} >> "${SANDBOX_LOG}"
+
+# skip our own flags up to the "env" marker
+while [ $# -gt 0 ] && [ "$1" != 'env' ]
+do
+   shift
+done
+exec "$@"
+EOF
+   chmod 755 "${sandbox}"
+
+   SANDBOX_LOG="${logfile}"
+   export SANDBOX_LOG
+
+   #
+   # --sandbox <file> wraps the command
+   #
+   : > "${logfile}"
+
+   result="`run_mulle_env --sandbox "${sandbox}" -s -c 'echo hello'`" || exit 1
+   if [ "${result}" != 'hello' ]
+   then
+      fail "#1 unexpected result (\"${result}\"), expected \"hello\""
+   fi
+   if ! grep "ARGS:env" "${logfile}" > /dev/null
+   then
+      fail "#1 sandbox was not invoked (\"`cat "${logfile}"`\")"
+   fi
+   if ! grep "SRCDIR:${directory}" "${logfile}" > /dev/null
+   then
+      fail "#1 sandbox did not receive MULLE_ENV_SANDBOX_SRC_DIR"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   #
+   # --sandbox with MULLE_ENV_SANDBOX_FLAGS
+   #
+   : > "${logfile}"
+
+   MULLE_ENV_SANDBOX_FLAGS='--hello'
+   export MULLE_ENV_SANDBOX_FLAGS
+
+   result="`run_mulle_env --sandbox "${sandbox}" -s -c 'echo world'`" || exit 1
+   if [ "${result}" != 'world' ]
+   then
+      fail "#2 unexpected result (\"${result}\"), expected \"world\""
+   fi
+   if ! grep "ARGS:--hello env" "${logfile}" > /dev/null
+   then
+      fail "#2 sandbox flags not passed (\"`cat "${logfile}"`\")"
+   fi
+
+   unset MULLE_ENV_SANDBOX_FLAGS
+
+   log_verbose "----- #2 PASSED -----"
+
+   #
+   # MULLE_ENV_SANDBOX environment variable
+   #
+   : > "${logfile}"
+
+   MULLE_ENV_SANDBOX="${sandbox}"
+   export MULLE_ENV_SANDBOX
+   unset MULLE_ENV_SANDBOX_FLAGS
+
+   result="`run_mulle_env -s -c 'echo envvar'`" || exit 1
+   if [ "${result}" != 'envvar' ]
+   then
+      fail "#3 unexpected result (\"${result}\"), expected \"envvar\""
+   fi
+   if ! grep "ARGS:env" "${logfile}" > /dev/null
+   then
+      fail "#3 MULLE_ENV_SANDBOX not honored (\"`cat "${logfile}"`\")"
+   fi
+
+   unset MULLE_ENV_SANDBOX
+
+   log_verbose "----- #3 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"

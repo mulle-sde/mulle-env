@@ -1,0 +1,45 @@
+## Repository layout
+
+**mulle-env** is a collection of POSIX shell scripts. The main program is the
+top-level `mulle-env` script. It is hand-maintained and contains the argument
+parser, the command dispatch and the core environment functions (`env::main`,
+`env::run_subshell`, `env::clean`, `env::reset`, `env::reinit`).
+
+The sub-commands are implemented as separate modules in `src/` and are sourced
+at runtime from `MULLE_ENV_LIBEXEC_DIR`. Each module supplies its own usage
+text and an `env::<command>::main` entry point.
+
+| Path                         | Purpose
+|------------------------------|----------------------------------
+| `mulle-env`                  | main program, dispatch and core env functions
+| `mudo`                       | run a command with the unrestricted environment
+| `src/mulle-env-shell`        | helper that sets up the restricted subshell
+| `src/mulle-env-<command>.sh` | one sub-command module each
+| `src/plugins/*.sh`           | tool styles (none/minimal/developer/mulle)
+| `test/*/run-test`            | test suites, driven by `test/run-test`
+| `cola/*.md.bud`              | README fragments, composed by `mulle-readme-cms`
+
+To add a sub-command, implement `env::<command>::main` in a new
+`src/mulle-env-<command>.sh`, source it from the `case` in `mulle-env` and add
+a test directory below `test/`.
+
+### Building and testing
+
+**mulle-env** needs
+[mulle-bashfunctions](https://github.com/mulle-sde/mulle-bashfunctions) at
+runtime. With `mulle-bashfunctions` on the `PATH`, the test suite runs with:
+
+``` sh
+./test/run-test
+```
+
+To run it through CMake, configure the project first and then build the `test`
+target:
+
+``` sh
+cmake -S . -B build
+cmake --build build --target test
+```
+
+See the `AGENTS.md` file in the repository root for the full build, test and
+lint commands.

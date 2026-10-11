@@ -48,9 +48,12 @@ main()
 
    log_verbose "----- #2 PASSED -----"
 
-   if run_mulle_env -s --mulle-no-errors tool add mv
+   #
+   # adding an already installed tool is idempotent: it warns but succeeds
+   #
+   if ! run_mulle_env -s tool add mv
    then
-      fail "#3: Unexpected success of mv add (should be 4)"
+      fail "#3: Unexpected failure of mv add"
    fi
 
    log_verbose "----- #3 PASSED -----"

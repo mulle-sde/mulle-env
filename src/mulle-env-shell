@@ -119,6 +119,7 @@ r_get_envfile()
 
    if [ ${ZSH_VERSION+x} ]
    then
+      # shellcheck disable=SC2296  # zsh-only parameter expansion, guarded above
       filename="${(P)envvar}"
    else
       filename="${!envvar}"

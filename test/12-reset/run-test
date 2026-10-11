@@ -1,0 +1,132 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local envdir
+   local value
+
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style none/tight
+
+   #
+   # materialize the generated var directories
+   #
+   run_mulle_env -s -c 'pwd' > /dev/null 2>&1
+
+   value="`run_mulle_env style`"
+   [ "${value}" != 'none/tight' ] && fail "#1 style not set (${directory})"
+
+   log_verbose "----- #1 PASSED -----"
+
+   #
+   # the help texts must not require an initialized environment
+   #
+   value="`${MULLE_ENV} ${MULLE_ENV_FLAGS} reset -h 2>&1`"
+   case "${value}" in
+      *"mulle-env reset"*)
+      ;;
+
+      *)
+         fail "#2 reset usage not shown (\"${value}\")"
+      ;;
+   esac
+
+   value="`${MULLE_ENV} ${MULLE_ENV_FLAGS} reinit -h 2>&1`"
+   case "${value}" in
+      *"mulle-env reinit"*)
+      ;;
+
+      *)
+         fail "#2 reinit usage not shown (\"${value}\")"
+      ;;
+   esac
+
+   log_verbose "----- #2 PASSED -----"
+
+   #
+   # reset must clear the generated var directories, but keep the style
+   #
+   envdir="`find "${directory}/.mulle/var" -type d -name env 2> /dev/null | head -1`"
+   if [ -z "${envdir}" ]
+   then
+      fail "#3 no generated env directory found (${directory})"
+   fi
+
+   touch "${envdir}/SENTINEL"
+
+   run_mulle_env -s reset
+
+   if [ -e "${envdir}/SENTINEL" ]
+   then
+      fail "#3 reset did not clear the var directory (${envdir})"
+   fi
+
+   value="`run_mulle_env style`"
+   [ "${value}" != 'none/tight' ] && fail "#3 style lost after reset (${directory})"
+
+   value="`run_mulle_env -c 'pwd'`"
+   [ "${value}" != "${directory}" ] && fail "#3 environment broken after reset (${value})"
+
+   log_verbose "----- #3 PASSED -----"
+
+   #
+   # reinit must keep the previously saved style
+   #
+   run_mulle_env -s reinit
+
+   value="`run_mulle_env style`"
+   [ "${value}" != 'none/tight' ] && fail "#4 style lost after reinit (${directory})"
+
+   value="`run_mulle_env -c 'pwd'`"
+   [ "${value}" != "${directory}" ] && fail "#4 environment broken after reinit (${value})"
+
+   log_verbose "----- #4 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"

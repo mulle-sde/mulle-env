@@ -1,0 +1,129 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local outer
+   local inner
+   local outerid
+   local result
+   local rc
+
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
+
+   outer="${directory}/outer"
+   inner="${directory}/inner"
+   mkdir -p "${outer}" "${inner}" || exit 1
+
+   ( cd "${outer}" && run_mulle_env -s init --style none/tight )
+   ( cd "${inner}" && run_mulle_env -s init --style none/tight )
+
+   outerid="`cd "${outer}" && run_mulle_env -c 'echo $MULLE_VIRTUAL_ROOT_ID'`"
+   if [ -z "${outerid}" ]
+   then
+      fail "#1 could not determine outer id (${outer})"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   cd "${inner}" || exit 1
+
+   #
+   # pretend to be inside the outer environment
+   #
+   MULLE_VIRTUAL_ROOT="${outer}"
+   MULLE_VIRTUAL_ROOT_ID="${outerid}"
+   export MULLE_VIRTUAL_ROOT MULLE_VIRTUAL_ROOT_ID
+
+   #
+   # by default a nested environment is refused
+   #
+   result="`${MULLE_ENV} ${MULLE_ENV_FLAGS} -c 'echo $MULLE_VIRTUAL_ROOT' 2>&1`"
+   rc=$?
+   if [ ${rc} -eq 0 ]
+   then
+      fail "#2 nesting was not refused (\"${result}\")"
+   fi
+   case "${result}" in
+      *"Environments don't stack"*)
+      ;;
+
+      *)
+         fail "#2 unexpected refusal (\"${result}\")"
+      ;;
+   esac
+
+   log_verbose "----- #2 PASSED -----"
+
+   #
+   # --allow-nested-env enters the inner environment
+   #
+   result="`run_mulle_env --allow-nested-env -c 'echo $MULLE_VIRTUAL_ROOT'`" || exit 1
+   if [ "${result}" != "${inner}" ]
+   then
+      fail "#3 unexpected virtual root (\"${result}\"), expected \"${inner}\""
+   fi
+
+   log_verbose "----- #3 PASSED -----"
+
+   #
+   # MULLE_ENV_ALLOW_NESTED environment variable
+   #
+   MULLE_ENV_ALLOW_NESTED=YES
+   export MULLE_ENV_ALLOW_NESTED
+
+   result="`run_mulle_env -c 'echo $MULLE_VIRTUAL_ROOT'`" || exit 1
+   if [ "${result}" != "${inner}" ]
+   then
+      fail "#4 unexpected virtual root (\"${result}\"), expected \"${inner}\""
+   fi
+
+   unset MULLE_ENV_ALLOW_NESTED
+   unset MULLE_VIRTUAL_ROOT MULLE_VIRTUAL_ROOT_ID
+
+   log_verbose "----- #4 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
