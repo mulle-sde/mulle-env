@@ -21,7 +21,7 @@ jobs:
         - bash
         - zsh
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |

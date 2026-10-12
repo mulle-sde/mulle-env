@@ -183,7 +183,7 @@ emit_initfile()
 
    if [ ! -z "${CUSTOM_ENVIRONMENT}" ]
    then
-      printf "%s\n" "${CUSTOM_ENVIRONMENT}"
+      printf "export %s\n" "${CUSTOM_ENVIRONMENT}"
    fi
 }
 
@@ -302,10 +302,11 @@ run_script_shell()
       fi
    fi
 
-   # Apply custom definitions (-D)
+   # Apply custom definitions (-D). Export them, so that -DE (post) defines
+   # survive into child processes even if the variable did not exist before.
    if [ ! -z "${CUSTOM_ENVIRONMENT}" ]
    then
-      eval "${CUSTOM_ENVIRONMENT}" || exit 1
+      eval "export ${CUSTOM_ENVIRONMENT}" || exit 1
    fi
 
    #

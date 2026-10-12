@@ -1,3 +1,28 @@
+## 6.2.0
+
+
+
+
+
+feature: allow nested environments and make tool addition idempotent
+
+* add `--allow-nested-env` and ``MULLE_ENV_ALLOW_NESTED=YES`` to explicitly enter an environment from within another one, overriding the inherited ``MULLE_VIRTUAL_ROOT``
+* `mulle-env tool add` of an already installed tool now warns and succeeds instead of failing (silent with `--if-missing`/`--force`)
+* `reset` and `reinit` now print usage for `-h` and work without a pre-initialized environment
+* sandbox wrappers can read ``MULLE_ENV_SANDBOX_SRC_DIR`` to learn the environment root, which may differ from the working directory
+
+
+feature: add sandbox and keep-pwd options, new frugal env-style
+
+* new `--sandbox `<file>`` option and ``MULLE_ENV_SANDBOX`` to run the subshell or `-c` command inside a sandbox executable (e.g. an lljail wrapper), with extra arguments via ``MULLE_ENV_SANDBOX_FLAGS``
+* new `--keep-pwd` option and ``MULLE_ENV_KEEP_PWD`` to run the subshell or command in the current directory instead of the environment root
+* new `frugal` env-style: like `restrict` plus all `/bin` tools; `relax` now builds on it and adds all `/usr/bin` tools
+* new `rm` command as a shortcut for `tool remove`
+* `init` now refuses to re-initialize an already initialized directory unless `-f` is given
+* fix tool linking to resolve tools against the current `PATH` instead of an inherited ``MULLE_OLDPATH``
+* fix eval getters/listers to represent locally inherited variables symbolically, so stale local values or bash defaults no longer leak into `get`/`list` output
+
+
 ### 6.1.1
 
 
