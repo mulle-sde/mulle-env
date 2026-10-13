@@ -236,6 +236,31 @@ EOF
 # <tool>;optional
 
 #
+# Both environment bin directories are part of the restricted PATH: the
+# host bin (${MULLE_ENV_HOST_VAR_DIR}/bin) receives the compiled tools, the
+# var bin (${MULLE_ENV_VAR_DIR}/bin) the mulle-sde/mulle tools. Removing them
+# from a search path makes sure a tool is never resolved to a symlink that we
+# are about to (re)create, which would relink it onto itself (recursion).
+#
+env::tool::r_filtered_tool_path()
+{
+   log_entry "env::tool::r_filtered_tool_path" "$@"
+
+   local path="$1"
+
+   RVAL="${path}"
+   if [ ! -z "${MULLE_ENV_HOST_VAR_DIR}" ]
+   then
+      r_colon_remove "${RVAL}" "${MULLE_ENV_HOST_VAR_DIR}/bin"
+   fi
+   if [ ! -z "${MULLE_ENV_VAR_DIR}" ]
+   then
+      r_colon_remove "${RVAL}" "${MULLE_ENV_VAR_DIR}/bin"
+   fi
+}
+
+
+#
 # since all mulle- tools are uniform, this is easy.
 # If it's a library, we need to strip off -env from
 # the toolname for the libraryname. Also libexec is versionized
@@ -261,12 +286,16 @@ env::tool::link_mulle_tool()
    # these dependencies should be there, but just check
    #
    local exefile
+   local searchpath
 
    #
-   # TODO: might need to modify PATH if our .mulle/bin is part of it
-   #       which can happen if we are called from another environment
+   # skip the environment's own bin directories in PATH, which can happen
+   # if we are called from another environment
    #
-   if ! exefile="`command -v "${toolname}" `"
+   env::tool::r_filtered_tool_path "${PATH}"
+   searchpath="${RVAL}"
+
+   if ! exefile="`PATH="${searchpath}" command -v "${toolname}" `"
    then
       if [ "${optional}" = 'required' ]
       then
@@ -1007,12 +1036,13 @@ env::tool::link_tool()
    local searchpath
 
    #
-   # Resolve tools against the *current* PATH, never against an inherited
-   # MULLE_OLDPATH. MULLE_OLDPATH is captured on entry and inherited by all
-   # descendant mulle-env/mulle-sde calls, so preferring it makes links point
-   # into whatever tree happened to be on the original caller's PATH, even
-   # when the environment's PATH is correct. MULLE_OLDPATH is only meant for
-   # "mudo -e" and "mulle-env cd" to restore the outer environment.
+   # Resolve tools against the *current* PATH first. MULLE_OLDPATH is captured
+   # on entry and inherited by all descendant mulle-env/mulle-sde calls, so
+   # preferring it makes links point into whatever tree happened to be on the
+   # original caller's PATH, even when the environment's PATH is correct.
+   # It is still useful as a fallback though: the restricted environment PATH
+   # may not contain tools (e.g. valgrind in /usr/local/bin) that the caller
+   # could still see when the environment was built.
    #
    searchpath="${PATH}"
    if [ -z "${searchpath}" ]
@@ -1020,9 +1050,31 @@ env::tool::link_tool()
       searchpath="${MULLE_OLDPATH}"
    fi
 
+   #
+   # Never resolve a tool to a symlink that we are about to (re)create: the
+   # environment's bin directories are on the restricted PATH (and can be part
+   # of an inherited MULLE_OLDPATH), so "command -v" could return our own link
+   # and relink it onto itself (recursion).
+   #
+   env::tool::r_filtered_tool_path "${searchpath}"
+   r_colon_remove "${RVAL}" "${bindir}"
+   searchpath="${RVAL}"
+
 #   log_setting "PATH          : ${searchpath}"
 
    filename="`PATH="${searchpath}" command -v "${toolname}" `"
+
+   if [ -z "${filename}" -a \
+        ! -z "${MULLE_OLDPATH}" -a \
+        "${searchpath}" != "${MULLE_OLDPATH}" ]
+   then
+      log_debug "Tool \"${toolname}\" not in PATH, trying MULLE_OLDPATH"
+
+      env::tool::r_filtered_tool_path "${MULLE_OLDPATH}"
+      r_colon_remove "${RVAL}" "${bindir}"
+      searchpath="${RVAL}"
+      filename="`PATH="${searchpath}" command -v "${toolname}" `"
+   fi
 
    case "${filename}" in
       "")

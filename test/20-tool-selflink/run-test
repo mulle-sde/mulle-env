@@ -1,0 +1,103 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local realbin
+   local vardir
+   local result
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL:-/tmp/exekutor}"
+
+   exekutor cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style minimal/tight
+
+   realbin="${directory}/realbin"
+   mkdir -p "${realbin}"
+
+   redirect_exekutor "${realbin}/selfsider" printf '#! /bin/sh\necho real\n'
+   chmod 755 "${realbin}/selfsider"
+
+   #
+   # --no-resolve so that a found symlink is not resolved to its target,
+   # otherwise the self-reference would be flattened again
+   #
+   run_mulle_env tool add --no-resolve selfsider
+   run_mulle_env tool compile
+
+   vardir="`run_mulle_env mulle-tool-env env | sed -n -e 's/^MULLE_ENV_VAR_DIR=.\(.*\).$/\1/p'`"
+   if [ -z "${vardir}" ]
+   then
+      fail "#0: could not determine MULLE_ENV_VAR_DIR"
+   fi
+
+   PATH="${realbin}:${PATH}" run_mulle_env tool link || exit 1
+
+   result="`readlink "${vardir}/bin/selfsider"`"
+   if [ "${result}" != "${realbin}/selfsider" ]
+   then
+      fail "#1: selfsider resolved to \"${result}\", expected \"${realbin}/selfsider\""
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   #
+   # Force a relink while our own bindir is on PATH (as it is inside the
+   # restricted environment). The already existing symlink must not be picked
+   # up as the tool, otherwise it would be relinked onto itself.
+   #
+   PATH="${vardir}/bin:${realbin}:${PATH}" \
+      run_mulle_env -f tool link --no-delete || exit 1
+
+   result="`readlink "${vardir}/bin/selfsider"`"
+   if [ "${result}" != "${realbin}/selfsider" ]
+   then
+      fail "#2: selfsider resolved to \"${result}\", expected \"${realbin}/selfsider\""
+   fi
+
+   log_verbose "----- #2 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
