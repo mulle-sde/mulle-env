@@ -1,0 +1,113 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local vardir
+   local oldbin
+   local cleanbin
+   local result
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL:-/tmp/exekutor}"
+
+   exekutor cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style minimal/tight
+
+   oldbin="${directory}/oldbin"
+   cleanbin="${directory}/cleanbin"
+
+   mkdir -p "${oldbin}" "${cleanbin}"
+
+   #
+   # "oldsider" is only reachable through MULLE_OLDPATH
+   #
+   redirect_exekutor "${oldbin}/oldsider" printf '#! /bin/sh\necho old\n'
+   chmod 755 "${oldbin}/oldsider"
+
+   #
+   # "both" exists in both places, the current PATH must win
+   #
+   redirect_exekutor "${cleanbin}/both" printf '#! /bin/sh\necho clean\n'
+   chmod 755 "${cleanbin}/both"
+   redirect_exekutor "${oldbin}/both" printf '#! /bin/sh\necho dirty\n'
+   chmod 755 "${oldbin}/both"
+
+   run_mulle_env tool add oldsider
+   run_mulle_env tool add both
+   run_mulle_env tool compile
+
+   vardir="`run_mulle_env mulle-tool-env env | sed -n -e 's/^MULLE_ENV_VAR_DIR=.\(.*\).$/\1/p'`"
+   if [ -z "${vardir}" ]
+   then
+      fail "#0: could not determine MULLE_ENV_VAR_DIR"
+   fi
+
+   #
+   # a tool missing from PATH is still resolved through MULLE_OLDPATH
+   #
+   PATH="${cleanbin}:${PATH}" MULLE_OLDPATH="${oldbin}" \
+      run_mulle_env tool link || exit 1
+
+   result="`readlink "${vardir}/bin/oldsider"`"
+   if [ "${result}" != "${oldbin}/oldsider" ]
+   then
+      fail "#1: oldsider resolved to \"${result}\", expected \"${oldbin}/oldsider\""
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   #
+   # but a tool present in PATH must never be taken from MULLE_OLDPATH
+   #
+   result="`readlink "${vardir}/bin/both"`"
+   if [ "${result}" != "${cleanbin}/both" ]
+   then
+      fail "#2: both resolved to \"${result}\", expected \"${cleanbin}/both\""
+   fi
+
+   log_verbose "----- #2 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"

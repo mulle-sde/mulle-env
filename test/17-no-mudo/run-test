@@ -1,0 +1,123 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local result
+   local rc
+
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style minimal/tight
+
+   FOO="secret"
+   export FOO
+
+   #
+   # by default the old environment is recoverable via mudo -e
+   #
+   result="`run_mulle_env -c "mudo -e sh -c 'echo \$FOO'"`" || exit 1
+   if [ "${result}" != 'secret' ]
+   then
+      fail "#1 unexpected escape result (\"${result}\"), expected \"secret\""
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   #
+   # --no-mudo removes MULLE_OLDPATH
+   #
+   result="`run_mulle_env --no-mudo -c 'echo ${MULLE_OLDPATH:-unset}'`" || exit 1
+   if [ "${result}" != 'unset' ]
+   then
+      fail "#2 MULLE_OLDPATH is still set (\"${result}\")"
+   fi
+
+   log_verbose "----- #2 PASSED -----"
+
+   #
+   # --no-mudo makes mudo -e fail
+   #
+   result="`${MULLE_ENV} ${MULLE_ENV_FLAGS} --no-mudo -c "mudo -e sh -c 'echo \$FOO'" 2>&1`"
+   rc=$?
+   if [ ${rc} -eq 0 ]
+   then
+      fail "#3 mudo -e succeeded unexpectedly (\"${result}\")"
+   fi
+   case "${result}" in
+      *secret*)
+         fail "#3 mudo -e leaked FOO (\"${result}\")"
+      ;;
+   esac
+
+   log_verbose "----- #3 PASSED -----"
+
+   #
+   # MULLE_ENV_NO_MUDO environment variable
+   #
+   result="`MULLE_ENV_NO_MUDO=YES run_mulle_env -c 'echo ${MULLE_OLDPATH:-unset}'`" || exit 1
+   if [ "${result}" != 'unset' ]
+   then
+      fail "#4 MULLE_OLDPATH is still set (\"${result}\")"
+   fi
+
+   log_verbose "----- #4 PASSED -----"
+
+   #
+   # an inherited MULLE_OLDPATH must not survive into a "wild" environment
+   #
+   result="`MULLE_OLDPATH='/evil' run_mulle_env --style none/wild --no-mudo \
+                -c 'echo ${MULLE_OLDPATH:-unset}'`" || exit 1
+   if [ "${result}" != 'unset' ]
+   then
+      fail "#5 inherited MULLE_OLDPATH leaked (\"${result}\")"
+   fi
+
+   log_verbose "----- #5 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"

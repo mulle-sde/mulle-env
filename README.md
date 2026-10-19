@@ -255,6 +255,39 @@ or set `MULLE_ENV_ALLOW_NESTED=YES` in the outer environment. The inherited
 virtual root is then discarded and the nested environment is derived from the
 working directory.
 
+#### Disabling mudo
+
+On entry mulle-env saves the caller's environment so that `mudo -e` can escape
+the subshell later. Use `--no-mudo` (or `MULLE_ENV_NO_MUDO=YES`) to keep the
+caller's `PATH` and environment out of the subshell entirely:
+
+``` sh
+mulle-env --no-mudo
+```
+
+Then no `MULLE_OLDPATH` is exported and no old environment is written to
+`.mulle/var`, so `mudo -e` can not recover it and plain `mudo` is a no-op with
+respect to `PATH`. This is useful when the subshell should not be able to
+escape to the user environment (and when the environment must not be persisted
+to disk).
+
+#### Hermetic environments
+
+A workspace driven from within a mulle-env subshell exports its bookkeeping
+variables (`MULLE_VIRTUAL_ROOT`, `MULLE_VIRTUAL_ROOT_ID`,
+`MULLE_ENV_LIBEXEC_DIR`, `MULLE_BASHFUNCTIONS_LIBEXEC_DIR`, `MULLE_OLDPATH`) to
+every child process. When those children descend into nested environments, the
+inherited root shadows the nested one — which is not supported and is rejected
+with a `MULLE_VIRTUAL_ROOT_ID mismatch`. Use `--hermetic` (or
+`MULLE_ENV_HERMETIC=YES`) to keep them out of the subshell:
+
+``` sh
+mulle-env --hermetic
+```
+
+`--hermetic` implies `--no-mudo`. Every tool then derives its own root from the
+working directory instead of extending the enclosing environment.
+
 ## Upgrade an environment
 
 To upgrade an environment to a newer mulle-env release use

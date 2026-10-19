@@ -39,7 +39,7 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_ENV_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
-MULLE_EXECUTABLE_VERSION="6.2.0"
+MULLE_EXECUTABLE_VERSION="6.3.0"
 
 
 #
@@ -71,6 +71,8 @@ env::emit_options()
    -aef <file>   : add another environment file to an interactive subshell
    --keep-pwd    : run subshell/command in PWD, not in the environment root
    --allow-nested-env : allow entering an environment from within one
+   --no-mudo     : do not save the old environment, disable mudo
+   --hermetic    : do not leak inherited mulle bookkeeping variables
    --search-here : search only in PWD, if none present ignore
    --search-none : search only in PWD, if none present fail
    -N            : search for nearest enclosing environment
@@ -705,28 +707,61 @@ env::get_symlink_status()
    rc=0
 
    local filename
-   local resolved
 
    shell_enable_nullglob
    for filename in "${MULLE_ENV_VAR_DIR}/bin/"*
    do
       shell_disable_nullglob
 
+      #
+      # a broken symlink is -L but not -e (which follows the link), so there
+      # is no need to fork readlink just to test the target
+      #
       # quick check, assume either all symlinks or none
-      if [ -L "${filename}" ]
+      #
+      if [ -L "${filename}" ] && [ ! -e "${filename}" ]
       then
-         resolved="`readlink "${filename}"`"
-         if [ ! -e "${resolved}" ]
-         then
-            log_fluff "Symlink is \"${filename}\" to \"${resolved}\" is broken"
-            rc=1
-         fi
+         log_fluff "Symlink \"${filename}\" is broken"
+         rc=1
       fi
       break # first file decides
    done
    shell_disable_nullglob
 
    return $rc
+}
+
+
+#
+# Read the first non-comment line of a file without forking grep/sed.
+#
+# Only for tiny single-value files (version, style). It stops at the first
+# value, so unlike a general line-filtering loop it can not degrade on a large
+# file. A leading run of comments and blank lines is skipped.
+#
+env::r_read_first_value()
+{
+   log_entry "env::r_read_first_value" "$@"
+
+   local file="$1"
+   local line
+
+   RVAL=""
+
+   if [ -f "${file}" ]
+   then
+      while IFS= read -r line || [ -n "${line}" ]
+      do
+         case "${line}" in
+            '#'*|'')
+               continue
+            ;;
+         esac
+
+         RVAL="${line}"
+         break
+      done < "${file}"
+   fi
 }
 
 
@@ -740,11 +775,11 @@ env::r_get_saved_version()
    local sharedir="$1"
    local fallbackroot="$2"
 
-   RVAL="`rexekutor grep -E -v '^#' "${sharedir}/version" 2> /dev/null`"
+   env::r_read_first_value "${sharedir}/version"
    if [ "${RVAL}" = "" ]
    then
       # old location
-      RVAL="`rexekutor grep -E -v '^#' "${fallbackroot}/.mulle-env/share/version" 2> /dev/null`"
+      env::r_read_first_value "${fallbackroot}/.mulle-env/share/version"
    fi
 
    case "${RVAL}" in
@@ -1007,20 +1042,27 @@ env::__get_saved_style_flavor()
    local fallback="$2"
 
    local filename
+   local slash
+
+   # a variable replacement keeps this working in both bash and zsh
+   slash='/'
 
    # make foo:bar foo/bar for backwards compatibility
    filename="${directory}/style.${LOGNAME:-all}"
-   _style="`rexekutor sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
+   env::r_read_first_value "${filename}"
+   _style="${RVAL//:/${slash}}"
    if [ -z "${_style}" ]
    then
       filename="${fallback}/style"
-      _style="`rexekutor sed -e '/^#/d' -e 's|:|/|g' "${filename}" 2> /dev/null `"
+      env::r_read_first_value "${filename}"
+      _style="${RVAL//:/${slash}}"
       if [ -z "${_style}" ]
       then
          log_debug "No previous style found ${filename}"
          return 1
       fi
    fi
+
    log_fluff "Previous style \"${_style}\" found in \"${filename}\""
 
    _flavor="${_style%%/*}"
@@ -1616,10 +1658,24 @@ undefined (old mulle-bashfunctions)"
          r_colon_concat "${RVAL}" "${MULLE_ENV_VAR_DIR}/bin"
          runpath="${RVAL}"
 
-         r_concat "${custom_pre_environment}" "MULLE_OLDPATH='${PATH}'"
-         custom_pre_environment="${RVAL}"
-      ;;
+         if [ "${OPTION_NO_MUDO}" != 'YES' ]
+         then
+            r_concat "${custom_pre_environment}" "MULLE_OLDPATH='${PATH}'"
+            custom_pre_environment="${RVAL}"
+         fi
+       ;;
    esac
+
+   #
+   # Signal the subshell helper to scrub the inherited mulle bookkeeping
+   # variables, including MULLE_VIRTUAL_ROOT, so nested tools derive their
+   # own root instead of extending the outer environment (see mulle-env-shell).
+   #
+   if [ "${OPTION_HERMETIC}" = 'YES' ]
+   then
+      r_concat "${custom_pre_environment}" "MULLE_ENV_HERMETIC='YES'"
+      custom_pre_environment="${RVAL}"
+   fi
 
    log_setting "runpath: ${runpath}"
 
@@ -1699,9 +1755,14 @@ undefined (old mulle-bashfunctions)"
    # remember old environment in "var" as export statements
    # for later use by "mudo -e" with env -i (if required)
    #
-   log_fluff "Saving current environment into ${vardir}/old-environment.$$"
+   if [ "${OPTION_NO_MUDO}" != 'YES' ]
+   then
+      log_fluff "Saving current environment into ${vardir}/old-environment.$$"
 
-   redirect_exekutor "${vardir}/old-environment.$$" env
+      redirect_exekutor "${vardir}/old-environment.$$" env
+   else
+      log_fluff "Not saving old environment (--no-mudo)"
+   fi
 
    local escaped_custom_post_environment
    local escaped_script
@@ -1886,6 +1947,16 @@ env::invoke_shell()
          fail "unknown envstyle \"${envstyle}\""
       ;;
    esac
+
+   #
+   # With --no-mudo make sure the caller's PATH is not recoverable. env -i
+   # already drops it, but "wild" passes the environment through, so an
+   # inherited MULLE_OLDPATH would leak in.
+   #
+   if [ "${OPTION_NO_MUDO}" = 'YES' ]
+   then
+      env_flag="${env_flag} -u MULLE_OLDPATH"
+   fi
 
    # needed to get termux going
    case "${MULLE_UNAME}" in
@@ -2170,6 +2241,8 @@ env::main()
    local OPTION_EVAL_EXEKUTOR='eval_exekutor'
    local OPTION_COPY_MULLE_TOOL='NO'
    local OPTION_ALLOW_NESTED="${MULLE_ENV_ALLOW_NESTED:-NO}"
+   local OPTION_NO_MUDO="${MULLE_ENV_NO_MUDO:-NO}"
+   local OPTION_HERMETIC="${MULLE_ENV_HERMETIC:-NO}"
    local CUSTOM_PRE_ENVIRONMENT=""
    local CUSTOM_POST_ENVIRONMENT=""
    local FLAG_OUTSIDE_ENV='NO'
@@ -2358,6 +2431,15 @@ env::main()
 
          --allow-nested-env)
             OPTION_ALLOW_NESTED='YES'
+         ;;
+
+         --no-mudo)
+            OPTION_NO_MUDO='YES'
+         ;;
+
+         --hermetic)
+            OPTION_HERMETIC='YES'
+            OPTION_NO_MUDO='YES'
          ;;
 
          --keep-tmp)

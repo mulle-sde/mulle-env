@@ -185,6 +185,17 @@ emit_initfile()
    then
       printf "export %s\n" "${CUSTOM_ENVIRONMENT}"
    fi
+
+   #
+   # --hermetic: do not leak the inherited mulle bookkeeping variables into
+   # the subshell. Dropping MULLE_VIRTUAL_ROOT makes every nested tool derive
+   # its own root from the working directory, instead of extending the outer
+   # one (nested mulle-sde is not supported and is caught by its ID check).
+   #
+   if [ "${MULLE_ENV_HERMETIC}" = 'YES' ]
+   then
+      printf "unset MULLE_VIRTUAL_ROOT MULLE_VIRTUAL_ROOT_ID MULLE_ENV_LIBEXEC_DIR MULLE_BASHFUNCTIONS_LIBEXEC_DIR MULLE_OLDPATH MULLE_ENV_HERMETIC\n"
+   fi
 }
 
 
@@ -307,6 +318,20 @@ run_script_shell()
    if [ ! -z "${CUSTOM_ENVIRONMENT}" ]
    then
       eval "export ${CUSTOM_ENVIRONMENT}" || exit 1
+   fi
+
+   #
+   # --hermetic: drop the inherited mulle bookkeeping variables, so tools
+   # invoked from here derive their own root/ID. MULLE_VIRTUAL_ROOT stays.
+   #
+   if [ "${MULLE_ENV_HERMETIC}" = 'YES' ]
+   then
+      unset MULLE_VIRTUAL_ROOT \
+            MULLE_VIRTUAL_ROOT_ID \
+            MULLE_ENV_LIBEXEC_DIR \
+            MULLE_BASHFUNCTIONS_LIBEXEC_DIR \
+            MULLE_OLDPATH \
+            MULLE_ENV_HERMETIC
    fi
 
    #

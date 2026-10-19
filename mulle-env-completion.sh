@@ -51,7 +51,7 @@ _mulle_env__global_flags() {
     -e --environment-override \
     --shell --echo-args \
     --keep-pwd --keep-tmp --no-motd \
-    --allow-nested-env \
+    --allow-nested-env --no-mudo --hermetic \
     --protect --no-protect \
     --scope-subdir \
     --uppercase-only \

@@ -21,6 +21,6 @@
       reponame="mulle-env";
       homepage="https://github.com/mulle-sde/mulle-env";
       license="BSD-3-Clause";
-      version="6.2.0"
+      version="6.3.0"
    };
 }

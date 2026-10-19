@@ -1,0 +1,117 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_env()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_ENV} ${MULLE_ENV_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_ENV_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+   local result
+   local expect
+   local rc
+
+   r_make_tmp_directory || exit 1
+   r_physicalpath "${RVAL:-/tmp/exekutor}"
+   directory="${RVAL}"
+
+   cd "${directory}" || exit 1
+
+   run_mulle_env -s init --style minimal/tight
+
+   FOO="secret"
+   export FOO
+
+   #
+   # sanity: without --hermetic the ID is set
+   #
+   result="`run_mulle_env -c 'echo ${MULLE_VIRTUAL_ROOT_ID:-unset}'`" || exit 1
+   if [ "${result}" = 'unset' ]
+   then
+      fail "#1 MULLE_VIRTUAL_ROOT_ID not set"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   #
+   # --hermetic drops MULLE_VIRTUAL_ROOT and the other bookkeeping variables
+   #
+   result="`run_mulle_env --hermetic -c '\
+echo \"root=${MULLE_VIRTUAL_ROOT:-unset} id=${MULLE_VIRTUAL_ROOT_ID:-unset} \
+old=${MULLE_OLDPATH:-unset} bf=${MULLE_BASHFUNCTIONS_LIBEXEC_DIR:-unset} \
+el=${MULLE_ENV_LIBEXEC_DIR:-unset} herm=${MULLE_ENV_HERMETIC:-unset}\"'`" || exit 1
+
+   expect="root=unset id=unset old=unset bf=unset el=unset herm=unset"
+   if [ "${result}" != "${expect}" ]
+   then
+      fail "#2 unexpected environment (\"${result}\"), expected \"${expect}\""
+   fi
+
+   log_verbose "----- #2 PASSED -----"
+
+   #
+   # --hermetic implies --no-mudo: no old environment
+   #
+   result="`${MULLE_ENV} ${MULLE_ENV_FLAGS} --hermetic -c "mudo -e sh -c 'echo \$FOO'" 2>&1`"
+   rc=$?
+   if [ ${rc} -eq 0 ]
+   then
+      fail "#3 mudo -e succeeded unexpectedly (\"${result}\")"
+   fi
+   case "${result}" in
+      *secret*)
+         fail "#3 mudo -e leaked FOO (\"${result}\")"
+      ;;
+   esac
+
+   log_verbose "----- #3 PASSED -----"
+
+   #
+   # MULLE_ENV_HERMETIC environment variable
+   #
+   result="`MULLE_ENV_HERMETIC=YES run_mulle_env -c 'echo ${MULLE_VIRTUAL_ROOT_ID:-unset}'`" || exit 1
+   if [ "${result}" != 'unset' ]
+   then
+      fail "#4 MULLE_VIRTUAL_ROOT_ID is still set (\"${result}\")"
+   fi
+
+   log_verbose "----- #4 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   cd /
+
+   rmdir_safer "${directory}"
+}
+
+
+
+init()
+{
+   MULLE_ENV="${MULLE_ENV:-${PWD}/../../mulle-env}"
+}
+
+
+
+init "$@"
+main "$@"
