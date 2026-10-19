@@ -1480,7 +1480,19 @@ env::environment::_eval_get()
 
    if [ ${ZSH_VERSION+x} ]
    then
-      value="`eval_rexekutor env -i ${environment} '${ZSH:-zsh}' -c "'${cmd}'" `"
+      #
+      # Use an absolute path: "env -i ${environment}" may carry a restricted
+      # PATH that does not contain the shell, in which case a bare "zsh"
+      # fails with "env: zsh: No such file or directory".
+      #
+      local shell
+
+      shell="${ZSH:-}"
+      if [ -z "${shell}" ]
+      then
+         shell="`command -v zsh`"
+      fi
+      value="`eval_rexekutor env -i ${environment} '${shell:-zsh}' -c "'${cmd}'" `"
    else
       value="`eval_rexekutor env -i "${environment}" '${BASH:-bash}' -c "'${cmd}'" `"
    fi
